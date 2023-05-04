@@ -93,9 +93,6 @@ export async function init(opts: InitOpts, log: winston.Logger) {
     throw new Error(reason)
   })
 
-  const contractsConfig = self.dev.createContractsConfig(contractsDir)
-  fs.writeFileSync(path.join(workspace, `${polyCoreContracts}.yaml`), contractsConfig, 'utf-8')
-
   log.info('workspace created at: %s', workspace)
   log.info('configuration file is available at: %s', configPath)
   log.info('when ready, run: ibctl start --workspace %s', workspace)
@@ -121,10 +118,7 @@ export async function start(opts: StartOpts, log: winston.Logger) {
   }
   const config = fs.readFileSync(configPath, 'utf-8')
 
-  const contractsPath = path.join(opts.workspace, `${polyCoreContracts}.yaml`)
-  if (!fs.existsSync(contractsPath)) {
-    throw new Error(`could not read contracts file: ${contractsPath}`)
-  }
+  const contractsPath = path.join(opts.workspace, polyCoreContracts)
 
   const { runObj: runtime } = await self.dev.runChainSets(config, log).then(...thenClause)
   const contracts = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsPath, log).then(...thenClause)

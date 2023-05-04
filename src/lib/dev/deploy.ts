@@ -7,16 +7,20 @@ import { images, newContainer } from './docker'
 import {
   ChainConfig,
   ChainSetsRunObj,
+  contractByVmType,
+  contractsArtifactsSchema,
   CosmosChainSet,
   deployedChainSchema,
   DeployedContract,
+  DeployedContractsMap,
   EvmChainSet,
   isCosmosChain,
   isEvmChain,
   VIBCCoreContractDeployment
 } from './schemas'
-import { fs, $ } from '../utils'
+import { $, fs } from '../utils'
 import { Attribute, Event } from '@cosmjs/stargate'
+import * as self from '../index'
 
 /*
  TODO:
@@ -74,25 +78,59 @@ export async function deployVIBCCoreContractsOnChainSets(
   }, Promise.resolve({}))
 }
 
-const contractByVmType = z.object({
-  VmType: z.enum(['evm']),
-  ArtifactsDir: z.string(),
-  Contracts: z.array(
-    z.object({
-      Name: z.string(),
-      Source: z.string(),
-      Path: z.string()
-    })
-  )
-})
+export async function deployCoreContractsOnChainSets(
+  runtime: ChainSetsRunObj,
+  contractsDir: string,
+  log: winston.Logger
+): Promise<DeployedContractsMap> {
+  const contractsConfig = self.dev.createContractsConfig(contractsDir)
+  const runPath = utils.path.join(runtime.Run.WorkingDir, 'run.json')
+  const artifactsPath = utils.path.join(runtime.Run.WorkingDir, '..', 'polycore-smart-contracts')
 
-const contractsArtifactsSchema = z.object({
-  ContractArtifacts: z.array(contractByVmType),
-  ChainClientImage: z.object({
-    Repository: z.string(),
-    Tag: z.string()
+  if (!fs.existsSync(runPath)) {
+    throw new Error(`could not read runtime file: ${runPath}`)
+  }
+
+  const deployedContracts: DeployedContractsMap = {}
+  const contractsWithDeps: string[] = ['Dispatcher.json']
+
+  const chainSetsPromises = runtime.ChainSets.filter((chainSet) => isEvmChain(chainSet.Type)).map(async (chainSet) => {
+    for (const contractConfig of contractsConfig) {
+      if (contractsWithDeps.includes(contractConfig.Name)) {
+        continue
+      }
+      const scpath = path.join(artifactsPath, contractConfig.Path)
+      try {
+        deployedContracts[contractConfig.Name] = await self.dev.deploySmartContract(
+          runtime,
+          chainSet.Name,
+          scpath,
+          [],
+          log
+        )
+      } catch (e) {
+        console.error(`Failed to deploy ${contractConfig.Name}; ${e}`)
+      }
+    }
+
+    const deployDependentContract = async (contractName, scargs) => {
+      const contractConfig = contractsConfig.find((c) => c.Name === contractName)
+      if (!contractConfig) {
+        throw new Error(`Could not find ${contractName}'s contract in contractsConfig`)
+      }
+
+      const scpath = path.join(artifactsPath, contractConfig.Path)
+      return await self.dev.deploySmartContract(runtime, chainSet.Name, scpath, scargs, log)
+    }
+
+    deployedContracts['Dispatcher.json'] = await deployDependentContract('Dispatcher.json', [
+      deployedContracts['Verifier.json'].Address
+    ])
   })
-})
+
+  await Promise.all(chainSetsPromises)
+  return deployedContracts
+}
 
 async function deployEvm(
   evmContractConfig: z.infer<typeof contractByVmType>,
@@ -129,25 +167,32 @@ async function deployEvm(
   await newContainer(config, logger)
 }
 
-export function createContractsConfig(contractsDir: string): string {
+export function createContractsConfig(contractsDir: string) {
   const contracts: any[] = []
   fs.readdirSync(contractsDir).forEach((dir) => {
     const p = path.join(contractsDir, dir)
     const contractNames = fs.readdirSync(p).filter((f) => f.endsWith('.json') && !f.endsWith('.dbg.json'))
     if (contractNames.length === 0) {
       throw new Error(`Could not find any Smart Contract API definition in ${p}`)
-    } else if (contractNames.length > 1) {
-      throw new Error(`Expecting a single Smart Contract API definition in ${p}. Found: ${contractNames}`)
     }
-    const name = contractNames[0]
-    contracts.push({
-      Name: name,
-      Source: dir,
-      Path: path.join(dir, name)
-    })
+
+    for (let i = 0; i < contractNames.length; i++) {
+      const name = contractNames[i]
+      contracts.push({
+        Name: name,
+        Source: dir,
+        Path: path.join(dir, name)
+      })
+    }
   })
 
   if (contracts.length === 0) throw new Error(`Could not find any Smart Contract API definition in ${contractsDir}`)
+
+  return contracts
+}
+
+export function createContractsConfigStr(contractsDir: string): string {
+  const contracts = createContractsConfig(contractsDir)
 
   return utils.dumpYamlSafe({
     ContractArtifacts: [
@@ -177,7 +222,7 @@ async function deployEvmSmartContract(chain: EvmChainSet, scpath: string, scargs
   const deployerAddress = await signer.getAddress()
 
   return {
-    Name: contract.Name,
+    Name: contract.contractName,
     Address: deploy.address,
     DeployerAddress: deployerAddress,
     Abi: JSON.stringify(contract.abi),

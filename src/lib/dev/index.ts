@@ -1,5 +1,6 @@
 export { runChainSets, cleanupChainSets, getChainSetsRuntimeFile, saveChainSetsRuntime } from './chainset'
 export {
+  createContractsConfigStr,
   createContractsConfig,
   deployOnChainSets,
   deployVIBCCoreContractsOnChainSets,

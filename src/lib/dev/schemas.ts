@@ -136,7 +136,7 @@ export const runningProverSchema = z.object({
   ContainerId: z.string(),
   RpcHost: z.string(),
   RpcContainer: z.string(),
-  CleanupMode: z.enum(['all', 'reuse']).nullish().default('reuse'),
+  CleanupMode: z.enum(['all', 'reuse']).nullish().default('reuse')
 })
 
 export const runningChainSetsSchema = z.object({
@@ -157,6 +157,8 @@ export const deployedContractSchema = z.object({
   TxHash: z.string()
 })
 
+export const deployedContractsMapSchema = z.record(z.string().min(1), deployedContractSchema)
+
 export const deployedChainSchema = z.object({
   ChainName: z.string(),
   ChainType: z.enum(EvmChains),
@@ -173,6 +175,25 @@ export const vibcCoreContractsSchema = z.record(
   })
 )
 
+export const contractByVmType = z.object({
+  VmType: z.enum(['evm']),
+  ArtifactsDir: z.string(),
+  Contracts: z.array(
+    z.object({
+      Name: z.string(),
+      Source: z.string(),
+      Path: z.string()
+    })
+  )
+})
+export const contractsArtifactsSchema = z.object({
+  ContractArtifacts: z.array(contractByVmType),
+  ChainClientImage: z.object({
+    Repository: z.string(),
+    Tag: z.string()
+  })
+})
+
 export type ChainConfig = z.infer<typeof ChainConfigSchema.all>
 export type EvmChainConfig = z.infer<typeof ChainConfigSchema.evm>
 export type CosmosChainConfig = z.infer<typeof ChainConfigSchema.cosmos>
@@ -188,5 +209,6 @@ export type DeployedChain = z.infer<typeof deployedChainSchema>
 
 export type DeployedContract = z.infer<typeof deployedContractSchema>
 export type VIBCCoreContractDeployment = z.infer<typeof vibcCoreContractsSchema>
+export type DeployedContractsMap = z.infer<typeof deployedContractsMapSchema>
 export type RunningNodeConfig = z.infer<typeof runningNodeConfigSchema>
 export type ImageConfigSchema = z.infer<typeof imageConfigSchema>
