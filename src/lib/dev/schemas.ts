@@ -131,9 +131,18 @@ export const runningRelayerSchema = z.object({
   Configuration: z.any()
 })
 
+export const runningProverSchema = z.object({
+  Name: z.string(),
+  ContainerId: z.string(),
+  RpcHost: z.string(),
+  RpcContainer: z.string(),
+  CleanupMode: z.enum(['all', 'reuse']).nullish().default('reuse'),
+})
+
 export const runningChainSetsSchema = z.object({
   ChainSets: z.array(chainSetSchema.all),
   Relayers: z.array(runningRelayerSchema).default([]),
+  Prover: runningProverSchema.nullish(),
   Run: z.object({
     WorkingDir: z.string(),
     CleanupMode: z.enum(['all', 'debug', 'log', 'reuse']).nullish().default('all')
@@ -172,6 +181,7 @@ export type NoneChainConfig = z.infer<typeof ChainConfigSchema.none>
 export type ChainSetsRunConfig = z.infer<typeof chainSetsRunConfigSchema>
 export type ChainSetsRunObj = z.infer<typeof runningChainSetsSchema>
 export type RelayerRunObj = z.infer<typeof runningRelayerSchema>
+export type ProverRunObj = z.infer<typeof runningProverSchema>
 export type EvmChainSet = z.infer<typeof chainSetSchema.evm>
 export type CosmosChainSet = z.infer<typeof chainSetSchema.cosmos>
 export type DeployedChain = z.infer<typeof deployedChainSchema>

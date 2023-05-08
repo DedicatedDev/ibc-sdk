@@ -111,6 +111,7 @@ const thenClause = [
 type StartOpts = {
   workspace: string
   connection: string[]
+  useZkMint: boolean
 }
 
 export async function start(opts: StartOpts, log: winston.Logger) {
@@ -127,6 +128,11 @@ export async function start(opts: StartOpts, log: winston.Logger) {
 
   const { runObj: runtime } = await self.dev.runChainSets(config, log).then(...thenClause)
   const contracts = await self.dev.deployPolyCoreContractsOnChainSets(runtime, contractsPath, log).then(...thenClause)
+
+  if (opts.useZkMint) {
+    await self.dev.runProver(runtime, log).then(...thenClause)
+  }
+
   await self.dev.runRelayers(runtime, contracts, opts.connection, log).then(...thenClause)
 }
 
@@ -156,11 +162,16 @@ export async function show(opts: any) {
     rows.push(await line(relayer.Name, relayer))
   }
 
+  if (runtime.Prover) {
+    rows.push(await line(runtime.Prover.Name, runtime.Prover));
+  }
+
   console.table(rows)
 }
 
 type StopOpts = {
   workspace: string
+  prover: boolean
   all: boolean
 }
 
@@ -182,6 +193,15 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
     for (const node of chain.Nodes) {
       log.info(`Removing '${chain.Name}:${node.Label}' container...`)
       await $`docker container rm -f ${node.ContainerId}`
+    }
+  }
+
+  if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse' ) {
+    log.info(`Removing zkmint prover container...`)
+    try {
+      await $`docker container rm -f ${runtime.Prover.ContainerId}`
+    } catch (e) {
+      log.warn(`Could not remove zkmint prover container: ${e}`)
     }
   }
 

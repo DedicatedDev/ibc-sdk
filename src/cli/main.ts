@@ -52,6 +52,8 @@ const program = new Command()
     new Option('-w, --workspace <workspace>', 'Working directory').default(defaultWorkspace, defaultWorkspace)
   )
 
+const useZkMintOption = new Option('--use-zk-mint', 'Use ZK minting').default(false)
+
 program
   .command('init')
   .description('Initializes the local stack')
@@ -62,6 +64,7 @@ program
   .command('start')
   .description('Start the local stack as defined in <workspace>/<config-file>')
   .addOption(connectionOption)
+  .addOption(useZkMintOption)
   .allowExcessArguments(false)
   .action(async (opts) => await commands.start({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
 
