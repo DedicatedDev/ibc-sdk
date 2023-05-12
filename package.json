@@ -1,7 +1,7 @@
 {
   "name": "@polymerdao/ibc-sdk",
   "version": "0.0.1",
-  "description": "Polymer IBC SDK",
+  "description": "IBC SDK",
   "main": "./dist/lib/index.js",
   "types": "./dist/lib/index.d.ts",
   "exports": {
@@ -24,7 +24,7 @@
     "cli-relayer-debug": "ts-node src/bin/debug-relayer.ts",
     "prepare": "run-s build"
   },
-  "author": "PolymerLabs",
+  "author": "Polymer Labs",
   "license": "UNLICENSED",
   "devDependencies": {
     "@ava/typescript": "^3.0.1",

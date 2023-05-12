@@ -1,6 +1,6 @@
-# Polymer DevKit
+# IBC SDK
 
-A NodeJS package that facilitates cross-chain Dapp development (aka. xDapp dev).
+A NodeJS package that facilitates cross-chain dapp (xdapp) development using IBC.
 
 ## What does this package do?
 
@@ -18,29 +18,25 @@ A xDapp requires deploying Smart Contracts (SCs, or similar constructs) on multi
 
 ### Get everything ready for testing xDapps
 
-As a xDapp developer, here are the prerequites to xDapp testing:
+As a xdapp developer, here are the prerequites to xdapp testing:
 
-    - launch all supported rollup chains, eg. ETH, BSC, Polygon, Avalanche
-    - launch Polymerase (the Polymer chain)
+    - launch all supported chains, eg. Ethereum and Wasmd
+    - launch the hub (the Polymer chain)
     - fund dev accounts on all chains
-    - deploy xDapp specific SCs on all chains
-    - deploy Polymer specific SCs on all chains, eg. Dispatcher
-    - configure and launch and off-chain (rollup) IBC relayers
-    - ensure relayers are monitoring the correct set of SCs on all chains
-    - ensure relayers create IBC clients/channels when needed
+    - deploy xdapp specific smart contracts on all chains
+    - deploy vIBC specific smart contracts on all chains
+    - configure and launch off-chain vIBC and IBC relayers
+    - ensure relayers are monitoring the correct set of smart contracts on all chains
+    - ensure relayers create IBC clients/connections/channels when needed
 
-This preparation step is cubersome and error-prone due to nuances of various chains. DevKit does this in one API call.
+This preparation step is cubersome and error-prone due to nuances of various chains. IBC SDK does this in one API call.
 
-### Trace status changes of IBC ports, channels, and xDapp SCs
+### Trace status changes of IBC ports, channels, and xdapp smart contracts
 
-This entail quries of multiple processes including chains and relayers. DevKit provides a single query entry that pulls status from all sources.
+This entails queries to multiple processes including chains and relayers. IBC SDK provides a single query entry that pulls status from all sources.
 
 ### What about production mode?
 
-xDapps devs can use the same DevKit query API for their SCs and IBC package status query.
+Xdapp developers can use the same IBC SDK query API for their smart contracts and IBC package status query.
 
-Polymer devs can gather high-level data from DevKit query API for all traffic invovling Polymer Core Protocol. Aggregated data can be visualized in a (fancy) dashboard.
-
-## How workflows differ between dev and prod?
-
-See this [Miro board](https://miro.com/app/board/uXjVOkhY0DE=/) (Polymer login required for access).
+IBC developers can gather high-level data from the IBC SDK query API for all traffic involving Polymer Core Protocol, IBC and vIBC. Aggregated data can be visualized in a dashboard.
