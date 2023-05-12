@@ -19,15 +19,14 @@
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
     "sourceMap": true,
+    "baseUrl": ".",
     "outDir": "dist",
-    "rootDirs": [
-      "./src"
-    ],
+    "rootDir": "src",
     "lib": [
       "es2020"
     ]
   },
   "include": [
-    "./src"
+    "./src/**/*"
   ]
 }

@@ -14,7 +14,7 @@ And Polymer devs to ensure Polymer Core Protocol works to the specs.
 
 ## What pain points do it solve?
 
-A xDapp requires deploying Smart Contracts (SCs, or similar constructs) on multiple blockchains. Polymer Core Protocol enables cross-chain messages in a permissinoless and trustless way.
+A xdapp requires deploying Smart Contracts (SCs, or similar constructs) on multiple blockchains. Polymer Core Protocol enables cross-chain messages in a permissinoless and trustless way.
 
 ### Get everything ready for testing xDapps
 

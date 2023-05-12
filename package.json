@@ -1,15 +1,20 @@
 {
   "name": "@polymerdao/ibc-sdk",
-  "version": "0.0.1",
+  "version": "0.0.1-alpha",
   "description": "IBC SDK",
-  "main": "./dist/lib/index.js",
-  "types": "./dist/lib/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/lib/index.d.ts",
-      "import": "./dist/lib/index.js",
-      "require": "./dist/lib/index.js"
-    }
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "!*.spec.*",
+    "!**/tests/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/polymerdao/ibc-sdk.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "test": "run-s build test-with-ava",
@@ -72,11 +77,9 @@
         "src/": "dist/"
       },
       "compile": false
-    },
-    "files": [
-      "src/**/*.spec.ts",
-      "src/**/*test.ts"
-    ]
+    }
   },
-  "bin": {}
+  "bin": {
+    "ibctl": "dist/cli/main.js"
+  }
 }
