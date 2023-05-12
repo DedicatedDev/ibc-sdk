@@ -1,0 +1,49 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  test:
+
+    runs-on: ubuntu-latest
+    env:
+      GOPATH: "/home/runner/work/polymerase/go"
+      LIGHT_CLIENTS_REPO_DIR: ${{ github.workspace }}
+      # TODO: this should be set but tests hang when it is
+      # RUN_REAL_CHAIN_TEST: 1
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Authenticate Docker
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.PACKAGES_TOKEN }}
+
+    - name: Build SDK
+      run: make
+
+    # TODO: enable, see https://github.com/polymerdao/polymerase/issues/491
+    #- name: Test SDK
+    #  working-directory: devkit
+    #  timeout-minutes: 20
+    #  run: make test
+
+    # TODO: here we should call just test-all instead but some tests will fail
+    #       on GH due to things like this:
+    # permission denied, scandir '/tmp/test-chainsets/run-20230306144747-viixr4v2d5/eth/gethDataDir/geth'
+
+    - name: Show logs
+      if: ${{ always() }}
+      run: |
+        date
+        docker ps -a
+        tail /tmp/devkit-cli-tests-*/run/*/* || true
