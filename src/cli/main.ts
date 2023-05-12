@@ -4,6 +4,7 @@ import { Command, InvalidArgumentError, Option } from 'commander'
 import * as winston from 'winston'
 import { EndpointInfo } from '../lib/dev/query'
 import * as commands from './commands'
+import path from 'path'
 
 function newLogger(level: string) {
   const timestampFormat = 'HH:mm:ss.SSS'
@@ -46,7 +47,7 @@ const program = new Command()
     new Option('-l, --log-level <level>', 'Log level').choices(['error', 'warn', 'info', 'verbose']).default('info')
   )
   .addOption(
-    new Option('-w, --workspace <workspace>', 'Working directory').default(process.cwd(), 'Current working directory')
+    new Option('-w, --workspace <workspace>', 'Working directory').default(path.join(process.cwd(), ".ibc-sdk"), 'Current working directory')
   )
 
 program
