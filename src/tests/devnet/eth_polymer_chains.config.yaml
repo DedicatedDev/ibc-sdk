@@ -1,0 +1,60 @@
+ChainSets:
+  - Name: "polymerase"
+    Type: "polymer"
+    Moniker: "polymerase"
+    Prefix: "polymerase"
+    Images:
+      - Repository: "ghcr.io/polymerdao/polymerase"
+        Tag: "latest"
+        Bin: "polymerased"
+    Accounts:
+      - Name: alice
+        Coins: ["20000token", "200000000stake"]
+      - Name: bob
+        Coins: ["10000token", "100000000stake"]
+      - Name: relayer
+        Mnemonic: "wait team asthma refuse situate crush kidney nature frown kid alpha boat engage test across cattle practice text olive level tag profit they veteran"
+        Coins: ["1234567token", "200000000stake"]
+      - Name: randomUser
+        Coins: ["0token"]
+      - Name: validatorRunner
+        Coins: ["150000000stake"]
+    Validator:
+      Name: validatorRunner
+      Staked: "100000000stake"
+  - Name: "eth"
+    Type: "ethereum"
+    Images:
+      - Repository: "ethereum/client-go"
+        Tag: "v1.10.26"
+        Bin: "geth"
+    Accounts:
+      Mnemonic: "develop test test test test only develop test test test test only"
+      Count: 5
+  - Name: "prysm"
+    Type: "ethereum2"
+    DependsOn: "eth"
+    Images:
+      - Label: "main"
+        Repository: "ghcr.io/polymerdao/prysm-beacon-chain"
+        Tag: "polymer-v0.0.1-debug"
+        Bin: "/app/cmd/beacon-chain/beacon-chain.runfiles/prysm/cmd/beacon-chain/beacon-chain_/beacon-chain"
+      - Label: "genesis"
+        Repository: "ghcr.io/polymerdao/prysmctl"
+        Tag: "polymer-v0.0.1-debug"
+        Bin: "/app/cmd/prysmctl/prysmctl.runfiles/prysm/cmd/prysmctl/prysmctl_/prysmctl"
+      - Label: "validator"
+        Repository: "ghcr.io/polymerdao/prysm-validator"
+        Tag: "polymer-v0.0.1-debug"
+        Bin: "/app/cmd/validator/validator.runfiles/prysm/cmd/validator/validator_/validator"
+Run:
+  WorkingDir: "/tmp/test-chainsets/run-*"
+  CleanupMode: reuse
+  Logger:
+    Level: debug
+    Transports:
+      - 'log'
+      - FileName: critial.log
+        Level: warn
+      - FileName: '-'
+        Level: verbose

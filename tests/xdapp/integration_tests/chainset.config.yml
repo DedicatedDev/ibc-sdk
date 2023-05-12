@@ -1,0 +1,96 @@
+ChainSets:
+  - Name: "eth"
+    Type: "ethereum"
+    Image:
+      Repository: "ethereum/client-go"
+      Tag: "v1.10.18"
+      Bin: "geth"
+    # Genesis:
+    Accounts:
+      Mnemonic: "develop test test test test only develop test test test test only"
+      Count: 10
+  - Name: "bsc"
+    Type: "bsc"
+    Image:
+      Repository: "ghcr.io/polymerdao/bsc"
+      Tag: "1.1.10"
+      Bin: "geth"
+    # Genesis:
+    Accounts:
+      Mnemonic: "develop test test test test only develop test test test test only"
+      Count: 5
+  - Name: "fantom"
+    Type: "fantom"
+    Image:
+      Repository: "ghcr.io/polymerdao/fantom"
+      Tag: "latest"
+      Bin: "/tmp/entrypoint.sh"
+    # Genesis:
+    Accounts:
+      Mnemonic: "develop test test test test only develop test test test test only"
+      Count: 2
+      Balance: 1234
+  - Name: "polygon"
+    Type: "polygon"
+    Image:
+      Repository: "0xpolygon/bor"
+      Tag: "0.2.16"
+      Bin: "bor"
+    # Genesis:
+    Accounts:
+      Mnemonic: "develop test test test test only develop test test test test only"
+      Count: 3
+      Balance: 2345
+  - Name: "avalanche"
+    Type: "avalanche"
+    Image:
+      Repository: "ghcr.io/polymerdao/avalanche"
+      Tag: "1.7.16"
+      Bin: "/avalanche/entrypoint.sh"
+    # Genesis:
+    Accounts:
+      Mnemonic: "develop test test test test only develop test test test test only"
+      Count: 3
+      # NanoAvax?
+      Balance: 2345
+  - Name: "polymerase"
+    Type: "cosmos"
+    Image:
+      Repository: "ghcr.io/polymerdao/polymerase"
+      Tag: "latest"
+      Bin: "polymerased"
+    Accounts:
+      - Name: alice
+        Coins: ["20000token", "200000000stake"]
+      - Name: bob
+        Coins: ["10000token", "100000000stake"]
+      - Name: relayer
+        Address: "polymerase1u24pwkz78sutr8ksc62z87ct7ug5pwvqhj2g09"
+        Coins: ["1234567token", "200000000stake"]
+      - Name: randomUser
+        Coins: ["0token"]
+      - Name: validatorRunner
+        Coins: ["150000000stake"]
+    Validator:
+      Name: validatorRunner
+      Staked: "100000000stake"
+
+
+Run:
+  # * is optional for timestamp and a random suffix, suitable for repeated runs
+  WorkingDir: "/tmp/test-chainsets/run-*"
+  # valid modes: ['all', 'debug', 'log'], default 'all'
+  CleanupMode: debug
+  Logger:
+    # valid levels: [deubg, info, warn, error]
+    Level: debug
+    # Colorize: false
+    # Transports can take a single str with the default log love above
+    # Transports: 'log'
+    Transports:
+      - 'log' # will use default level
+      - FileName: critial.log
+        Level: warn
+      # add console logger for debugging
+      - FileName: '-'
+        Level: verbose

@@ -1,0 +1,12 @@
+{
+  "name": "hardhat-project",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "hardhat": "^2.10.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.8.2",
+    "@polymerdao/ibc-sdk": "file:../../",
+    "zx-cjs": "^7.0.7-0"
+  }
+}
