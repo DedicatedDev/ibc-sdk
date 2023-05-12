@@ -96,9 +96,9 @@ export async function init(opts: InitOpts, log: winston.Logger) {
   const contractsConfig = self.dev.createContractsConfig(contractsDir)
   fs.writeFileSync(path.join(workspace, `${polyCoreContracts}.yaml`), contractsConfig, 'utf-8')
 
-  log.info('Workspace created at: %s', workspace)
-  log.info('Configuration file is available at: %s', configPath)
-  log.info('When ready, run: ibctl start --workspace %s', workspace)
+  log.info('workspace created at: %s', workspace)
+  log.info('configuration file is available at: %s', configPath)
+  log.info('when ready, run: ibctl start --workspace %s', workspace)
 }
 
 const thenClause = [
@@ -366,3 +366,4 @@ export async function tx(opts: WrapCommandsOpts & { tx: string }, log: winston.L
 
   throw new Error(`Cannot query transactions on chain type: ${chain.Type}`)
 }
+

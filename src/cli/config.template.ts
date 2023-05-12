@@ -89,7 +89,7 @@ ChainSets:
     Prefix: "wasm"
     Images:
       - Repository: "ghcr.io/polymerdao/wasm"
-        Tag: "ghcr.io/polymerdao/wasm:v0.40.0-rc.0-ibcx-noproof-1"
+        Tag: "v0.40.0-rc.0-ibcx-noproof-1"
         Bin: "wasmd"
     Accounts:
       - Name: bob

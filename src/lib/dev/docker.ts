@@ -15,7 +15,7 @@ const containerSchema = z.object({
   workDir: z.string().nullish(),
   entrypoint: z.string().nullish(),
   publishAllPorts: z.boolean().nullish().default(true),
-  label: z.string().nullish().default('<empty>')
+  label: z.string().nullish().default('org.polymerlabs.runner=ibc-sdk')
 })
 
 export type containerConfig = z.input<typeof containerSchema>
@@ -40,7 +40,7 @@ export async function newContainer(
     try {
       return await containerFromTag(parsed.imageRepoTag, logger)
     } catch {
-      logger.info("Couldn't find a running container. Will create a new one")
+      logger.info("couldn't find a running container. Will create a new one")
     }
   }
   const args = ['docker', 'container', 'run', '--log-driver', 'local', '--log-opt', 'mode=non-blocking']
@@ -72,14 +72,15 @@ export async function newContainer(
   if (parsed.args) {
     args.push(...parsed.args)
   }
+  logger.verbose(`creating container: ${args.map($.quote).join(' ')}`)
   const process = $`${args}`
   process.child?.unref()
   const out = await process
   const containerId = out.stdout.trim()
   if (containerId.length < 2) {
-    throw new Error(`Didn't get a valid container ID with args: ${args.map($.quote).join(' ')}`)
+    throw new Error(`didn't get a valid container ID with args: ${args.map($.quote).join(' ')}`)
   }
-  logger.verbose(`Created container with ${parsed.imageRepoTag}`)
+  logger.verbose(`created container with ${parsed.imageRepoTag}`)
   return new Container(containerId, logger)
 }
 
@@ -90,7 +91,7 @@ async function reuseContainer(filters: string[], logger: Logger): Promise<Contai
   const out = await $`${args}`
   const containerId = out.stdout.trim()
   if (containerId.length < 2) {
-    throw new Error(`Didn't get a valid container ID with args: ${args.map($.quote).join(' ')}`)
+    throw new Error(`didn't get a valid container ID with args: ${args.map($.quote).join(' ')}`)
   }
   return new Container(containerId, logger, true)
 }

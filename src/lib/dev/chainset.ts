@@ -226,11 +226,11 @@ export class RunningChainSets {
   async run() {
     const chainSetsConfig = this.resolveDependencies()
 
-    this.logger.info(`about to create ${this.config.ChainSets.length} running chains`)
+    this.logger.info(`initializing containers for ${this.config.ChainSets.length} chains`)
     let dependencyRuntime: NodeAccounts[] = []
     for (const chainConfigGroup of chainSetsConfig) {
       const promises = chainConfigGroup.map(async (chainConfig) => {
-        this.logger.info(`starting chain: ${chainConfig.Name}`)
+        this.logger.info(`initializing ${chainConfig.Name}`)
         const runningChain = await this.createRunningChain(chainConfig)
         await runningChain.start(dependencyRuntime)
         this.chainSet.set(chainConfig.Name, runningChain)
@@ -282,8 +282,7 @@ export class RunningChainSets {
         ).join(', ')}]`
       )
     }
-
-    this.logger.verbose(`host dir: ${containerDir}`)
+    this.logger.verbose(`creating chain of type ${chainConfig.Type}`)
     return await ChainConstructor(chainConfig, containerDir, this.config.Run.CleanupMode === 'reuse', this.logger)
   }
 }
