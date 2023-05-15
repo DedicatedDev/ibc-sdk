@@ -5,6 +5,7 @@ import * as winston from 'winston'
 import { EndpointInfo } from '../lib/dev/query'
 import * as commands from './commands'
 import path from 'path'
+import { homedir } from 'os'
 
 function newLogger(level: string) {
   const timestampFormat = 'HH:mm:ss.SSS'
@@ -40,6 +41,7 @@ const connectionOption = new Option(
     return previous.concat([current])
   })
 
+const defaultWorkspace = path.join(homedir(), ".ibc-sdk")
 const program = new Command()
   .helpOption('-h, --help', 'Display help command')
   .description('IBC SDK control')
@@ -47,7 +49,7 @@ const program = new Command()
     new Option('-l, --log-level <level>', 'Log level').choices(['error', 'warn', 'info', 'verbose']).default('info')
   )
   .addOption(
-    new Option('-w, --workspace <workspace>', 'Working directory').default(path.join(process.cwd(), ".ibc-sdk"), 'Current working directory')
+    new Option('-w, --workspace <workspace>', 'Working directory').default(defaultWorkspace, defaultWorkspace)
   )
 
 program
