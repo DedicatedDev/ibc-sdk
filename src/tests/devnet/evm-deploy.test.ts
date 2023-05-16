@@ -24,7 +24,7 @@ test('deploy contracts on chains from chainSet runobj', async (t) => {
   const { runObj, configObj: _ } = await self.dev.runChainSets(chainsetsConfig, logger)
 
   const contractsDir = path.resolve(__dirname, '..', '..', '..', 'tests', 'xdapp', 'artifacts', 'contracts')
-  const contractsConfig = self.dev.createContractsConfigStr(contractsDir)
+  const contractsConfig = self.dev.createContractsConfig(contractsDir)
   // start deploy contracts
   await self.dev.deployOnChainSets(contractsConfig, runObj, logger)
 

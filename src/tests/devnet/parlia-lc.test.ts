@@ -70,10 +70,9 @@ test.before(async (t) => {
     configs.runObj.ChainSets.filter((cs) => cs.Name === 'polymer')[0]
   )
   const contractsDir = path.resolve(__dirname, '..', '..', '..', 'tests', 'xdapp', 'artifacts', 'contracts')
-  const contractsConfig = self.dev.createContractsConfig(contractsDir)
   const dispatcherContract = await self.dev.deployVIBCCoreContractsOnChainSets(
     configs.runObj,
-    contractsConfig,
+    contractsDir,
     t.context.logger
   )
 

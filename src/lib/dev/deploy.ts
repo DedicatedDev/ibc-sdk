@@ -3,20 +3,17 @@ import * as winston from 'winston'
 import { utils } from './deps'
 import { z } from 'zod'
 import path from 'path'
-import { images, newContainer } from './docker'
+import { newContainer } from './docker'
 import {
-  ChainConfig,
   ChainSetsRunObj,
   contractByVmType,
   contractsArtifactsSchema,
   CosmosChainSet,
-  deployedChainSchema,
   DeployedContract,
   DeployedContractsMap,
   EvmChainSet,
   isCosmosChain,
-  isEvmChain,
-  VIBCCoreContractDeployment
+  isEvmChain
 } from './schemas'
 import { $, fs } from '../utils'
 import { Attribute, Event } from '@cosmjs/stargate'
@@ -47,38 +44,7 @@ export async function deployOnChainSets(
   }
 }
 
-/**
- * Deploy smart contracts on chains launched from chainSets config and return the address of the
- * vIBC Core Smart Contract on every EVM chain
- */
 export async function deployVIBCCoreContractsOnChainSets(
-  rawRunObj: string | object,
-  rawContractConfig: string | object,
-  logger: utils.Logger
-): Promise<VIBCCoreContractDeployment> {
-  logger.info('Deploying vIBC Smart Contracts...')
-  const runObj = typeof rawRunObj === 'object' ? rawRunObj : utils.readYaml(rawRunObj)
-  await deployOnChainSets(rawContractConfig, runObj, logger)
-
-  return await runObj.ChainSets.reduce(async (accumulator: Promise<VIBCCoreContractDeployment>, chain: ChainConfig) => {
-    if (isEvmChain(chain.Type)) {
-      // need to await on the accumulator since the reduce callback is async 🤯
-      const acc = await accumulator
-      const evmDeployedPath = path.join(runObj.Run.WorkingDir, chain.Name, 'deployed-contracts.json')
-      const deployedJson = JSON.parse(utils.fs.readFileSync(evmDeployedPath, 'utf8'))
-      const deployed = deployedChainSchema.parse(deployedJson.Deployed)
-      const dispatcherContract = deployed.Contracts.find((c: DeployedContract) => c.Name === 'Dispatcher.json')
-      if (dispatcherContract) {
-        acc[chain.Name] = { address: dispatcherContract.Address, abi: dispatcherContract.Abi ?? '[]' }
-      } else {
-        logger.warn(`Could not find Dispatcher.json deployment on chain '${chain.Name}'`)
-      }
-    }
-    return accumulator
-  }, Promise.resolve({}))
-}
-
-export async function deployCoreContractsOnChainSets(
   runtime: ChainSetsRunObj,
   contractsDir: string,
   log: winston.Logger
@@ -189,24 +155,6 @@ export function createContractsConfig(contractsDir: string) {
   if (contracts.length === 0) throw new Error(`Could not find any Smart Contract API definition in ${contractsDir}`)
 
   return contracts
-}
-
-export function createContractsConfigStr(contractsDir: string): string {
-  const contracts = createContractsConfig(contractsDir)
-
-  return utils.dumpYamlSafe({
-    ContractArtifacts: [
-      {
-        VmType: 'evm',
-        Contracts: contracts,
-        ArtifactsDir: contractsDir
-      }
-    ],
-    ChainClientImage: {
-      Repository: images.chain_client.repo,
-      Tag: images.chain_client.tag
-    }
-  })
 }
 
 async function deployEvmSmartContract(chain: EvmChainSet, scpath: string, scargs: string[]): Promise<DeployedContract> {
