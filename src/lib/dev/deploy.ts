@@ -44,30 +44,32 @@ export async function deployOnChainSets(
   }
 }
 
+/**
+ * Deploy smart contracts on chains launched from chainSets config and return the address of the
+ * PolyCore Smart Contract on every EVM chain
+ */
 export async function deployVIBCCoreContractsOnChainSets(
   runtime: ChainSetsRunObj,
   contractsDir: string,
   log: winston.Logger
 ): Promise<DeployedContractsMap> {
   const contractsConfig = self.dev.createContractsConfig(contractsDir)
-  const runPath = utils.path.join(runtime.Run.WorkingDir, 'run.json')
-  const artifactsPath = utils.path.join(runtime.Run.WorkingDir, '..', 'polycore-smart-contracts')
 
-  if (!fs.existsSync(runPath)) {
-    throw new Error(`could not read runtime file: ${runPath}`)
-  }
-
-  const deployedContracts: DeployedContractsMap = {}
+  // specify a list of contracts that have a constructor with arguments
   const contractsWithDeps: string[] = ['Dispatcher.json']
+  const deployedContracts: DeployedContractsMap = {}
 
+  // deploy smart contracts to EVM chains
   const chainSetsPromises = runtime.ChainSets.filter((chainSet) => isEvmChain(chainSet.Type)).map(async (chainSet) => {
+    // first deploy contracts with no dependencies
     for (const contractConfig of contractsConfig) {
       if (contractsWithDeps.includes(contractConfig.Name)) {
         continue
       }
-      const scpath = path.join(artifactsPath, contractConfig.Path)
+      const scpath = path.join(contractsDir, contractConfig.Path)
       try {
-        deployedContracts[contractConfig.Name] = await self.dev.deploySmartContract(
+        deployedContracts[chainSet.Name] = deployedContracts[chainSet.Name] ?? {}
+        deployedContracts[chainSet.Name][contractConfig.Name] = await self.dev.deploySmartContract(
           runtime,
           chainSet.Name,
           scpath,
@@ -79,21 +81,25 @@ export async function deployVIBCCoreContractsOnChainSets(
       }
     }
 
+    // define a func to deploy a contract with dependencies
     const deployDependentContract = async (contractName, scargs) => {
       const contractConfig = contractsConfig.find((c) => c.Name === contractName)
       if (!contractConfig) {
-        throw new Error(`Could not find ${contractName}'s contract in contractsConfig`)
+        throw new Error(`Could not find ${contractName}'s contract in ${contractConfig}`)
       }
 
-      const scpath = path.join(artifactsPath, contractConfig.Path)
+      const scpath = path.join(contractsDir, contractConfig.Path)
       return await self.dev.deploySmartContract(runtime, chainSet.Name, scpath, scargs, log)
     }
 
-    deployedContracts['Dispatcher.json'] = await deployDependentContract('Dispatcher.json', [
-      deployedContracts['Verifier.json'].Address
+    // deploy Dispatcher's contract
+    const dispatcherContract = await deployDependentContract('Dispatcher.json', [
+      deployedContracts[chainSet.Name]['Verifier.json'].Address
     ])
+    deployedContracts[chainSet.Name]['Dispatcher.json'] = dispatcherContract
   })
 
+  // wait until deployment is done on all evm chains
   await Promise.all(chainSetsPromises)
   return deployedContracts
 }
