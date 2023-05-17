@@ -83,14 +83,14 @@ test.serial('the start command starts stack', async (t) => {
   t.assert(runtime.Relayers.find((r) => r.Name === 'eth2-relayer'))
   t.assert(fs.existsSync(path.join(t.context.workspace, 'run', 'eth-exec-0', 'deployed-contracts.json')))
 
-  await $`grep -q -i error ${t.context.workspace}/run/vibc-relayer/std*.log`.then(
+  await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
     }
   )
 
-  await $`grep -q -i error ${t.context.workspace}/run/eth2-relayer/std*.log`.then(
+  await $`${t.context.cli} -w ${t.context.workspace} logs eth2-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in eth2 relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
@@ -158,8 +158,8 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
     Moniker: "juno"
     Prefix: "juno"
     Images:
-      - Repository: "ghcr.io/polymerdao/juno"
-        Tag: "latest"
+      - Repository: "ghcr.io/strangelove-ventures/heighliner/juno"
+        Tag: "v9.0.0"
         Bin: "junod"
     Accounts:
       - Name: bob
@@ -199,19 +199,19 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
 
   t.assert(fs.existsSync(path.join(t.context.workspace, 'run', 'eth-exec-0', 'deployed-contracts.json')))
 
-  await $`grep -q -i error ${t.context.workspace}/run/vibc-relayer/std*.log`.then(
+  await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
     }
   )
-  await $`grep -q -i error ${t.context.workspace}/run/eth2-relayer/std*.log`.then(
+  await $`${t.context.cli} -w ${t.context.workspace} logs eth2-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in eth2 relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
     }
   )
-  await $`grep -q -i error ${t.context.workspace}/run/ibc-relayer-polymer-0-juno/*.log`.then(
+  await $`${t.context.cli} -w ${t.context.workspace} logs ibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in ibc-relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
@@ -237,7 +237,7 @@ test.serial('the stop command resets the workspace', async (t) => {
   // run start on the stopped workspace again
   out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer-0:eth-exec-0'`
   t.assert(out.exitCode === 0)
-  await $`grep -q -i error ${t.context.workspace}/run/vibc-relayer/std*.log`.then(
+  await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)

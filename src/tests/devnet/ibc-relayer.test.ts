@@ -100,8 +100,8 @@ const gaiaConfig = `
     Moniker: "gaia"
     Prefix: "cosmos"
     Images:
-      - Repository: "ghcr.io/polymerdao/gaia"
-        Tag: "latest"
+      - Repository: "ghcr.io/strangelove-ventures/heighliner/gaia"
+        Tag: "v7.0.3"
         Bin: "gaiad"
     Accounts:
       - Name: bob
@@ -122,8 +122,8 @@ const junoConfig = `
     Moniker: "juno"
     Prefix: "juno"
     Images:
-      - Repository: "ghcr.io/polymerdao/juno"
-        Tag: "latest"
+      - Repository: "ghcr.io/strangelove-ventures/heighliner/juno"
+        Tag: "v9.0.0"
         Bin: "junod"
     Accounts:
       - Name: charlie

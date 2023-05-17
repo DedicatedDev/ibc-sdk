@@ -10,7 +10,7 @@ const test = anyTest as TestFn<{
 }>
 
 test.before(async (t) => {
-  const logLevel: any = process.env.TEST_LOG_LEVEL ?? 'debug'
+  const logLevel: any = process.env.TEST_LOG_LEVEL ?? 'verbose'
   t.context.logger = utils.createLogger({ Level: logLevel, Colorize: true })
   t.context.relayer = await self.dev.polyrelayer.PolyRelayer.create('/tmp', t.context.logger)
 })
@@ -18,7 +18,7 @@ test.before(async (t) => {
 test.beforeEach(async (t) => {
   t.context.config = utils.readYaml(`# this is a comment
 global:
-    polling-idle-time: 60000
+    polling-idle-time: 10000
 
 chains:
     bsc-4:
@@ -36,7 +36,7 @@ chains:
     polymerase-2:
         chain-type: cosmos
         rpc-url: http://api.polymerdao.org:80
-        account-prefix: unsetPrefix
+        account-prefix: polymer
         account:
           Name: 'alice'
           Address: 'polymerase1lmm335gqcs82uearjcyt866756h6vae5qy8w9l'
@@ -57,6 +57,7 @@ paths:
       {
         Name: 'polymerase-2',
         Type: 'cosmos',
+        Prefix: 'polymer',
         Images: [
           {
             Repository: 'ghcr.io/polymerdao/polymerase',
