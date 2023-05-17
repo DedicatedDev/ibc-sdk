@@ -63,12 +63,12 @@ ChainSets:
 
   - Name: "polymer-0"
     Type: "polymer"
-    Moniker: "polymerase"
-    Prefix: "polymerase"
+    Moniker: "polymer"
+    Prefix: "polymer"
     Images:
       - Repository: "${images.polymer.repo}"
         Tag: "${images.polymer.tag}"
-        Bin: "polymerased"
+        Bin: "polymerd"
     Accounts:
       - Name: alice
         Coins: ["20000token", "200000000stake"]

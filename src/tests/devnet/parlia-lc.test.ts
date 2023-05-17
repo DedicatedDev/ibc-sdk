@@ -11,7 +11,7 @@ const test = anyTest as TestFn<{
   logger: utils.Logger
   fullConfig: self.dev.schemas.ChainSetsRunConfig
   bscRunConfig: self.dev.schemas.EvmChainSet
-  polymeraseRunConfig: self.dev.schemas.CosmosChainSet
+  polymerRunConfig: self.dev.schemas.CosmosChainSet
   signerClient: self.cosmos.client.SigningStargateClient
   queryClient: self.cosmos.client.QueryClient & self.cosmos.client.PolyIbcExtension & BankExtension & IbcExtension
   signerAccount: self.dev.schemas.CosmosAccounts[0]
@@ -63,11 +63,11 @@ const createAndUpdateClientWithExistingHeaders = test.macro(
 test.before(async (t) => {
   const logLevel: any = process.env.TEST_LOG_LEVEL ?? 'debug'
   t.context.logger = utils.createLogger({ Level: logLevel, Colorize: true })
-  const chainSetConfig = getConfigs(['bsc', 'polymerase'])
+  const chainSetConfig = getConfigs(['bsc', 'polymer'])
   const configs = await self.dev.runChainSets(chainSetConfig, t.context.logger)
   t.context.bscRunConfig = configs.runObj.ChainSets.filter((cs) => cs.Name === 'bsc')[0] as self.dev.schemas.EvmChainSet
-  t.context.polymeraseRunConfig = self.dev.schemas.chainSetSchema.cosmos.parse(
-    configs.runObj.ChainSets.filter((cs) => cs.Name === 'polymerase')[0]
+  t.context.polymerRunConfig = self.dev.schemas.chainSetSchema.cosmos.parse(
+    configs.runObj.ChainSets.filter((cs) => cs.Name === 'polymer')[0]
   )
   const contractsDir = path.resolve(__dirname, '..', '..', '..', 'tests', 'xdapp', 'artifacts', 'contracts')
   const contractsConfig = self.dev.createContractsConfig(contractsDir)
@@ -78,10 +78,10 @@ test.before(async (t) => {
   )
 
   t.truthy(dispatcherContract.bsc, 'Dispatcher contract was never deployed')
-  const polymeraseRpc = t.context.polymeraseRunConfig.Nodes[0].RpcHost
-  t.context.signerAccount = t.context.polymeraseRunConfig.Accounts[0]
-  t.context.signerClient = await createSignerClient(t.context.signerAccount, polymeraseRpc, t.context.logger)
-  const tmClient = await self.cosmos.client.newTendermintClient(polymeraseRpc)
+  const polymerRpc = t.context.polymerRunConfig.Nodes[0].RpcHost
+  t.context.signerAccount = t.context.polymerRunConfig.Accounts[0]
+  t.context.signerClient = await createSignerClient(t.context.signerAccount, polymerRpc, t.context.logger)
+  const tmClient = await self.cosmos.client.newTendermintClient(polymerRpc)
   t.context.queryClient = self.cosmos.client.QueryClient.withExtensions(
     tmClient,
     setupBankExtension,
@@ -108,7 +108,7 @@ test('Read Existing BSC Block Data', async (t) => {
 })
 
 test.serial(
-  'Create Polymerase Chain w/Parlia LC and use existing BSC Headers',
+  'Create Polymer Chain w/Parlia LC and use existing BSC Headers',
   createAndUpdateClientWithExistingHeaders,
   { chain_id: 'existing-1', start: 0, take: 1, update_start: 1, update_take: 1, real_data: false },
   { newClient: true, updateSuccess: true }
@@ -143,7 +143,7 @@ test.serial(
 )
 
 test.serial(
-  'Create Fresh BSC Chain and Polymerase Chain with Parlia LC',
+  'Create Fresh BSC Chain and Polymer Chain with Parlia LC',
   createAndUpdateClientWithExistingHeaders,
   { chain_id: 'new-bsc', start: 0, take: 1, update_start: 1, update_take: 1, real_data: true },
   { newClient: true, updateSuccess: true }
@@ -154,7 +154,7 @@ async function createAndConfirmClient(
     logger: utils.Logger
     fullConfig: self.dev.schemas.ChainSetsRunConfig
     bscRunConfig: self.dev.schemas.EvmChainSet
-    polymeraseRunConfig: self.dev.schemas.CosmosChainSet
+    polymerRunConfig: self.dev.schemas.CosmosChainSet
     signerClient: self.cosmos.client.SigningStargateClient
     queryClient: self.cosmos.client.QueryClient & self.cosmos.client.PolyIbcExtension & BankExtension & IbcExtension
     signerAccount: self.dev.schemas.CosmosAccounts[0]
@@ -209,7 +209,7 @@ async function updateAndConfirmClient(
     logger: utils.Logger
     fullConfig: self.dev.schemas.ChainSetsRunConfig
     bscRunConfig: self.dev.schemas.EvmChainSet
-    polymeraseRunConfig: self.dev.schemas.CosmosChainSet
+    polymerRunConfig: self.dev.schemas.CosmosChainSet
     signerClient: self.cosmos.client.SigningStargateClient
     queryClient: self.cosmos.client.QueryClient & self.cosmos.client.PolyIbcExtension & BankExtension & IbcExtension
     signerAccount: self.dev.schemas.CosmosAccounts[0]

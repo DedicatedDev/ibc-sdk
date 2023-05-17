@@ -20,18 +20,18 @@ test.before((t) => {
   t.context = { logger }
 })
 
-const Relayer = { address: 'polymerase1u24pwkz78sutr8ksc62z87ct7ug5pwvqhj2g09', token: '1234567', stake: '200000000' }
+const Relayer = { address: 'polymer1u24pwkz78sutr8ksc62z87ct7ug5pwvqhj2g09', token: '1234567', stake: '200000000' }
 
-const CosmosChainSetConfig = `# applicable to all cosmos chains; use polymerase
+const CosmosChainSetConfig = `# applicable to all cosmos chains; use polymer
 ChainSets:
-  - Name: "polymerase"
+  - Name: "polymer"
     Type: "polymer"
-    Moniker: "polymerase"
-    Prefix: "polymerase"
+    Moniker: "polymer"
+    Prefix: "polymer"
     Images:
       - Repository: "${images.polymer.repo}"
         Tag: "${images.polymer.tag}"
-        Bin: "polymerased"
+        Bin: "polymerd"
     Accounts:
       - Name: alice
         Coins: ["20000token", "200000000stake"]
@@ -98,7 +98,7 @@ test('start a comos chain from docker container', async (t) => {
   // Test with cosmjs client
   const testWithComsjs = async () => {
     const client = await cosmos.client.StargateClient.connect(chainRpc)
-    t.deepEqual(await client.getChainId(), 'polymerase')
+    t.deepEqual(await client.getChainId(), 'polymer')
     assertChainStatus(await queryClient.bank.allBalances(Relayer.address))
 
     const ibcConnections = await queryClient.ibc.connection.allConnections()
@@ -126,7 +126,7 @@ test('start a comos chain from docker container', async (t) => {
   // create a signer client from a given account.
   // The account `sender` must have an mnemonic.
   const createSignerClient = async (sender: typeof chain.Accounts[0]) => {
-    const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(sender.Mnemonic!, { prefix: 'polymerase' })
+    const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(sender.Mnemonic!, { prefix: 'polymer' })
     logger.verbose(`sender address: ${sender.Address}, mnemonic: ${sender.Mnemonic}`)
     const signerClient = await cosmos.client.SigningStargateClient.createWithSigner(
       await self.cosmos.client.newTendermintClient(chainRpc),

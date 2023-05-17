@@ -23,7 +23,7 @@ export async function createSignerClient(
   chainRpc: string,
   logger: utils.Logger
 ): Promise<self.cosmos.client.SigningStargateClient> {
-  const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(sender.Mnemonic!, { prefix: 'polymerase' })
+  const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(sender.Mnemonic!, { prefix: 'polymer' })
   logger.verbose(`sender address: ${sender.Address}, mnemonic: ${sender.Mnemonic}`)
   const signerClient = await self.cosmos.client.SigningStargateClient.createWithSigner(
     await self.cosmos.client.newTendermintClient(chainRpc),

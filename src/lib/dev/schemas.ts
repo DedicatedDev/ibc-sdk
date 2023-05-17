@@ -11,7 +11,7 @@ export {
 } from './accounts_config.js'
 export { RelayerConfigSchema, RelayerConfig } from './relayer.js'
 
-const EvmChains = ['ethereum', 'bsc', 'fantom', 'polygon'] as const
+const EvmChains = ['ethereum', 'bsc'] as const
 const CosmosChains = ['cosmos', 'polymer'] as const
 const NoneChains = ['ethereum2'] as const
 
@@ -165,7 +165,7 @@ export const deployedChainSchema = z.object({
   Contracts: z.array(deployedContractSchema)
 })
 
-export const polyCoreContractsSchema = z.record(
+export const vibcCoreContractsSchema = z.record(
   z.string().min(1),
   z.object({
     address: z.string().min(1),
@@ -187,6 +187,6 @@ export type CosmosChainSet = z.infer<typeof chainSetSchema.cosmos>
 export type DeployedChain = z.infer<typeof deployedChainSchema>
 
 export type DeployedContract = z.infer<typeof deployedContractSchema>
-export type PolyCoreContractDeployment = z.infer<typeof polyCoreContractsSchema>
+export type VIBCCoreContractDeployment = z.infer<typeof vibcCoreContractsSchema>
 export type RunningNodeConfig = z.infer<typeof runningNodeConfigSchema>
 export type ImageConfigSchema = z.infer<typeof imageConfigSchema>

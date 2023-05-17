@@ -12,7 +12,7 @@ import { Any } from './_generated/google/protobuf/any'
 export { polyibc }
 export { MsgCreateClient } from './_generated/polyibc/core/tx'
 
-export const chainPrefix = 'polymerase'
+export const chainPrefix = 'polymer'
 
 export interface PolyIbcExtension {
   readonly polyibc: Query

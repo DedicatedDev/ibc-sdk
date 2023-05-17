@@ -80,7 +80,7 @@ test.serial('the start command starts stack', async (t) => {
   )
   t.assert(runtime.Relayers.length === 2)
   t.assert(runtime.Relayers.find((r) => r.Name === 'vibc-relayer'))
-  t.assert(runtime.Relayers.find((r) => r.Name === 'eth2-relayer'))
+  t.assert(runtime.Relayers.find((r) => r.Name === 'eth-relayer'))
   t.assert(fs.existsSync(path.join(t.context.workspace, 'run', 'eth-exec-0', 'deployed-contracts.json')))
 
   await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
@@ -90,8 +90,8 @@ test.serial('the start command starts stack', async (t) => {
     }
   )
 
-  await $`${t.context.cli} -w ${t.context.workspace} logs eth2-relayer | grep -q -i error`.then(
-    () => t.fail('grep should not find errors in eth2 relayer logs'),
+  await $`${t.context.cli} -w ${t.context.workspace} logs eth-relayer | grep -q -i error`.then(
+    () => t.fail('grep should not find errors in eth relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
     }
@@ -194,7 +194,7 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
 
   t.assert(runtime.Relayers.length === 3)
   t.assert(runtime.Relayers.find((r) => r.Name === 'vibc-relayer'))
-  t.assert(runtime.Relayers.find((r) => r.Name === 'eth2-relayer'))
+  t.assert(runtime.Relayers.find((r) => r.Name === 'eth-relayer'))
   t.assert(runtime.Relayers.find((r) => r.Name === 'ibc-relayer-polymer-0-juno'))
 
   t.assert(fs.existsSync(path.join(t.context.workspace, 'run', 'eth-exec-0', 'deployed-contracts.json')))
@@ -205,8 +205,8 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
       t.assert(reject.exitCode === 1)
     }
   )
-  await $`${t.context.cli} -w ${t.context.workspace} logs eth2-relayer | grep -q -i error`.then(
-    () => t.fail('grep should not find errors in eth2 relayer logs'),
+  await $`${t.context.cli} -w ${t.context.workspace} logs eth-relayer | grep -q -i error`.then(
+    () => t.fail('grep should not find errors in eth relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
     }

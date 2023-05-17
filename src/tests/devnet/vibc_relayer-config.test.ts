@@ -4,7 +4,7 @@ import anyTest, { TestFn } from 'ava'
 
 const test = anyTest as TestFn<{
   logger: self.utils.Logger
-  relayer: self.dev.polyrelayer.PolyRelayer
+  relayer: self.dev.vibcRelayer.VIBCRelayer
   config: any
   run: any
 }>
@@ -12,7 +12,7 @@ const test = anyTest as TestFn<{
 test.before(async (t) => {
   const logLevel: any = process.env.TEST_LOG_LEVEL ?? 'verbose'
   t.context.logger = utils.createLogger({ Level: logLevel, Colorize: true })
-  t.context.relayer = await self.dev.polyrelayer.PolyRelayer.create('/tmp', t.context.logger)
+  t.context.relayer = await self.dev.vibcRelayer.VIBCRelayer.create('/tmp', t.context.logger)
 })
 
 test.beforeEach(async (t) => {
@@ -33,21 +33,21 @@ chains:
           PrivateKey: '0xbaeb0652f541c24abdf69216fec5136bda1a013dea71ab24bb3b477143efa9ef'
           Balance: 1000
 
-    polymerase-2:
+    polymer-2:
         chain-type: cosmos
         rpc-url: http://api.polymerdao.org:80
         account-prefix: polymer
         account:
           Name: 'alice'
-          Address: 'polymerase1lmm335gqcs82uearjcyt866756h6vae5qy8w9l'
+          Address: 'polymer1lmm335gqcs82uearjcyt866756h6vae5qy8w9l'
           Coins: ["1000000000000000000stake"]
 paths:
-    bsc-4-polymerase-2:
+    bsc-4-polymer-2:
         src:
             chain-id: bsc-4
             client-id: client-id-src
         dst:
-            chain-id: polymerase-2
+            chain-id: polymer-2
             client-id: client-id-dst
         src-channel-filter: # TODO
 `)
@@ -55,14 +55,14 @@ paths:
   t.context.run = {
     ChainSets: [
       {
-        Name: 'polymerase-2',
+        Name: 'polymer-2',
         Type: 'cosmos',
         Prefix: 'polymer',
         Images: [
           {
-            Repository: 'ghcr.io/polymerdao/polymerase',
+            Repository: 'ghcr.io/polymerdao/polymer',
             Tag: 'latest',
-            Bin: 'polymerased'
+            Bin: 'polymerd'
           }
         ],
         Nodes: [
@@ -74,7 +74,7 @@ paths:
         Accounts: [
           {
             Name: 'alice',
-            Address: 'polymerase1lmm335gqcs82uearjcyt866756h6vae5qy8w9l',
+            Address: 'polymer1lmm335gqcs82uearjcyt866756h6vae5qy8w9l',
             Coins: ['1000000000000000000stake']
           }
         ]
@@ -111,7 +111,7 @@ paths:
   }
 })
 
-test('polyrelayer parses valid config', async (t) => {
+test('vibc-relayer parses valid config', async (t) => {
   const got = await t.context.relayer.setup(t.context.config)
   t.assert(got.exitCode === 0)
 
@@ -120,43 +120,43 @@ test('polyrelayer parses valid config', async (t) => {
   t.deepEqual(JSON.parse(out.stdout), t.context.config)
 })
 
-test('polyrelayer validates all src paths refer to chain ids in the chain set', async (t) => {
-  t.context.config.paths['bsc-4-polymerase-2'].src['chain-id'] = 'foo-1'
+test('vibc-relayer validates all src paths refer to chain ids in the chain set', async (t) => {
+  t.context.config.paths['bsc-4-polymer-2'].src['chain-id'] = 'foo-1'
   const got = await t.context.relayer.setup(t.context.config)
 
   t.assert(got.exitCode === 1)
-  const err = "Undefined chain ID 'foo-1' used in 'paths.bsc-4-polymerase-2.src.chain-id'"
+  const err = "Undefined chain ID 'foo-1' used in 'paths.bsc-4-polymer-2.src.chain-id'"
   t.assert(got.stderr.includes(err))
 })
 
-test('polyrelayer validates all dst paths refer to chain ids in the chain set', async (t) => {
-  t.context.config.paths['bsc-4-polymerase-2'].dst['chain-id'] = 'foo-1'
+test('vibc-relayer validates all dst paths refer to chain ids in the chain set', async (t) => {
+  t.context.config.paths['bsc-4-polymer-2'].dst['chain-id'] = 'foo-1'
   const got = await t.context.relayer.setup(t.context.config)
 
   t.assert(got.exitCode === 1)
-  const err = "Undefined chain ID 'foo-1' used in 'paths.bsc-4-polymerase-2.dst.chain-id'"
+  const err = "Undefined chain ID 'foo-1' used in 'paths.bsc-4-polymer-2.dst.chain-id'"
   t.assert(got.stderr.includes(err))
 })
 
-test('polyrelayer validates dst and src paths are different type', async (t) => {
-  t.context.config.chains['bsc-4']['chain-type'] = t.context.config.chains['polymerase-2']['chain-type']
+test('vibc-relayer validates dst and src paths are different type', async (t) => {
+  t.context.config.chains['bsc-4']['chain-type'] = t.context.config.chains['polymer-2']['chain-type']
   const got = await t.context.relayer.setup(t.context.config)
 
   t.assert(got.exitCode === 1)
-  const err = "Path 'bsc-4-polymerase-2' src and dst of same type: 'cosmos'"
+  const err = "Path 'bsc-4-polymer-2' src and dst of same type: 'cosmos'"
   t.assert(got.stderr.includes(err))
 })
 
-test('polyrelayer validates dispatcher contract chain ids', (t) => {
+test('vibc-relayer validates dispatcher contract chain ids', (t) => {
   const contracts = { foo: { address: '0x338fE7f3844408fe50EF618d0DBC3C74203326F0', abi: '[]' } }
 
-  const error = t.throws(() => t.context.relayer.config(t.context.run, contracts, [['bsc-4', 'polymerase-2']]))
+  const error = t.throws(() => t.context.relayer.config(t.context.run, contracts, [['bsc-4', 'polymer-2']]))
   t.is(error?.message, 'Invalid dispatcher contract configuration: unknown chain foo')
 })
 
-test('polyrelayer produces config from runObj', async (t) => {
+test('vibc-relayer produces config from runObj', async (t) => {
   const contracts = { 'bsc-4': { address: '0x338fE7f3844408fe50EF618d0DBC3C74203326F0', abi: '[]' } }
-  const config = t.context.relayer.config(t.context.run, contracts, [['bsc-4', 'polymerase-2']])
+  const config = t.context.relayer.config(t.context.run, contracts, [['bsc-4', 'polymer-2']])
   const got = await t.context.relayer.setup(config)
   t.assert(got.exitCode === 0)
 

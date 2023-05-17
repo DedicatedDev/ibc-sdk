@@ -7,22 +7,22 @@ import {
   CosmosChainSet,
   isCosmosChain,
   isEvmChain,
-  PolyCoreContractDeployment,
+  VIBCCoreContractDeployment,
   RelayerRunObj
 } from './schemas'
 
-export class PolyRelayer {
+export class VIBCRelayer {
   container: Container
   logger: winston.Logger
 
-  private readonly binary = '/polyrelayer/polyrelayer'
+  private readonly binary = '/vibc-relayer/vibc-relayer'
 
   private constructor(container: Container, logger: winston.Logger) {
     this.logger = logger
     this.container = container
   }
 
-  static async create(workDir: string, logger: winston.Logger): Promise<PolyRelayer> {
+  static async create(workDir: string, logger: winston.Logger): Promise<VIBCRelayer> {
     const containerDir = utils.ensureDir(utils.path.join(workDir, 'vibc-relayer'))
     const relayerLogger = utils.createLogger({
       Level: logger.level as any,
@@ -38,12 +38,12 @@ export class PolyRelayer {
     }
     const container = await newContainer(relayerDockerConfig, relayerLogger)
     logger.verbose(`host dir: ${containerDir}`)
-    return new PolyRelayer(container, relayerLogger)
+    return new VIBCRelayer(container, relayerLogger)
   }
 
-  static async reuse(runtime: RelayerRunObj, logger: winston.Logger): Promise<PolyRelayer> {
+  static async reuse(runtime: RelayerRunObj, logger: winston.Logger): Promise<VIBCRelayer> {
     const container = await containerFromId(runtime.ContainerId, logger)
-    return new PolyRelayer(container, logger)
+    return new VIBCRelayer(container, logger)
   }
 
   async events(
@@ -84,7 +84,7 @@ export class PolyRelayer {
   /// TODO add schema for returning value
   public config(
     runObj: ChainSetsRunObj,
-    dispatcherContracts: PolyCoreContractDeployment,
+    dispatcherContracts: VIBCCoreContractDeployment,
     paths: string[][],
     configSettings: any = {}
   ): any {
@@ -103,7 +103,7 @@ export class PolyRelayer {
 
   private createConfigObject(
     runObj: ChainSetsRunObj,
-    dispatcherContracts: PolyCoreContractDeployment,
+    dispatcherContracts: VIBCCoreContractDeployment,
     paths: string[][],
     configSettings: any = {}
   ): any {

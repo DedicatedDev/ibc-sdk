@@ -10,8 +10,6 @@ import {
 } from './schemas.js'
 import { RunningCosmosChain } from './cosmos_chain.js'
 import { NodeAccounts, RunningChain, RunningChainCreator } from './running_chain.js'
-import { RunningFantomChain } from './fantom_chain.js'
-import { RunningPolygonChain } from './polygon_chain.js'
 import { fs } from '../utils'
 import { RunningPrysmChain } from './prysm_chain'
 
@@ -143,9 +141,6 @@ export class RunningChainSets {
   // of chain names. It's "reverse" because we care more about the chains don't depend
   // on anything so those are at the top of the tree. The chains at the top of the tree
   // are the ones started first.
-  //
-  // A typical output could be [ [ polymerase, eth1 ], [ eth2 ] ], which means:
-  /// "you can simultaneously start polymerase and eth1 first and then eth2"
   //
   // Considering this real tree where D depends on B which depends on A and so on...
   //   A -> B -> D

@@ -15,7 +15,7 @@ const mnemonic =
   'frown kid alpha boat engage test across cattle practice ' +
   'text olive level tag profit they veteran'
 
-const configPrefix = `# applicable to all cosmos chains; use polymerase
+const configPrefix = `# applicable to all cosmos chains; use polymer
 ChainSets:
 `
 
@@ -67,14 +67,14 @@ const ibcConnectionsTest = test.macro(async (t, config: string) => {
 })
 
 const polymerConfig = `
-  - Name: "polymerase"
+  - Name: "polymer"
     Type: "polymer"
-    Moniker: "polymerase"
-    Prefix: "polymerase"
+    Moniker: "polymer"
+    Prefix: "polymer"
     Images:
       - Repository: "${images.polymer.repo}"
         Tag: "${images.polymer.tag}"
-        Bin: "polymerased"
+        Bin: "polymerd"
     Accounts:
       - Name: alice
         Coins: ["20000token", "200000000stake"]

@@ -2,13 +2,13 @@ import { z } from 'zod'
 import { utils } from './deps'
 import { Container, containerFromId, newContainer, images } from './docker'
 import * as winston from 'winston'
-import { ChainSetsRunObj, PolyCoreContractDeployment, RelayerRunObj } from './schemas'
+import { ChainSetsRunObj, VIBCCoreContractDeployment, RelayerRunObj } from './schemas'
 import path from 'path'
 import { $, ProcessOutput } from 'zx-cjs'
 import { fs } from '../utils'
 import { Writable } from 'stream'
 
-export const Eth2RelayerConfigSchema = z.object({
+export const EthRelayerConfigSchema = z.object({
   consensusHostUrl: z.string().min(1),
   executionHostUrl: z.string().min(1),
   ibcCoreAddress: z.string().min(1),
@@ -22,16 +22,16 @@ export const Eth2RelayerConfigSchema = z.object({
   ethcontainer: z.string()
 })
 
-export type Eth2RelayerConfig = z.infer<typeof Eth2RelayerConfigSchema>
+export type EthRelayerConfig = z.infer<typeof EthRelayerConfigSchema>
 
-export class Eth2Relayer {
+export class EthRelayer {
   container: Container
-  config: Eth2RelayerConfig
+  config: EthRelayerConfig
   logger: winston.Logger
   containerDir: string
-  private readonly cmdPrefix = '/relayer/vibc-eth2-relayer'
+  private readonly cmdPrefix = '/relayer/eth-relayer'
 
-  private constructor(container: Container, config: Eth2RelayerConfig, containerDir: string, logger: winston.Logger) {
+  private constructor(container: Container, config: EthRelayerConfig, containerDir: string, logger: winston.Logger) {
     this.container = container
     this.containerDir = containerDir
     this.config = config
@@ -40,10 +40,10 @@ export class Eth2Relayer {
 
   static async create(
     runObj: ChainSetsRunObj,
-    dispatcherContracts: PolyCoreContractDeployment,
+    dispatcherContracts: VIBCCoreContractDeployment,
     paths: string[],
     logger: winston.Logger
-  ): Promise<Eth2Relayer> {
+  ): Promise<EthRelayer> {
     const [src, dst] = paths
 
     const eth1 = runObj.ChainSets.find((c) => c.Name === src)
@@ -71,7 +71,7 @@ export class Eth2Relayer {
       ethcontainer: eth1.Nodes[0].ContainerId
     }
 
-    const containerDir = utils.ensureDir(utils.path.join(runObj.Run.WorkingDir, 'eth2-relayer'))
+    const containerDir = utils.ensureDir(utils.path.join(runObj.Run.WorkingDir, 'eth-relayer'))
     const relayerLogger = utils.createLogger({
       Level: logger.level as any,
       Transports: [utils.path.join(containerDir, 'log')]
@@ -92,9 +92,9 @@ export class Eth2Relayer {
     fs.writeFileSync(path.join(containerDir, 'abi.json'), config.ibcCoreAbi, { encoding: 'utf-8' })
 
     // TODO: remove this once the relayer won't need to access the accounts in polymer home dir
-    await $`docker cp ${poly.Nodes[0].ContainerId}:/home/heighliner/.polymerase /tmp`
-    await $`docker cp /tmp/.polymerase ${container.containerId}:/tmp/polymer-home`
-    await $`rm -rf /tmp/.polymerase`
+    await $`docker cp ${poly.Nodes[0].ContainerId}:/home/heighliner/.polymer /tmp`
+    await $`docker cp /tmp/.polymer ${container.containerId}:/tmp/polymer-home`
+    await $`rm -rf /tmp/.polymer`
 
     // TODO: this is horribly hacky. The altair lc running on polymer expects to find a random config file
     //       with the smart contract abi and the dispatcher address. So, we are adding that file here.
@@ -155,11 +155,11 @@ export class Eth2Relayer {
       path.join('/tmp', 'abi.json'),
       '--router-host',
       this.config.routerHostUrl,
-      '--polymerase-rpc-addr',
+      '--polymer-rpc-addr',
       this.config.rpcAddressUrl,
-      '--polymerase-account',
+      '--polymer-account',
       this.config.accountName,
-      '--polymerase-home',
+      '--polymer-home',
       '/tmp/polymer-home'
     ]
     if (this.config.localDevNet) rawCmds.push('--local-dev-net')
@@ -185,7 +185,7 @@ export class Eth2Relayer {
 
   public runtime(): RelayerRunObj {
     return {
-      Name: 'eth2-relayer',
+      Name: 'eth-relayer',
       ContainerId: this.container.containerId,
       Configuration: this.config
     }

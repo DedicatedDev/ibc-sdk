@@ -34,7 +34,7 @@ async function getChannelsFrom(t: any, chain: string) {
   return utils.readYamlText(out.stdout.trim())
 }
 
-test('cli end to end: eth2 <-> polymer <-> wasm', async (t) => {
+test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert((await runCommand(t, 'init')).exitCode === 0)
   t.assert(
     (await runCommand(t, 'start', '-c', 'wasm-0:polymer-0', '-c', 'polymer-0:eth-exec-0', '-c', 'eth-exec-0:polymer-0'))

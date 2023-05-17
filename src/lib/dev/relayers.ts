@@ -1,9 +1,9 @@
 import winston from 'winston'
 import { ChainSetsRunObj, isCosmosChain, isEvmChain, PolyCoreContractDeployment, RelayerRunObj } from './schemas'
 import { CosmosAccount, CosmosAccounts } from './accounts_config.js'
-import { PolyRelayer } from './poly_relayer'
+import { VIBCRelayer } from './vibc_relayer'
 import * as self from '../../lib/index.js'
-import { Eth2Relayer } from './eth2_relayer.js'
+import { EthRelayer } from './eth_relayer.js'
 
 function findRelayerAccount(runtime: ChainSetsRunObj, src: string, dst: string): CosmosAccount | undefined {
   for (const chain of runtime.ChainSets) {
@@ -56,13 +56,13 @@ async function setupVIbcRelayer(
   log: winston.Logger
 ) {
   log.info(`starting vibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
-  const relayer = await PolyRelayer.create(runtime.Run.WorkingDir, log)
+  const relayer = await VIBCRelayer.create(runtime.Run.WorkingDir, log)
   const relayerConfig = relayer.config(runtime, dispatcherContracts, paths)
   let out = await relayer.setup(relayerConfig)
-  if (out.exitCode !== 0) throw new Error(`Could not setup the polyrelayer: ${out.stderr}`)
+  if (out.exitCode !== 0) throw new Error(`Could not setup the vibc-relayer: ${out.stderr}`)
 
   out = await relayer.run()
-  if (out.exitCode !== 0) throw new Error(`Could not run the polyrelayer: ${out.stderr}`)
+  if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
 
   runtime.Relayers.push(await relayer.runtime())
   log.info('vibc-relayer started')
@@ -74,13 +74,13 @@ async function setupEth2Relayer(
   paths: string[],
   log: winston.Logger
 ) {
-  log.info(`starting eth2-relayer with path ${paths[0]} -> ${paths[1]}`)
-  const relayer = await Eth2Relayer.create(runtime, dispatcherContracts, paths, log)
+  log.info(`starting vibc-relayer with path ${paths[0]} -> ${paths[1]}`)
+  const relayer = await EthRelayer.create(runtime, dispatcherContracts, paths, log)
   const out = await relayer.run()
-  if (out.exitCode !== 0) throw new Error(`Could not run the polyrelayer: ${out.stderr}`)
+  if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
 
   runtime.Relayers.push(relayer.runtime())
-  log.info('eth2-relayer started')
+  log.info('vibc-relayer started')
 }
 
 export type RelayingPaths = {
@@ -163,8 +163,8 @@ export async function createLightClient(runtime: RelayerRunObj, path: string, lc
   if (!runtime.Configuration.chains[src]) throw new Error(`Invalid source path end: unknown chain ${src}`)
   if (!runtime.Configuration.chains[dst]) throw new Error(`Invalid destination path end: unknown chain ${dst}`)
 
-  const polyrelayer = await PolyRelayer.reuse(runtime, log)
-  const out = await polyrelayer.createLightClient(src, dst, lcType)
+  const vibcRelayer = await VIBCRelayer.reuse(runtime, log)
+  const out = await vibcRelayer.createLightClient(src, dst, lcType)
   if (out.exitCode !== 0) throw new Error(`Could not create light client: ${out.stderr}`)
   log.info(`Light Client created: ${out.stdout.trim()}`)
 }

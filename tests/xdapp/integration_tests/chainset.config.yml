@@ -19,53 +19,19 @@ ChainSets:
     Accounts:
       Mnemonic: "develop test test test test only develop test test test test only"
       Count: 5
-  - Name: "fantom"
-    Type: "fantom"
-    Image:
-      Repository: "ghcr.io/polymerdao/fantom"
-      Tag: "latest"
-      Bin: "/tmp/entrypoint.sh"
-    # Genesis:
-    Accounts:
-      Mnemonic: "develop test test test test only develop test test test test only"
-      Count: 2
-      Balance: 1234
-  - Name: "polygon"
-    Type: "polygon"
-    Image:
-      Repository: "0xpolygon/bor"
-      Tag: "0.2.16"
-      Bin: "bor"
-    # Genesis:
-    Accounts:
-      Mnemonic: "develop test test test test only develop test test test test only"
-      Count: 3
-      Balance: 2345
-  - Name: "avalanche"
-    Type: "avalanche"
-    Image:
-      Repository: "ghcr.io/polymerdao/avalanche"
-      Tag: "1.7.16"
-      Bin: "/avalanche/entrypoint.sh"
-    # Genesis:
-    Accounts:
-      Mnemonic: "develop test test test test only develop test test test test only"
-      Count: 3
-      # NanoAvax?
-      Balance: 2345
-  - Name: "polymerase"
+  - Name: "polymer"
     Type: "cosmos"
     Image:
-      Repository: "ghcr.io/polymerdao/polymerase"
+      Repository: "ghcr.io/polymerdao/polymer"
       Tag: "latest"
-      Bin: "polymerased"
+      Bin: "polymerd"
     Accounts:
       - Name: alice
         Coins: ["20000token", "200000000stake"]
       - Name: bob
         Coins: ["10000token", "100000000stake"]
       - Name: relayer
-        Address: "polymerase1u24pwkz78sutr8ksc62z87ct7ug5pwvqhj2g09"
+        Address: "polymer1u24pwkz78sutr8ksc62z87ct7ug5pwvqhj2g09"
         Coins: ["1234567token", "200000000stake"]
       - Name: randomUser
         Coins: ["0token"]

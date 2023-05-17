@@ -234,8 +234,8 @@ type CreateLightClientOpts = {
 
 export async function createLightClient(opts: CreateLightClientOpts, log: winston.Logger) {
   const runtime = loadWorkspace(opts.workspace)
-  const relayer = runtime.Relayers.find((r) => r.Name === 'polyrelayer')
-  if (!relayer) throw new Error('Could not find polyrelayer runtime object!')
+  const relayer = runtime.Relayers.find((r) => r.Name === 'vibc-relayer')
+  if (!relayer) throw new Error('Could not find vibc-relayer runtime object!')
   await self.dev.createLightClient(relayer, opts.path, opts.lcType, log).then(...thenClause)
 }
 

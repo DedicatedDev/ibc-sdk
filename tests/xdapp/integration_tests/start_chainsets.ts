@@ -1,4 +1,4 @@
-import { dev, utils } from '@polymerdao/devkit'
+import { dev, utils } from '@polymerdao/ibc-sdk'
 import { HardhatUserConfig } from 'hardhat/config'
 import assert from 'assert'
 import { describe, it, setup, teardown } from 'mocha'

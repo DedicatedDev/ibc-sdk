@@ -184,7 +184,7 @@ ChainSets:
   t.is(err?.message, 'Unknown chain id B')
 })
 
-test('start eth2 node with labels and dependencies', async (t) => {
+test('start eth node with labels and dependencies', async (t) => {
   const baseConfig = `
 ChainSets:
   - Name: "eth"
