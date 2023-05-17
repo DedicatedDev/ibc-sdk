@@ -4,6 +4,7 @@ import * as utils from '../../lib/utils/index.js'
 import anyTest, { TestFn } from 'ava'
 import { ChainSetsRunObj } from '../../lib/dev/schemas.js'
 import winston from 'winston'
+import { images } from '../../lib/dev/docker'
 
 const test = anyTest as TestFn<{
   logger: utils.Logger
@@ -71,8 +72,8 @@ const polymerConfig = `
     Moniker: "polymerase"
     Prefix: "polymerase"
     Images:
-      - Repository: "ghcr.io/polymerdao/polymerase"
-        Tag: "latest"
+      - Repository: "${images.polymer.repo}"
+        Tag: "${images.polymer.tag}"
         Bin: "polymerased"
     Accounts:
       - Name: alice

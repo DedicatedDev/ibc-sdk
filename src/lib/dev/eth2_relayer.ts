@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { utils } from './deps'
-import { Container, containerFromId, newContainer } from './docker'
+import { Container, containerFromId, newContainer, images } from './docker'
 import * as winston from 'winston'
 import { ChainSetsRunObj, PolyCoreContractDeployment, RelayerRunObj } from './schemas'
 import path from 'path'
@@ -79,7 +79,7 @@ export class Eth2Relayer {
     const container = await newContainer(
       {
         entrypoint: 'sh',
-        imageRepoTag: 'ghcr.io/polymerdao/eth-relayer:8bd1785',
+        imageRepoTag: images.eth_relayer.full(),
         detach: true,
         tty: true,
         workDir: '/tmp',

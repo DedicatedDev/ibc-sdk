@@ -247,3 +247,31 @@ export class Container {
     return logs
   }
 }
+
+class DockerImage {
+  public repo: string
+  public tag: string
+  public label: string
+
+  constructor(repo: string, tag: string, label: string = 'main') {
+    this.repo = repo
+    this.tag = tag
+    this.label = label
+  }
+  public full(): string {
+    return this.repo + ':' + this.tag
+  }
+}
+
+export const images = {
+  polymer: new DockerImage('ghcr.io/polymerdao/polymerase', 'd709b00'),
+  ethereum: new DockerImage('ethereum/client-go', 'v1.10.26'),
+  prysm_main: new DockerImage('ghcr.io/polymerdao/prysm-beacon-chain', '1eaa9a-debug'),
+  prysm_validator: new DockerImage('ghcr.io/polymerdao/prysm-validator', '1eaa9a-debug', 'validator'),
+  prysm_genesis: new DockerImage('ghcr.io/polymerdao/prysmctl', '1eaa9a-debug', 'genesis'),
+  wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-rc.0-ibcx-noproof-1'),
+  eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', '8bd1785'),
+  vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', '7df54e1'),
+  ibc_relayer: new DockerImage('ghcr.io/polymerdao/ibc-relayer', 'a59389b'),
+  chain_client: new DockerImage('ghcr.io/polymerdao/chain_client', '8bd1785')
+}

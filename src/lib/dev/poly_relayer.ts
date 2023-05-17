@@ -1,4 +1,4 @@
-import { newContainer, containerConfig, Container, containerFromId } from './docker'
+import { images, newContainer, containerConfig, Container, containerFromId } from './docker'
 import * as utils from '../utils/index.js'
 import winston from 'winston'
 import { ProcessOutput } from 'zx-cjs'
@@ -29,7 +29,7 @@ export class PolyRelayer {
       Transports: [utils.path.join(containerDir, 'log')]
     })
     const relayerDockerConfig: containerConfig = {
-      imageRepoTag: `ghcr.io/polymerdao/vibc-relayer:7df54e1`,
+      imageRepoTag: images.vibc_relayer.full(),
       detach: true,
       tty: true,
       workDir: '/tmp',

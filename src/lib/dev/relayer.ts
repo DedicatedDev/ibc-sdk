@@ -1,7 +1,7 @@
 import assert from 'assert'
 import { z } from 'zod'
 import { utils } from './deps'
-import { Container, newContainer } from './docker'
+import { Container, newContainer, images } from './docker'
 import { ChainSetsRunObj, RelayerRunObj } from './schemas'
 import * as winston from 'winston'
 
@@ -67,7 +67,7 @@ export async function newIBCRelayer(workDir: string, id: string, log: winston.Lo
   const container = await newContainer(
     {
       entrypoint: 'sh',
-      imageRepoTag: 'ghcr.io/polymerdao/ibc-relayer:a59389b',
+      imageRepoTag: images.ibc_relayer.full(),
       detach: true,
       tty: true,
       workDir: '/tmp',

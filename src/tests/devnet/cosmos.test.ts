@@ -5,6 +5,7 @@ import { Coin, MsgSendEncodeObject, setupBankExtension, setupIbcExtension } from
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { TextEncoder } from 'util'
 import { toAny } from '../../lib/cosmos/client'
+import { images } from '../../lib/dev/docker'
 
 const cosmos = self.cosmos
 const { utils } = self
@@ -28,8 +29,8 @@ ChainSets:
     Moniker: "polymerase"
     Prefix: "polymerase"
     Images:
-      - Repository: "ghcr.io/polymerdao/polymerase"
-        Tag: "latest"
+      - Repository: "${images.polymer.repo}"
+        Tag: "${images.polymer.tag}"
         Bin: "polymerased"
     Accounts:
       - Name: alice

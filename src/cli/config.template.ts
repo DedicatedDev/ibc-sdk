@@ -1,3 +1,5 @@
+import { images } from '../lib/dev/docker'
+
 export const configTemplate = `#
 # This is the IBC SDK configuration file. Edit it as you please before starting the stack with 'ibctl start'
 #
@@ -18,17 +20,17 @@ ChainSets:
     Images:
 
         # The image will be pulled from this repository.
-      - Repository: "ethereum/client-go"
+      - Repository: "${images.ethereum.repo}"
 
         # The tag is used to identify the docker image.
-        Tag: "v1.10.26"
+        Tag: "${images.ethereum.tag}"
 
         # Name or path of the binary inside the docker image that starts up the chain.
         Bin: "geth"
 
         # This is used to keep track of the images when more than one is used.
         # Can be one of: main, genesis, validator. If not set it defaults to main.
-        Label: "main"
+        Label: "${images.ethereum.label}"
 
     # This section is used to generate and fund accounts once the chain is started.
     Accounts:
@@ -46,17 +48,17 @@ ChainSets:
     Type: "ethereum2"
     DependsOn: "eth-exec-0"
     Images:
-      - Label: "main"
-        Repository: "ghcr.io/polymerdao/prysm-beacon-chain"
-        Tag: "1eaa9a-debug"
+      - Label: "${images.prysm_main.label}"
+        Repository: "${images.prysm_main.repo}"
+        Tag: "${images.prysm_main.tag}"
         Bin: "/app/cmd/beacon-chain/beacon-chain.runfiles/prysm/cmd/beacon-chain/beacon-chain_/beacon-chain"
-      - Label: "genesis"
-        Repository: "ghcr.io/polymerdao/prysmctl"
-        Tag: "1eaa9a-debug"
+      - Label: "${images.prysm_genesis.label}"
+        Repository: "${images.prysm_genesis.repo}"
+        Tag: "${images.prysm_genesis.tag}"
         Bin: "/app/cmd/prysmctl/prysmctl.runfiles/prysm/cmd/prysmctl/prysmctl_/prysmctl"
-      - Label: "validator"
-        Repository: "ghcr.io/polymerdao/prysm-validator"
-        Tag: "1eaa9a-debug"
+      - Label: "${images.prysm_validator.label}"
+        Repository: "${images.prysm_validator.repo}"
+        Tag: "${images.prysm_validator.tag}"
         Bin: "/app/cmd/validator/validator.runfiles/prysm/cmd/validator/validator_/validator"
 
   - Name: "polymer-0"
@@ -64,8 +66,8 @@ ChainSets:
     Moniker: "polymerase"
     Prefix: "polymerase"
     Images:
-      - Repository: "ghcr.io/polymerdao/polymerase"
-        Tag: "d709b00"
+      - Repository: "${images.polymer.repo}"
+        Tag: "${images.polymer.tag}"
         Bin: "polymerased"
     Accounts:
       - Name: alice
@@ -88,8 +90,8 @@ ChainSets:
     Moniker: "wasm"
     Prefix: "wasm"
     Images:
-      - Repository: "ghcr.io/polymerdao/wasm"
-        Tag: "v0.40.0-rc.0-ibcx-noproof-1"
+      - Repository: "${images.wasm.repo}"
+        Tag: "${images.wasm.tag}"
         Bin: "wasmd"
     Accounts:
       - Name: bob

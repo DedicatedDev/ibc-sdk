@@ -3,7 +3,7 @@ import * as winston from 'winston'
 import { utils } from './deps'
 import { z } from 'zod'
 import path from 'path'
-import { newContainer } from './docker'
+import { images, newContainer } from './docker'
 import {
   ChainConfig,
   ChainSetsRunObj,
@@ -158,8 +158,8 @@ export function createContractsConfig(contractsDir: string): string {
       }
     ],
     ChainClientImage: {
-      Repository: 'ghcr.io/polymerdao/chain_client',
-      Tag: '8bd1785'
+      Repository: images.chain_client.repo,
+      Tag: images.chain_client.tag
     }
   })
 }
