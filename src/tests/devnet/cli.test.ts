@@ -244,33 +244,3 @@ test.serial('the stop command resets the workspace', async (t) => {
     }
   )
 })
-
-// TODO remove me
-test.serial.skip('create parlia light client', async (t) => {
-  t.assert((await runInit(t)).exitCode === 0)
-
-  const configPath = path.join(t.context.workspace, 'config.yaml')
-  const bscConfigPath = path.resolve(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'src',
-    'tests',
-    'devnet',
-    'bsc_polymer_chains.config.yaml'
-  )
-  await $`cp ${bscConfigPath} ${configPath}`
-  await $`sed -i '/WorkingDir:/ s|".*"|"${t.context.workspace}/run"|' ${configPath}`
-
-  let out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection bsc:polymer-0`
-  t.assert(out.exitCode === 0)
-
-  await $`${t.context.cli} create-light-client --workspace ${t.context.workspace} --path bsc:polymer-0 --lc-type parlia`.then(
-    (resolve) => {
-      t.assert(resolve.exitCode === 0)
-      t.regex(resolve.stdout, /.*parlia-\d+.*/)
-    },
-    () => t.fail('create-light-client command should have returned zero')
-  )
-})
