@@ -9,7 +9,6 @@ coverage
 log
 
 # Hardhat
-/artifacts
 /typechain
 /cache
 
@@ -150,8 +149,3 @@ coverage
 coverage.json
 typechain
 typechain-types
-
-#Hardhat files
-cache
-artifacts
-

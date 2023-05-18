@@ -86,16 +86,8 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const wasmAccount = wasmChain.Accounts.find((a: CosmosAccount) => a.Name === 'relayer')
   t.assert(wasmAccount)
 
-  // test sending messages from WASM to ETH
-  const dispatcherAddr = vibcRelayer.Configuration.chains['eth-exec-0'].dispatcher.address
-
-  // TODO: we can deploy our own SC that uses the dispatcher. That would test a more realistic scenario
-  const dispatcher = JSON.parse(
-    fs.readFileSync(
-      path.join(t.context.workspace, 'polycore-smart-contracts', 'Dispatcher.sol', 'Dispatcher.json'),
-      'utf-8'
-    )
-  )
+  const dispatcher = eth1Chain.Contracts.find((c: any) => c.Name === 'Dispatcher')
+  t.assert(dispatcher)
 
   const config = {
     runtime: runtime,
@@ -107,8 +99,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
     wasmChannel: wasmChannel,
     wasmAddress: wasmAddress,
     polyChannel: polyChannel,
-    ethContractAbi: dispatcher.abi,
-    ethContractAddr: dispatcherAddr
+    contract: dispatcher
   }
 
   await testMessagesFromWasmToEth(t, config)
@@ -121,10 +112,15 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert(await runCommand(t, 'stop'))
 })
 
+// Test the following sequence
+//  - Call sendIbcPacket() on the vIBC contract running on ethereum
+//  - Expect the eth relayer to relay it polymer
+//  - Expect the ibc relayer to relay it to wasm
+//  - Receive the message on wasm
 async function testMessagesFromEthToWasm(t: any, c: any) {
   const provider = new ethers.providers.JsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
   const signer = new ethers.Wallet(c.eth1Account.PrivateKey).connect(provider)
-  const contract = new ethers.Contract(c.ethContractAddr, c.ethContractAbi, signer)
+  const contract = new ethers.Contract(c.contract.Address, c.contract.Abi, signer)
 
   const res = await contract.sendIbcPacket(
     ethers.utils.formatBytes32String(c.polyChannel.channels[0].channel_id),
@@ -173,6 +169,11 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   )
 }
 
+// Test the following sequence
+//  - Call the wasm contract running on wasm
+//  - Expect the ibc relayer to relay it polymer
+//  - Expect the vibc relayer to relay it to ethereum
+//  - Receive the message on ethereum
 async function testMessagesFromWasmToEth(t: any, c: any) {
   const msg = JSON.stringify({
     send_msgs: {
@@ -190,7 +191,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   t.assert(out.exitCode === 0)
 
   const provider = new ethers.providers.JsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
-  const contract = new ethers.Contract(c.ethContractAddr, c.ethContractAbi, provider)
+  const contract = new ethers.Contract(c.contract.Address, c.contract.Abi, provider)
   t.assert(
     await utils.waitUntil(
       async () => {

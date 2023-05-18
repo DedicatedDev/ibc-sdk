@@ -1,47 +1,47 @@
 import { ethers } from 'ethers'
 import * as winston from 'winston'
 import { utils } from './deps'
-import { z } from 'zod'
 import path from 'path'
-import { newContainer } from './docker'
-import {
-  ChainSetsRunObj,
-  contractByVmType,
-  contractsArtifactsSchema,
-  CosmosChainSet,
-  DeployedContract,
-  DeployedContractsMap,
-  EvmChainSet,
-  isCosmosChain,
-  isEvmChain
-} from './schemas'
+import { ChainSetsRunObj, CosmosChainSet, DeployedContract, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
 import { $, fs } from '../utils'
 import { Attribute, Event } from '@cosmjs/stargate'
-import * as self from '../index'
+import { saveChainSetsRuntime } from './chainset'
 
-/*
- TODO:
-  remove all this non-sense code here. Deploying contracts should be much simpler than having to
-  construct this weird intermediate configuration so we can start a new container.
-*/
-
-/**
- * Deploy smart contracts on chains launched from chainSets config
- */
-export async function deployOnChainSets(
-  rawContractConfig: string | object,
-  rawRunObj: string | object,
-  logger: utils.Logger
+async function deployVIBCCoreContractsOnChain(
+  runtime: ChainSetsRunObj,
+  contractsDir: string,
+  chain: EvmChainSet,
+  log: winston.Logger
 ) {
-  const contractConfig = typeof rawContractConfig === 'object' ? rawContractConfig : utils.readYaml(rawContractConfig)
-  const parsedContractConfig = contractsArtifactsSchema.parse(contractConfig)
-  const chainClientImageRepoTag =
-    parsedContractConfig.ChainClientImage.Repository + ':' + parsedContractConfig.ChainClientImage.Tag
-  const runObj = typeof rawRunObj === 'object' ? rawRunObj : utils.readYaml(rawRunObj)
-  for (const evmContractConfig of parsedContractConfig.ContractArtifacts) {
-    if (evmContractConfig.VmType !== 'evm') throw new Error(`unsupported VmType ${evmContractConfig.VmType}`)
-    await deployEvm(evmContractConfig, JSON.stringify(runObj), chainClientImageRepoTag, logger)
-  }
+  const contracts: DeployedContract[] = []
+  log.info(`deploying vIBC core smart contracts on chain ${chain.Name}, type ${chain.Type}`)
+
+  let scpath = path.join(contractsDir, 'IbcDispatcher.sol', 'IbcDispatcher.json')
+  contracts.push(await deployEvmSmartContract(chain, scpath))
+
+  scpath = path.join(contractsDir, 'IbcReceiver.sol', 'IbcReceiver.json')
+  contracts.push(await deployEvmSmartContract(chain, scpath))
+
+  scpath = path.join(contractsDir, 'IbcVerifier.sol', 'ZKMintVerifier.json')
+  contracts.push(await deployEvmSmartContract(chain, scpath))
+
+  scpath = path.join(contractsDir, 'Earth.sol', 'Earth.json')
+  contracts.push(await deployEvmSmartContract(chain, scpath))
+
+  scpath = path.join(contractsDir, 'Mars.sol', 'Mars.json')
+  contracts.push(await deployEvmSmartContract(chain, scpath))
+
+  scpath = path.join(contractsDir, 'Verifier.sol', 'Verifier.json')
+  const verifier = await deployEvmSmartContract(chain, scpath)
+  contracts.push(verifier)
+
+  scpath = path.join(contractsDir, 'Dispatcher.sol', 'Dispatcher.json')
+  contracts.push(await deployEvmSmartContract(chain, scpath, verifier.Address))
+
+  chain.Contracts = contracts
+  saveChainSetsRuntime(runtime)
+
+  log.verbose(`deployed ${contracts.length} contracts on ${chain.Name}`)
 }
 
 /**
@@ -52,118 +52,22 @@ export async function deployVIBCCoreContractsOnChainSets(
   runtime: ChainSetsRunObj,
   contractsDir: string,
   log: winston.Logger
-): Promise<DeployedContractsMap> {
-  const contractsConfig = self.dev.createContractsConfig(contractsDir)
-
-  // specify a list of contracts that have a constructor with arguments
-  const contractsWithDeps: string[] = ['Dispatcher.json']
-  const deployedContracts: DeployedContractsMap = {}
-
-  // deploy smart contracts to EVM chains
-  const chainSetsPromises = runtime.ChainSets.filter((chainSet) => isEvmChain(chainSet.Type)).map(async (chainSet) => {
-    // first deploy contracts with no dependencies
-    for (const contractConfig of contractsConfig) {
-      if (contractsWithDeps.includes(contractConfig.Name)) {
-        continue
-      }
-      const scpath = path.join(contractsDir, contractConfig.Path)
-      try {
-        deployedContracts[chainSet.Name] = deployedContracts[chainSet.Name] ?? {}
-        deployedContracts[chainSet.Name][contractConfig.Name] = await self.dev.deploySmartContract(
-          runtime,
-          chainSet.Name,
-          scpath,
-          [],
-          log
-        )
-      } catch (e) {
-        console.error(`Failed to deploy ${contractConfig.Name}; ${e}`)
-      }
+): Promise<ChainSetsRunObj> {
+  const promises: Promise<void>[] = []
+  for (let chain of runtime.ChainSets) {
+    if (isEvmChain(chain.Type)) {
+      promises.push(deployVIBCCoreContractsOnChain(runtime, contractsDir, chain as EvmChainSet, log))
     }
-
-    // define a func to deploy a contract with dependencies
-    const deployDependentContract = async (contractName, scargs) => {
-      const contractConfig = contractsConfig.find((c) => c.Name === contractName)
-      if (!contractConfig) {
-        throw new Error(`Could not find ${contractName}'s contract in ${contractConfig}`)
-      }
-
-      const scpath = path.join(contractsDir, contractConfig.Path)
-      return await self.dev.deploySmartContract(runtime, chainSet.Name, scpath, scargs, log)
-    }
-
-    // deploy Dispatcher's contract
-    const dispatcherContract = await deployDependentContract('Dispatcher.json', [
-      deployedContracts[chainSet.Name]['Verifier.json'].Address
-    ])
-    deployedContracts[chainSet.Name]['Dispatcher.json'] = dispatcherContract
-  })
-
-  // wait until deployment is done on all evm chains
-  await Promise.all(chainSetsPromises)
-  return deployedContracts
+  }
+  await Promise.all(promises)
+  return runtime
 }
 
-async function deployEvm(
-  evmContractConfig: z.infer<typeof contractByVmType>,
-  runObjJson: string,
-  chainClientImageRepoTag: string,
-  logger: utils.Logger
-) {
-  const runObj: ChainSetsRunObj = JSON.parse(runObjJson)
-  runObj.ChainSets = runObj.ChainSets.filter((chain) => {
-    const p = path.join(runObj.Run.WorkingDir, chain.Name, 'deployed-contracts.json')
-    return isEvmChain(chain.Type) && !fs.existsSync(p)
-  })
-
-  if (runObj.ChainSets.length === 0) {
-    logger.info('Smart contracts already deployed to all chains in the chain set.')
-    return
-  }
-
-  const hostDir = path.resolve(evmContractConfig.ArtifactsDir)
-  const containerDir = '/tmp/contracts'
-  evmContractConfig.ArtifactsDir = containerDir
-  const contractJson = JSON.stringify(evmContractConfig)
-
-  const containerOutput = '/tmp/output'
-  const config = {
-    args: ['evm-deploy', '-c', contractJson, '-r', runObjJson, '-o', containerOutput],
-    imageRepoTag: chainClientImageRepoTag,
-    volumes: [[hostDir, containerDir]]
-  }
-
-  for (const chain of runObj.ChainSets) {
-    config.volumes.push([path.join(runObj.Run.WorkingDir, chain.Name), path.join(containerOutput, chain.Name)])
-  }
-  await newContainer(config, logger)
-}
-
-export function createContractsConfig(contractsDir: string) {
-  const contracts: any[] = []
-  fs.readdirSync(contractsDir).forEach((dir) => {
-    const p = path.join(contractsDir, dir)
-    const contractNames = fs.readdirSync(p).filter((f) => f.endsWith('.json') && !f.endsWith('.dbg.json'))
-    if (contractNames.length === 0) {
-      throw new Error(`Could not find any Smart Contract API definition in ${p}`)
-    }
-
-    for (let i = 0; i < contractNames.length; i++) {
-      const name = contractNames[i]
-      contracts.push({
-        Name: name,
-        Source: dir,
-        Path: path.join(dir, name)
-      })
-    }
-  })
-
-  if (contracts.length === 0) throw new Error(`Could not find any Smart Contract API definition in ${contractsDir}`)
-
-  return contracts
-}
-
-async function deployEvmSmartContract(chain: EvmChainSet, scpath: string, scargs: string[]): Promise<DeployedContract> {
+async function deployEvmSmartContract(
+  chain: EvmChainSet,
+  scpath: string,
+  ...scargs: string[]
+): Promise<DeployedContract> {
   const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
   // TODO: need to check if the account exists?
   const signer = new ethers.Wallet(chain.Accounts[0].PrivateKey!, provider)
@@ -298,7 +202,7 @@ export async function deploySmartContract(
 
   let contract: DeployedContract | undefined
   if (isEvmChain(chain.Type)) {
-    contract = await deployEvmSmartContract(chain as EvmChainSet, scpath, scargs)
+    contract = await deployEvmSmartContract(chain as EvmChainSet, scpath, ...scargs)
   }
 
   if (isCosmosChain(chain.Type)) {

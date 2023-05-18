@@ -65,7 +65,7 @@ type InitOpts = {
   workspace: string
 }
 
-const polyCoreContracts = 'polycore-smart-contracts'
+const vibcCoreContracts = 'vibc-core-smart-contracts'
 
 export async function init(opts: InitOpts, log: winston.Logger) {
   const workspace = path.resolve(opts.workspace)
@@ -85,7 +85,7 @@ export async function init(opts: InitOpts, log: winston.Logger) {
 
   fs.writeFileSync(configPath, config, 'utf-8')
 
-  const contractsDir = path.join(workspace, polyCoreContracts)
+  const contractsDir = path.join(workspace, vibcCoreContracts)
   fs.mkdirSync(contractsDir)
 
   // TODO: tidy up output?
@@ -118,16 +118,16 @@ export async function start(opts: StartOpts, log: winston.Logger) {
   }
   const config = fs.readFileSync(configPath, 'utf-8')
 
-  const contractsPath = path.join(opts.workspace, polyCoreContracts)
+  const contractsPath = path.join(opts.workspace, vibcCoreContracts)
 
-  const { runObj: runtime } = await self.dev.runChainSets(config, log).then(...thenClause)
-  const contracts = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsPath, log).then(...thenClause)
+  let { runObj: runtime } = await self.dev.runChainSets(config, log).then(...thenClause)
+  runtime = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsPath, log).then(...thenClause)
 
   if (opts.useZkMint) {
     await self.dev.runProver(runtime, log).then(...thenClause)
   }
 
-  await self.dev.runRelayers(runtime, contracts, opts.connection, log).then(...thenClause)
+  await self.dev.runRelayers(runtime, opts.connection, log).then(...thenClause)
 }
 
 export async function show(opts: any) {

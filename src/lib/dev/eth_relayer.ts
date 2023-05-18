@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { utils } from './deps'
 import { Container, containerFromId, newContainer, images } from './docker'
 import * as winston from 'winston'
-import { ChainSetsRunObj, VIBCCoreContractDeployment, RelayerRunObj } from './schemas'
+import { ChainSetsRunObj, RelayerRunObj } from './schemas'
 import path from 'path'
 import { $, ProcessOutput } from 'zx-cjs'
 import { fs } from '../utils'
@@ -38,12 +38,7 @@ export class EthRelayer {
     this.logger = logger
   }
 
-  static async create(
-    runObj: ChainSetsRunObj,
-    dispatcherContracts: VIBCCoreContractDeployment,
-    paths: string[],
-    logger: winston.Logger
-  ): Promise<EthRelayer> {
+  static async create(runObj: ChainSetsRunObj, paths: string[], logger: winston.Logger): Promise<EthRelayer> {
     const [src, dst] = paths
 
     const eth1 = runObj.ChainSets.find((c) => c.Name === src)
@@ -55,14 +50,14 @@ export class EthRelayer {
     const eth2 = runObj.ChainSets.find((c) => c.Type === 'ethereum2')
     if (!eth2) throw new Error('Expected to find an ethereum2 chain!')
 
-    const dispatcher = dispatcherContracts[eth1.Name]
+    const dispatcher = eth1.Contracts.find((c) => c.Name === 'Dispatcher')
     if (!dispatcher) throw new Error(`Dispatcher contract not deployed on ${eth1.Name}?`)
 
     const config = {
       consensusHostUrl: eth2.Nodes[0].RpcContainer.replace(/:[0-9]+$/, ':3500'),
       executionHostUrl: eth1.Nodes[0].RpcContainer,
-      ibcCoreAddress: dispatcher.address,
-      ibcCoreAbi: dispatcher.abi,
+      ibcCoreAddress: dispatcher.Address,
+      ibcCoreAbi: dispatcher.Abi ?? '',
       rpcAddressUrl: poly.Nodes[0].RpcContainer,
       routerHostUrl: poly.Nodes[0].RpcContainer.replace(/:[0-9]+$/, ':9090'),
       accountName: 'relayer',

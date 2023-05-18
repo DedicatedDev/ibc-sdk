@@ -17,33 +17,10 @@ ChainSets:
     Accounts:
       Mnemonic: "develop test test test test only develop test test test test only"
       Count: 1
-  - Name: "fantom"
-    Type: "fantom"
-    Images:
-      - Repository: "ghcr.io/polymerdao/fantom"
-        Tag: "latest"
-        Bin: "/tmp/entrypoint.sh"
-    Accounts:
-      Mnemonic: "develop test test test test only develop test test test test only"
-      Count: 2
-      Balance: 1234
-  - Name: "polygon"
-    Type: "polygon"
-    Images:
-      - Repository: "0xpolygon/bor"
-        Tag: "0.2.16"
-        Bin: "bor"
-    ChainClientImage:
-      Repository: "ghcr.io/polymerdao/chain_client"
-      Tag: "8bd1785"
-    Accounts:
-      Mnemonic: "develop test test test test only develop test test test test only"
-      Count: 3
-      Balance: 2345
 
 Run:
   WorkingDir: "/tmp/test-chainsets/run-*"
-  CleanupMode: debug
+  CleanupMode: all
   Logger:
     Level: debug
     Transports:

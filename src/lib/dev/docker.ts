@@ -273,6 +273,5 @@ export const images = {
   wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-rc.0-ibcx-noproof'),
   eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-745b10c'),
   vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'sha-5f0281d'),
-  ibc_relayer: new DockerImage('ghcr.io/polymerdao/ibc-relayer', 'sha-f43cdb4'),
-  chain_client: new DockerImage('ghcr.io/polymerdao/chain_client', '8bd1785')
+  ibc_relayer: new DockerImage('ghcr.io/polymerdao/ibc-relayer', 'sha-f43cdb4')
 }

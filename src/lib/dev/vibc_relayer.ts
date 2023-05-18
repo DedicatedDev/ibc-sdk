@@ -2,14 +2,7 @@ import { images, newContainer, containerConfig, Container, containerFromId } fro
 import * as utils from '../utils/index.js'
 import winston from 'winston'
 import { ProcessOutput } from 'zx-cjs'
-import {
-  ChainSetsRunObj,
-  CosmosChainSet,
-  isCosmosChain,
-  isEvmChain,
-  VIBCCoreContractDeployment,
-  RelayerRunObj
-} from './schemas'
+import { ChainSetsRunObj, CosmosChainSet, isCosmosChain, isEvmChain, RelayerRunObj } from './schemas'
 
 export class VIBCRelayer {
   container: Container
@@ -82,31 +75,11 @@ export class VIBCRelayer {
   }
 
   /// TODO add schema for returning value
-  public config(
-    runObj: ChainSetsRunObj,
-    dispatcherContracts: VIBCCoreContractDeployment,
-    paths: string[][],
-    configSettings: any = {}
-  ): any {
-    Object.keys(dispatcherContracts).forEach((chainId) => {
-      if (runObj.ChainSets.find((c) => c.Name === chainId) === undefined) {
-        throw new Error(`Invalid dispatcher contract configuration: unknown chain ${chainId}`)
-      }
-    })
-
+  public config(runObj: ChainSetsRunObj, paths: string[][]): any {
     for (const path of paths) {
       if (path.length !== 2) throw new Error(`Invalid path. Expected: ['src','dst'], goat: ${path}`)
     }
 
-    return this.createConfigObject(runObj, dispatcherContracts, paths, configSettings)
-  }
-
-  private createConfigObject(
-    runObj: ChainSetsRunObj,
-    dispatcherContracts: VIBCCoreContractDeployment,
-    paths: string[][],
-    configSettings: any = {}
-  ): any {
     const relayerConfig = {
       global: { 'polling-idle-time': 10000 },
       chains: {},
@@ -117,25 +90,26 @@ export class VIBCRelayer {
       // Only care about chains that are part of any path
       if (!paths.some((p) => p.some((s) => s === chain.Name))) continue
 
-      // TODO: only work with EVM and Polymer chains. For that, we need the polymer chain type.
-      // Eth2 would be handled by its own relayer
-      let chainType = ''
-      if (isEvmChain(chain.Type)) chainType = 'evm'
-      else if (isCosmosChain(chain.Type)) chainType = 'cosmos'
-      else continue
+      if (!isEvmChain(chain.Type) && !isCosmosChain(chain.Type)) continue
 
       relayerConfig.chains[chain.Name] = {
         'rpc-url': chain.Nodes[0].RpcContainer,
-        'chain-type': chainType,
+        'chain-type': isEvmChain(chain.Type) ? 'evm' : 'cosmos',
         'account-prefix': 'unsetPrefix',
         account: chain.Accounts![0]
       }
-      if (chainType === 'cosmos') {
+
+      if (isCosmosChain(chain.Type)) {
         relayerConfig.chains[chain.Name]['account-prefix'] = (chain as CosmosChainSet).Prefix
+        continue
       }
 
-      const dispatcher = dispatcherContracts[chain.Name]
-      if (dispatcher) relayerConfig.chains[chain.Name].dispatcher = dispatcher
+      const dispatcher = chain.Contracts.find((c) => c.Name === 'Dispatcher')
+      if (!dispatcher) throw new Error(`Missing dispatcher contract on chain ${chain.Name}`)
+      relayerConfig.chains[chain.Name].dispatcher = {
+        address: dispatcher.Address,
+        abi: dispatcher.Abi
+      }
     }
 
     for (const path of paths) {
@@ -143,13 +117,13 @@ export class VIBCRelayer {
       relayerConfig.paths[src + '-' + dst] = {
         src: {
           'chain-id': src,
-          'client-id': configSettings.src_client_id || 'client-id-src',
-          'forward-block-headers': configSettings['forward-block-headers'] || false
+          // TODO: update me with real client id
+          'client-id': 'client-id-src'
         },
         dst: {
           'chain-id': dst,
-          'client-id': configSettings.dst_client_id || 'client-id-dst',
-          'forward-block-headers': configSettings['forward-block-headers'] || false
+          // TODO: update me with real client id
+          'client-id': 'client-id-dst'
         },
         'src-channel-filter': null
       }

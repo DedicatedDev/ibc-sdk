@@ -1,5 +1,5 @@
 import winston from 'winston'
-import { ChainSetsRunObj, isCosmosChain, isEvmChain, VIBCCoreContractDeployment, RelayerRunObj } from './schemas'
+import { ChainSetsRunObj, isCosmosChain, isEvmChain, RelayerRunObj } from './schemas'
 import { CosmosAccount, CosmosAccounts } from './accounts_config.js'
 import { VIBCRelayer } from './vibc_relayer'
 import * as self from '../../lib/index.js'
@@ -49,15 +49,10 @@ async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: string[], lo
   log.info('ibc-relayer started')
 }
 
-async function setupVIbcRelayer(
-  runtime: ChainSetsRunObj,
-  dispatcherContracts: VIBCCoreContractDeployment,
-  paths: string[][],
-  log: winston.Logger
-) {
+async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: string[][], log: winston.Logger) {
   log.info(`starting vibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
   const relayer = await VIBCRelayer.create(runtime.Run.WorkingDir, log)
-  const relayerConfig = relayer.config(runtime, dispatcherContracts, paths)
+  const relayerConfig = relayer.config(runtime, paths)
   let out = await relayer.setup(relayerConfig)
   if (out.exitCode !== 0) throw new Error(`Could not setup the vibc-relayer: ${out.stderr}`)
 
@@ -68,19 +63,14 @@ async function setupVIbcRelayer(
   log.info('vibc-relayer started')
 }
 
-async function setupEthRelayer(
-  runtime: ChainSetsRunObj,
-  dispatcherContracts: VIBCCoreContractDeployment,
-  paths: string[],
-  log: winston.Logger
-) {
-  log.info(`starting vibc-relayer with path ${paths[0]} -> ${paths[1]}`)
-  const relayer = await EthRelayer.create(runtime, dispatcherContracts, paths, log)
+async function setupEthRelayer(runtime: ChainSetsRunObj, paths: string[], log: winston.Logger) {
+  log.info(`starting eth-relayer with path ${paths[0]} -> ${paths[1]}`)
+  const relayer = await EthRelayer.create(runtime, paths, log)
   const out = await relayer.run()
   if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
 
   runtime.Relayers.push(relayer.runtime())
-  log.info('vibc-relayer started')
+  log.info('eth-relayer started')
 }
 
 export type RelayingPaths = {
@@ -131,7 +121,6 @@ export function configurePaths(runtime: ChainSetsRunObj, paths: string[]): Relay
 
 export async function runRelayers(
   runtime: ChainSetsRunObj,
-  dispatcherContracts: VIBCCoreContractDeployment,
   relayingPaths: string[],
   logger: winston.Logger
 ): Promise<ChainSetsRunObj> {
@@ -139,12 +128,12 @@ export async function runRelayers(
   const promises: Promise<void>[] = []
 
   if (paths.vibc.length > 0) {
-    promises.push(setupVIbcRelayer(runtime, dispatcherContracts, paths.vibc, logger))
+    promises.push(setupVIbcRelayer(runtime, paths.vibc, logger))
   }
 
   // TODO: what happens if we have more than one path here? Is the eth2 relayer going to be able to handle it?
   if (paths.eth2.length > 0) {
-    promises.push(setupEthRelayer(runtime, dispatcherContracts, paths.eth2[0], logger))
+    promises.push(setupEthRelayer(runtime, paths.eth2[0], logger))
   }
 
   // TODO: create one instance of the ibc-relayer per path because the ts-relayer sucks

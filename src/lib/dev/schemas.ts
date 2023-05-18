@@ -97,6 +97,14 @@ export const runningNodeConfigSchema = z.object({
   RpcContainer: z.string()
 })
 
+export const deployedContractSchema = z.object({
+  Name: z.string(),
+  Address: z.string(),
+  DeployerAddress: z.string(),
+  Abi: z.string().optional(),
+  TxHash: z.string()
+})
+
 /** A running chainSet is a live blockchain network with 1+ nodes and prefunded accounts */
 export const chainSetSchema = (() => {
   const base = z.object({
@@ -104,7 +112,8 @@ export const chainSetSchema = (() => {
     Images: z.array(imageConfigSchema),
     Nodes: z.array(runningNodeConfigSchema),
     DependsOn: z.string().optional(),
-    Accounts: AccountsSchema.evm.optional()
+    Accounts: AccountsSchema.evm.optional(),
+    Contracts: z.array(deployedContractSchema).default([])
   })
   const evm = base.extend({
     Type: z.enum(EvmChains),
@@ -149,51 +158,6 @@ export const runningChainSetsSchema = z.object({
   })
 })
 
-export const deployedContractSchema = z.object({
-  Name: z.string(),
-  Address: z.string(),
-  DeployerAddress: z.string(),
-  Abi: z.string().optional(),
-  TxHash: z.string()
-})
-
-export const deployedContractsMapSchema = z.record(z.string().min(1), deployedContractSchema)
-
-export const deployedChainSchema = z.object({
-  ChainName: z.string(),
-  ChainType: z.enum(EvmChains),
-  RpcHost: z.string(),
-  RpcContainer: z.string(),
-  Contracts: z.array(deployedContractSchema)
-})
-
-export const vibcCoreContractsSchema = z.record(
-  z.string().min(1),
-  z.object({
-    address: z.string().min(1),
-    abi: z.string().min(1)
-  })
-)
-
-export const contractByVmType = z.object({
-  VmType: z.enum(['evm']),
-  ArtifactsDir: z.string(),
-  Contracts: z.array(
-    z.object({
-      Name: z.string(),
-      Source: z.string(),
-      Path: z.string()
-    })
-  )
-})
-export const contractsArtifactsSchema = z.object({
-  ContractArtifacts: z.array(contractByVmType),
-  ChainClientImage: z.object({
-    Repository: z.string(),
-    Tag: z.string()
-  })
-})
-
 export type ChainConfig = z.infer<typeof ChainConfigSchema.all>
 export type EvmChainConfig = z.infer<typeof ChainConfigSchema.evm>
 export type CosmosChainConfig = z.infer<typeof ChainConfigSchema.cosmos>
@@ -205,10 +169,7 @@ export type RelayerRunObj = z.infer<typeof runningRelayerSchema>
 export type ProverRunObj = z.infer<typeof runningProverSchema>
 export type EvmChainSet = z.infer<typeof chainSetSchema.evm>
 export type CosmosChainSet = z.infer<typeof chainSetSchema.cosmos>
-export type DeployedChain = z.infer<typeof deployedChainSchema>
 
 export type DeployedContract = z.infer<typeof deployedContractSchema>
-export type VIBCCoreContractDeployment = z.infer<typeof vibcCoreContractsSchema>
-export type DeployedContractsMap = z.infer<typeof deployedContractsMapSchema>
 export type RunningNodeConfig = z.infer<typeof runningNodeConfigSchema>
 export type ImageConfigSchema = z.infer<typeof imageConfigSchema>
