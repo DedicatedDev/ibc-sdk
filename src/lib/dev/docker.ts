@@ -269,7 +269,7 @@ export const images = {
   ethereum: new DockerImage('ethereum/client-go', 'v1.10.26'),
   prysm_main: new DockerImage('ghcr.io/polymerdao/prysm-beacon-chain', '1eaa9a-debug'),
   prysm_validator: new DockerImage('ghcr.io/polymerdao/prysm-validator', '1eaa9a-debug', 'validator'),
-  prysm_genesis: new DockerImage('ghcr.io/polymerdao/prysmctl', '1eaa9a-debug', 'genesis'),
+  prysm_genesis: new DockerImage('ghcr.io/polymerdao/prysm-prysmctl', '1eaa9a-debug', 'genesis'),
   wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-rc.0-ibcx-noproof'),
   eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-745b10c'),
   vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'sha-5f0281d'),

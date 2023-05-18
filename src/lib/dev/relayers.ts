@@ -68,7 +68,7 @@ async function setupVIbcRelayer(
   log.info('vibc-relayer started')
 }
 
-async function setupEth2Relayer(
+async function setupEthRelayer(
   runtime: ChainSetsRunObj,
   dispatcherContracts: VIBCCoreContractDeployment,
   paths: string[],
@@ -144,7 +144,7 @@ export async function runRelayers(
 
   // TODO: what happens if we have more than one path here? Is the eth2 relayer going to be able to handle it?
   if (paths.eth2.length > 0) {
-    promises.push(setupEth2Relayer(runtime, dispatcherContracts, paths.eth2[0], logger))
+    promises.push(setupEthRelayer(runtime, dispatcherContracts, paths.eth2[0], logger))
   }
 
   // TODO: create one instance of the ibc-relayer per path because the ts-relayer sucks
