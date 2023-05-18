@@ -127,7 +127,7 @@ export async function start(opts: StartOpts, log: winston.Logger) {
   }
 
   const { runObj: runtime } = await self.dev.runChainSets(config, log).then(...thenClause)
-  const contracts = await self.dev.deployPolyCoreContractsOnChainSets(runtime, contractsPath, log).then(...thenClause)
+  const contracts = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsPath, log).then(...thenClause)
 
   if (opts.useZkMint) {
     await self.dev.runProver(runtime, log).then(...thenClause)
@@ -141,12 +141,12 @@ export async function show(opts: any) {
 
   const line = async (name: string, node: any) => {
     if (node.Label) name = `${name}:${node.Label}`
-    let out = { Name: name, 'Container ID': node.ContainerId }
+    const out = { Name: name, 'Container ID': node.ContainerId, Endpoint: '', Status: '' }
 
-    out['Endpoint'] = node.RpcHost ?? 'N/A'
+    out.Endpoint = node.RpcHost ?? 'N/A'
 
     const state = await $`docker inspect ${node.ContainerId}  --format='{{.State.Status}}'`
-    out['Status'] = state.stdout.trim()
+    out.Status = state.stdout.trim()
 
     return out
   }
@@ -163,7 +163,7 @@ export async function show(opts: any) {
   }
 
   if (runtime.Prover) {
-    rows.push(await line(runtime.Prover.Name, runtime.Prover));
+    rows.push(await line(runtime.Prover.Name, runtime.Prover))
   }
 
   console.table(rows)
@@ -196,7 +196,7 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
     }
   }
 
-  if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse' ) {
+  if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse') {
     log.info(`Removing zkmint prover container...`)
     try {
       await $`docker container rm -f ${runtime.Prover.ContainerId}`
@@ -386,4 +386,3 @@ export async function tx(opts: WrapCommandsOpts & { tx: string }, log: winston.L
 
   throw new Error(`Cannot query transactions on chain type: ${chain.Type}`)
 }
-

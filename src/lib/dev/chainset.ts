@@ -263,8 +263,6 @@ export class RunningChainSets {
       ['ethereum', RunningGethChain.newNode],
       ['ethereum2', RunningPrysmChain.newNode],
       ['bsc', RunningBSCChain.newNode],
-      ['polygon', RunningPolygonChain.newNode],
-      ['fantom', RunningFantomChain.newNode],
       ['polymer', RunningCosmosChain.newNode],
       ['cosmos', RunningCosmosChain.newNode]
     ])

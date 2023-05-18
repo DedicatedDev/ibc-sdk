@@ -30,7 +30,7 @@ const createAndUpdateClientWithExistingHeaders = test.macro(
     },
     expected: { newClient: boolean; updateSuccess: boolean }
   ) => {
-    let createdClients = await t.context.queryClient.polyibc.ClientStates({})
+    const createdClients = await t.context.queryClient.polyibc.ClientStates({})
     const preCreateClients = createdClients.clientStates.length
     let startingHeaders = readParliaHeaders(input.start, input.take)
     if (input.real_data) {
@@ -39,7 +39,7 @@ const createAndUpdateClientWithExistingHeaders = test.macro(
       startingHeaders = evmHeaders.blocks
     }
     const clientId = await createAndConfirmClient(t, input.chain_id, startingHeaders, input.start, !expected.newClient)
-    let newClients = await t.context.queryClient.polyibc.ClientStates({})
+    const newClients = await t.context.queryClient.polyibc.ClientStates({})
     if (!expected.newClient) {
       t.assert(newClients.clientStates.length === preCreateClients)
       return
@@ -71,7 +71,7 @@ test.before(async (t) => {
   )
   const contractsDir = path.resolve(__dirname, '..', '..', '..', 'tests', 'xdapp', 'artifacts', 'contracts')
   const contractsConfig = self.dev.createContractsConfig(contractsDir)
-  const dispatcherContract = await self.dev.deployPolyCoreContractsOnChainSets(
+  const dispatcherContract = await self.dev.deployVIBCCoreContractsOnChainSets(
     configs.runObj,
     contractsConfig,
     t.context.logger

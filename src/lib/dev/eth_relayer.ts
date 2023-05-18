@@ -111,7 +111,7 @@ export class EthRelayer {
     }
 
     logger.verbose(`host dir: ${containerDir}`)
-    return new Eth2Relayer(container, config, containerDir, relayerLogger)
+    return new EthRelayer(container, config, containerDir, relayerLogger)
   }
 
   async waitForPoS() {

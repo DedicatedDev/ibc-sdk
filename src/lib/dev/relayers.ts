@@ -1,5 +1,5 @@
 import winston from 'winston'
-import { ChainSetsRunObj, isCosmosChain, isEvmChain, PolyCoreContractDeployment, RelayerRunObj } from './schemas'
+import { ChainSetsRunObj, isCosmosChain, isEvmChain, VIBCCoreContractDeployment, RelayerRunObj } from './schemas'
 import { CosmosAccount, CosmosAccounts } from './accounts_config.js'
 import { VIBCRelayer } from './vibc_relayer'
 import * as self from '../../lib/index.js'
@@ -51,7 +51,7 @@ async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: string[], lo
 
 async function setupVIbcRelayer(
   runtime: ChainSetsRunObj,
-  dispatcherContracts: PolyCoreContractDeployment,
+  dispatcherContracts: VIBCCoreContractDeployment,
   paths: string[][],
   log: winston.Logger
 ) {
@@ -70,7 +70,7 @@ async function setupVIbcRelayer(
 
 async function setupEth2Relayer(
   runtime: ChainSetsRunObj,
-  dispatcherContracts: PolyCoreContractDeployment,
+  dispatcherContracts: VIBCCoreContractDeployment,
   paths: string[],
   log: winston.Logger
 ) {
@@ -131,7 +131,7 @@ export function configurePaths(runtime: ChainSetsRunObj, paths: string[]): Relay
 
 export async function runRelayers(
   runtime: ChainSetsRunObj,
-  dispatcherContracts: PolyCoreContractDeployment,
+  dispatcherContracts: VIBCCoreContractDeployment,
   relayingPaths: string[],
   logger: winston.Logger
 ): Promise<ChainSetsRunObj> {

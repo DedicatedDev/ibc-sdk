@@ -13,7 +13,7 @@ import {
   EvmChainSet,
   isCosmosChain,
   isEvmChain,
-  PolyCoreContractDeployment
+  VIBCCoreContractDeployment
 } from './schemas'
 import { fs, $ } from '../utils'
 import { Attribute, Event } from '@cosmjs/stargate'
@@ -45,18 +45,18 @@ export async function deployOnChainSets(
 
 /**
  * Deploy smart contracts on chains launched from chainSets config and return the address of the
- * PolyCore Smart Contract on every EVM chain
+ * vIBC Core Smart Contract on every EVM chain
  */
-export async function deployPolyCoreContractsOnChainSets(
+export async function deployVIBCCoreContractsOnChainSets(
   rawRunObj: string | object,
   rawContractConfig: string | object,
   logger: utils.Logger
-): Promise<PolyCoreContractDeployment> {
+): Promise<VIBCCoreContractDeployment> {
   logger.info('Deploying vIBC Smart Contracts...')
   const runObj = typeof rawRunObj === 'object' ? rawRunObj : utils.readYaml(rawRunObj)
   await deployOnChainSets(rawContractConfig, runObj, logger)
 
-  return await runObj.ChainSets.reduce(async (accumulator: Promise<PolyCoreContractDeployment>, chain: ChainConfig) => {
+  return await runObj.ChainSets.reduce(async (accumulator: Promise<VIBCCoreContractDeployment>, chain: ChainConfig) => {
     if (isEvmChain(chain.Type)) {
       // need to await on the accumulator since the reduce callback is async 🤯
       const acc = await accumulator

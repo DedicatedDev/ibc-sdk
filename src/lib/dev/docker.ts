@@ -258,20 +258,21 @@ class DockerImage {
     this.tag = tag
     this.label = label
   }
+
   public full(): string {
     return this.repo + ':' + this.tag
   }
 }
 
 export const images = {
-  polymer: new DockerImage('ghcr.io/polymerdao/polymerase', 'sha-1cc8a03'),
+  polymer: new DockerImage('ghcr.io/polymerdao/polymer', 'sha-11e50e5'),
   ethereum: new DockerImage('ethereum/client-go', 'v1.10.26'),
   prysm_main: new DockerImage('ghcr.io/polymerdao/prysm-beacon-chain', '1eaa9a-debug'),
   prysm_validator: new DockerImage('ghcr.io/polymerdao/prysm-validator', '1eaa9a-debug', 'validator'),
   prysm_genesis: new DockerImage('ghcr.io/polymerdao/prysmctl', '1eaa9a-debug', 'genesis'),
   wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-rc.0-ibcx-noproof'),
-  eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-1cc8a03'),
-  vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'sha-1cc8a03'),
-  ibc_relayer: new DockerImage('ghcr.io/polymerdao/ibc-relayer', 'sha-1cc8a03'),
+  eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-5f0281d'),
+  vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'sha-5f0281d'),
+  ibc_relayer: new DockerImage('ghcr.io/polymerdao/ibc-relayer', 'sha-f43cdb4'),
   chain_client: new DockerImage('ghcr.io/polymerdao/chain_client', '8bd1785')
 }

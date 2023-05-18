@@ -2,7 +2,7 @@ export { runChainSets, cleanupChainSets, getChainSetsRuntimeFile, saveChainSetsR
 export {
   createContractsConfig,
   deployOnChainSets,
-  deployPolyCoreContractsOnChainSets,
+  deployVIBCCoreContractsOnChainSets,
   deploySmartContract
 } from './deploy'
 export { newIbcRelayerConfig, newChainRegistry, newIBCRelayer } from './relayer'
