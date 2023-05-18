@@ -271,7 +271,7 @@ export const images = {
   prysm_validator: new DockerImage('ghcr.io/polymerdao/prysm-validator', '1eaa9a-debug', 'validator'),
   prysm_genesis: new DockerImage('ghcr.io/polymerdao/prysmctl', '1eaa9a-debug', 'genesis'),
   wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-rc.0-ibcx-noproof'),
-  eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-5f0281d'),
+  eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-745b10c'),
   vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'sha-5f0281d'),
   ibc_relayer: new DockerImage('ghcr.io/polymerdao/ibc-relayer', 'sha-f43cdb4'),
   chain_client: new DockerImage('ghcr.io/polymerdao/chain_client', '8bd1785')
