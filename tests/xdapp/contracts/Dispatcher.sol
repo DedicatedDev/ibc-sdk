@@ -217,8 +217,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
      */
     function onRecvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external {
         require(verify(proof), "Proof verification failed");
-        // TODO: comment this out for now since we won't need it for the demo
-        //  receiver.onRecvPacket(packet);
+        receiver.onRecvPacket(packet);
         emit OnRecvPacket(packet.src.channelId, packet.src.portId, packet.dest.channelId, packet.dest.portId, packet.data, packet.sequence);
     }
 

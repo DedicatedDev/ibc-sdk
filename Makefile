@@ -28,7 +28,8 @@ stop: build-ibctl
 clean: stop
 	rm -rf bin dist node_modules ~/.ibc-sdk
 
-package-contracts:
+build-vibc-core-contracts:
+	npx hardhat compile --config ./tests/xdapp/hardhat.config.ts --force
 	tar -c -z --strip-components 4 -f - tests/xdapp/artifacts/contracts | \
 		base64 | \
 		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
