@@ -30,6 +30,12 @@ clean: stop
 
 package-contracts:
 	tar -c -z --strip-components 4 -f - tests/xdapp/artifacts/contracts | \
-    base64 | \
-    awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
-    src/cli/contracts.template.ts
+		base64 | \
+		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
+		src/cli/contracts.template.ts
+
+test:
+	npx ava
+
+.PHONY: test test-e2e test-cli test-vibc-relayer-config test-evm-deploy
+.PHONY: clean package-contracts
