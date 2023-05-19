@@ -34,8 +34,8 @@ package-contracts:
 		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
 		src/cli/contracts.template.ts
 
-test:
-	npx ava
+test-all:
+	npx ava src
 
 .PHONY: test test-e2e test-cli test-vibc-relayer-config test-evm-deploy
 .PHONY: clean package-contracts

@@ -77,7 +77,8 @@ paths:
             Address: 'polymer1lmm335gqcs82uearjcyt866756h6vae5qy8w9l',
             Coins: ['1000000000000000000stake']
           }
-        ]
+        ],
+        Contracts: []
       },
       {
         Name: 'bsc-4',
@@ -100,6 +101,13 @@ paths:
             Address: '0x50c1389FfDf0fc0c27BAC88EcFD7046A5343c79A',
             PrivateKey: '0xbaeb0652f541c24abdf69216fec5136bda1a013dea71ab24bb3b477143efa9ef',
             Balance: 1000
+          }
+        ],
+        Contracts: [
+          {
+            Name: 'Dispatcher',
+            Address: '0x338fE7f3844408fe50EF618d0DBC3C74203326F0',
+            Abi: '[]'
           }
         ]
       }
@@ -148,13 +156,12 @@ test('vibc-relayer validates dst and src paths are different type', async (t) =>
 })
 
 test('vibc-relayer validates dispatcher contract chain ids', (t) => {
+  t.context.run.ChainSets.find((c: any) => c.Name === 'bsc-4').Contracts = []
   const error = t.throws(() => t.context.relayer.config(t.context.run, [['bsc-4', 'polymer-2']]))
-  t.is(error?.message, 'Invalid dispatcher contract configuration: unknown chain foo')
+  t.is(error?.message, 'Missing dispatcher contract on chain bsc-4')
 })
 
 test('vibc-relayer produces config from runObj', async (t) => {
-  t.context.run.ChainSets[1].Contracts = [{ Address: '0x338fE7f3844408fe50EF618d0DBC3C74203326F0', Abi: '[]' }]
-
   const config = t.context.relayer.config(t.context.run, [['bsc-4', 'polymer-2']])
   const got = await t.context.relayer.setup(config)
   t.assert(got.exitCode === 0)

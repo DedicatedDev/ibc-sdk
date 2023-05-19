@@ -20,7 +20,15 @@ test.before((t) => {
   t.context = { logger }
 })
 
-const Relayer = { address: 'polymer1u24pwkz78sutr8ksc62z87ct7ug5pwvqhj2g09', token: '1234567', stake: '200000000' }
+const Relayer = {
+  address: 'polymer158z04naus5r3vcanureh7u0ngs5q4l0g5yw8xv',
+  token: '1234567',
+  stake: '200000000',
+  mnemonic:
+    'wait team asthma refuse situate crush kidney nature ' +
+    'frown kid alpha boat engage test across cattle practice ' +
+    'text olive level tag profit they veteran'
+}
 
 const CosmosChainSetConfig = `# applicable to all cosmos chains; use polymer
 ChainSets:
@@ -38,7 +46,7 @@ ChainSets:
       - Name: bob
         Coins: ["10000token", "100000000stake"]
       - Name: relayer
-        Address: "${Relayer.address}"
+        Mnemonic: "${Relayer.mnemonic}"
         Coins: ["${Relayer.token}token", "${Relayer.stake}stake"]
       - Name: randomUser
         Coins: ["0token"]

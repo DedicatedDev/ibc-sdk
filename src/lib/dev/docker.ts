@@ -15,7 +15,7 @@ const containerSchema = z.object({
   workDir: z.string().nullish(),
   entrypoint: z.string().nullish(),
   publishAllPorts: z.boolean().nullish().default(true),
-  label: z.string().nullish().default('<empty>')
+  label: z.string().nullish().default('main')
 })
 
 export type containerConfig = z.input<typeof containerSchema>

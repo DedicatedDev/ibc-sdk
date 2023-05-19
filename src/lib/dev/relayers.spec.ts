@@ -38,12 +38,12 @@ test('configure empty paths with virtual chains', (t) => {
 })
 
 test('configure paths with virtual chains and polymer', (t) => {
-  const got = relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['bsc:poly', 'poly:eth', 'prysm:poly'])
+  const got = relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:bsc', 'poly:eth', 'eth:poly'])
   const vibc = [
-    ['bsc', 'poly'],
-    ['poly', 'eth']
+    ['poly', 'eth'],
+    ['poly', 'bsc']
   ]
-  const eth2 = [['prysm', 'poly']]
+  const eth2 = [['eth', 'poly']]
   checkPaths(t, got, vibc, [], eth2)
 })
 
@@ -106,8 +106,8 @@ const runWithMixedChains = {
       Type: 'polymer'
     },
     {
-      Name: 'prysm',
-      Type: 'ethereum2'
+      Name: 'eth',
+      Type: 'ethereum'
     },
     {
       Name: 'bsc',
@@ -126,9 +126,9 @@ test('configure empty paths with ibc and virtual chains', (t) => {
 })
 
 test('configure paths with ibc and virtual chains', (t) => {
-  const got = relayers.configurePaths(runWithMixedChains as ChainSetsRunObj, ['bsc:poly', 'poly:gaia', 'prysm:poly'])
-  const vibc = [['bsc', 'poly']]
+  const got = relayers.configurePaths(runWithMixedChains as ChainSetsRunObj, ['poly:bsc', 'poly:gaia', 'eth:poly'])
+  const vibc = [['poly', 'bsc']]
   const ibc = [['poly', 'gaia']]
-  const eth2 = [['prysm', 'poly']]
+  const eth2 = [['eth', 'poly']]
   checkPaths(t, got, vibc, ibc, eth2)
 })
