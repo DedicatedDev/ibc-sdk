@@ -25,6 +25,15 @@ contract Dispatcher is Ownable, IbcDispatcher {
     // 
     // channel events
     //
+    event SendPacket(
+        address indexed portId,
+        bytes32 indexed channelId,
+        bytes packet,
+        // timeoutTimestamp is in UNIX nano seconds; packet will be rejected if
+        // delivered after this timestamp on the receiving chain.
+        // Timeout semantics is compliant to IBC spec and ibc-go implementation 
+        uint64 timeoutTimestamp
+    );
 
     event OpenIbcChannel(
         string connectionId,
@@ -120,6 +129,21 @@ contract Dispatcher is Ownable, IbcDispatcher {
     // 
     // IBC Channel methods
     //
+    /**
+     * @notice Sends an IBC packet on a existing channel with the specified packet data and timeout block timestamp.
+     * @notice Data should be encoded in a format defined by the channel version, and the module on the other side should know how to parse this.
+     * @dev Emits an `IbcPacketEvent` event containing the sender address, channel ID, packet data, and timeout block timestamp.
+     * @param channelId The ID of the channel on which to send the packet.
+     * @param packet The packet data to send.
+     * @param timeoutTimestamp The timestamp in nanoseconds after which the packet times out if it has not been received.
+     */
+    function sendPacket(
+        bytes32 channelId,
+        bytes calldata packet,
+        uint64 timeoutTimestamp
+    ) external {
+        emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp);
+    }
 
     /**
      * @notice Opens a new IBC channel on the Polymer chain.

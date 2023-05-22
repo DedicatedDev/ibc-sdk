@@ -21,6 +21,17 @@ struct Proof {
  * @notice IBC dispatcher interface is the Polymer Core Smart Contract that implements the core IBC protocol.
  */
 interface IbcDispatcher {
+    function sendPacket(
+        bytes32 channelId,
+        bytes calldata payload,
+        uint64 timeoutTimestamp
+    ) external;
+
+    function onRecvPacket(
+        IbcReceiver receiver,
+        IbcPacket calldata packet,
+        Proof calldata proof
+    ) external;
 
     function openIbcChannel(
         string calldata connectionId,
