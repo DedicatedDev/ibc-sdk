@@ -1,15 +1,11 @@
 name: Test
 
 on:
-  pull_request:
-    branches:
-      - main
+  push
 
 jobs:
-
   test:
-
-    runs-on: ubuntu-latest-x86
+    runs-on: gce-runner-x64
 
     steps:
 
@@ -23,7 +19,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.PACKAGES_TOKEN }}
 
-    - name: Build SDK
+    - name: Test
       run: make test-e2e
 
     - name: Show logs
