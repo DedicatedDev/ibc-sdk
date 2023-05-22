@@ -22,12 +22,14 @@ struct LightClient {
 *     which can be relayed to a rollup module on the Polymerase chain
 */
 contract Dispatcher is Ownable, IbcDispatcher {
-    event SendIbcPacket(
+    event SendPacket(
         address indexed portId,
         bytes32 indexed channelId,
         bytes packet,
-        // timestamp is in nano seconds similar to how it's done in IBC and CosmWasm
-        uint64 timeoutBlockTimestamp
+        // timeoutTimestamp is in UNIX nano seconds; packet will be rejected if
+        // delivered after this timestamp on the receiving chain.
+        // Timeout semantics is compliant to IBC spec and ibc-go implementation 
+        uint64 timeoutTimestamp
     );
 
     event OpenIbcChannel(
@@ -102,14 +104,14 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @dev Emits an `IbcPacketEvent` event containing the sender address, channel ID, packet data, and timeout block timestamp.
      * @param channelId The ID of the channel on which to send the packet.
      * @param packet The packet data to send.
-     * @param timeoutBlockTimestamp The timestamp in nanoseconds after which the packet times out if it has not been received.
+     * @param timeoutTimestamp The timestamp in nanoseconds after which the packet times out if it has not been received.
      */
-    function sendIbcPacket(
+    function sendPacket(
         bytes32 channelId,
         bytes calldata packet,
-        uint64 timeoutBlockTimestamp
+        uint64 timeoutTimestamp
     ) external {
-        emit SendIbcPacket(msg.sender, channelId, packet, timeoutBlockTimestamp);
+        emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp);
     }
 
     /**

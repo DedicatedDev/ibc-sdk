@@ -122,7 +122,7 @@ export class SimLightClient {
     this.header = header
   }
 
-  async sendIbcPacket(channelID: string, payload: string, timeout: string): Promise<any> {
+  async sendPacket(channelID: string, payload: string, timeout: string): Promise<any> {
     const enc = new TextEncoder()
     const msg: self.cosmos.client.polyibc.MsgSendIbcPacketEncodeObject = {
       typeUrl: '/polyibc.core.MsgSendIbcPacket',

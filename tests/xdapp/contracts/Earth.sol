@@ -54,6 +54,6 @@ contract Earth is IbcReceiver, Ownable {
         string calldata message,
         bytes32 channelId
     ) external {
-        IbcDispatcher(dispatcher).sendIbcPacket(channelId, bytes(message), 0);
+        IbcDispatcher(dispatcher).sendPacket(channelId, bytes(message), 0);
     }
 }

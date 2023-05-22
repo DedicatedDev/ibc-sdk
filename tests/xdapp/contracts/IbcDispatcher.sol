@@ -16,10 +16,10 @@ struct Proof {
 }
 
 interface IbcDispatcher {
-    function sendIbcPacket(
+    function sendPacket(
         bytes32 channelId,
         bytes calldata payload,
-        uint64 timeoutBlockTimestamp
+        uint64 timeoutTimestamp
     ) external;
 
     function onRecvPacket(
