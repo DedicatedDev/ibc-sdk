@@ -9,7 +9,7 @@ jobs:
 
   test:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-x86
 
     steps:
 
