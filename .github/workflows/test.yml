@@ -24,7 +24,7 @@ jobs:
         password: ${{ secrets.PACKAGES_TOKEN }}
 
     - name: Build SDK
-      run: make
+      run: make test-e2e
 
     - name: Show logs
       if: ${{ always() }}
