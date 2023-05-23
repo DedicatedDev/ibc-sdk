@@ -71,11 +71,19 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const wasmAddress = out.stdout.trim()
   t.assert(wasmAddress.startsWith('wasm'))
 
+  // deploy evm contract
+  const marsPath = path.join(t.context.workspace, 'vibc-core-smart-contracts', 'Mars.sol', 'Mars.json')
+  t.assert(fs.existsSync(marsPath))
+  const out1 = await runCommand(t, 'deploy', 'eth-exec-0', eth1Account.Address, marsPath)
+  t.assert(out1.exitCode === 0)
+  const marsAddress = out1.stdout.trim()
+
   // check there's no channels after chains are started
   t.deepEqual((await getChannelsFrom(t, 'polymer-0')).channels, [])
   t.deepEqual((await getChannelsFrom(t, 'wasm-0')).channels, [])
 
-  t.assert((await runCommand(t, 'channel', 'eth-exec-0', 'wasm-0', '--dst-address', wasmAddress)).exitCode === 0)
+  const out2 = await runCommand(t, 'channel', 'eth-exec-0:' + marsAddress, 'wasm-0:' + wasmAddress)
+  t.assert(out2.exitCode === 0)
 
   // check the channels have been correctly created
   const polyChannel = await getChannelsFrom(t, 'polymer-0')
@@ -127,6 +135,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   const signer = new ethers.Wallet(c.eth1Account.PrivateKey).connect(provider)
   const contract = new ethers.Contract(c.contract.Address, c.contract.Abi, signer)
 
+  console.log('Sending message from ETH to WASM...')
   const res = await contract.sendIbcPacket(
     ethers.utils.formatBytes32String(c.polyChannel.channels[0].channel_id),
     ethers.utils.toUtf8Bytes(JSON.stringify({ message: { m: 'Hello from ETH' } })),
@@ -192,6 +201,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   cmds.push(...['--yes', '--from', c.wasmAccount.Address, '--keyring-backend', 'test'])
   cmds.push(...['--chain-id', c.wasmChain.Name])
 
+  console.log('Sending message from WASM to ETH...')
   const out = await runCommand(t, 'exec', ...cmds)
   t.assert(out.exitCode === 0)
 

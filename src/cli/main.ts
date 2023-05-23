@@ -79,18 +79,24 @@ program
   .option('-a, --all', 'Remove the entire workspace, including the configuration file')
   .action(async (opts) => await commands.stop({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
 
+function parseChannelEnpoint(value: string) {
+  const args = value.split(':')
+  if (args.length !== 2)
+    throw new Error('Invalid argument format. Expected a <chain_id:account_name_or_address> tuple separated by a `:`.')
+  return { chainId: args[0], account: args[1] }
+}
+
 program
   .command('channel')
-  .description('Creates an IBC channel between two endpoints')
-  .arguments('<src-chain> <dst-chain>')
-  .option('--dst-address <src-address>', 'Address of the smart contract deployed on the destination chain')
-  .option('--src-address <dst-address>', 'Address of the smart contract deployed on the source chain')
+  .description(
+    'Creates an IBC channel between two endpoints. The endpoint format must be `chain_id:account_name_or_address`'
+  )
+  .arguments('<endpoint-a> <endpoint-b>')
   .allowExcessArguments(false)
-  .action(async (src, dst, opts) => {
-    await commands.channel(
-      { ...program.opts(), srcChain: src, dstChain: dst, ...opts },
-      newLogger(program.opts().logLevel)
-    )
+  .action(async (a, b) => {
+    const endpointA = parseChannelEnpoint(a)
+    const endpointB = parseChannelEnpoint(b)
+    await commands.channel({ ...program.opts(), endpointA, endpointB }, newLogger(program.opts().logLevel))
   })
 
 program

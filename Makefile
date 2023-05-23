@@ -1,6 +1,6 @@
 
 build:
-	npm install
+	test -d node_modules || npm install
 	npx tsc -p tsconfig.json
 
 build-ibctl: build

@@ -59,10 +59,6 @@ export async function channelHandshake(
   dstAddress: string,
   log: winston.Logger
 ) {
-  self.utils.ignoreUnused(srcAddress)
-
-  log.info(`Creating channel between '${src.Name}' and '${dst.Name}'`)
-
   const srcAccount = src.Accounts.find((a) => a.Name === 'relayer')
   if (!srcAccount) throw new Error(`Could not find relayer account in '${src.Name}' chain`)
 
@@ -128,7 +124,7 @@ export async function channelHandshake(
   }
 
   const enc = new TextEncoder()
-  const portEth2 = `polyibc.Ethereum-Devnet.${toHex(enc.encode(srcAccount.Address))}`
+  const portEth2 = `polyibc.Ethereum-Devnet.${toHex(enc.encode(srcAddress))}`
 
   const ibcRelayerRuntime = runtime.Relayers.find((r) => r.Name.startsWith('ibc-relayer-'))
 

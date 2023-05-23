@@ -249,46 +249,43 @@ export async function deploy(opts: DeployOpts, log: winston.Logger) {
 
 type ChannelOpts = {
   workspace: string
-  srcChain: string
-  dstChain: string
-  srcAddress: string
-  dstAddress: string
+  endpointA: { chainId: string; account: string }
+  endpointB: { chainId: string; account: string }
 }
 
 export async function channel(opts: ChannelOpts, log: winston.Logger) {
   const runtime = loadWorkspace(opts.workspace)
 
-  let src = runtime.ChainSets.find((c) => c.Name === opts.srcChain)
-  if (!src) throw new Error(`Could not find endpoint ${src} is chain sets`)
+  let endpointA = runtime.ChainSets.find((c) => c.Name === opts.endpointA.chainId)
+  if (!endpointA) throw new Error(`Could not find endpoint ${opts.endpointA.chainId} is chain sets`)
 
-  let dst = runtime.ChainSets.find((c) => c.Name === opts.dstChain)
-  if (!dst) throw new Error(`Could not find endpoint ${dst} is chain sets`)
+  let endpointB = runtime.ChainSets.find((c) => c.Name === opts.endpointB.chainId)
+  if (!endpointB) throw new Error(`Could not find endpoint ${opts.endpointB.chainId} is chain sets`)
 
   const poly = runtime.ChainSets.find((c) => c.Type === 'polymer')
   if (!poly) throw new Error('Could not find polymer chain is chain sets')
 
   const valid = new Set<string>(['cosmos:ethereum', 'ethereum:cosmos'])
 
-  if (!valid.has(`${src.Type}:${dst.Type}`))
+  if (!valid.has(`${endpointA.Type}:${endpointB.Type}`))
     throw new Error(
-      `Only the following combinations are currently supported: ${new Array(...valid).join(', ')}. Got: ${src.Type}:${
-        dst.Type
-      }`
+      `Only the following combinations are currently supported: ${new Array(...valid).join(', ')}. ` +
+        `Got: ${endpointA.Type}:${endpointB.Type}`
     )
 
   // replace the ethereum chain with polymer
-  src = src.Type === 'ethereum' ? poly : src
-  dst = dst.Type === 'ethereum' ? poly : dst
+  endpointA = endpointA.Type === 'ethereum' ? poly : endpointA
+  endpointB = endpointB.Type === 'ethereum' ? poly : endpointB
 
-  // always keep polymer as the src chain for convenience
-  if (src.Type !== 'polymer') [src, dst] = [dst, src]
+  // always keep polymer as the endpoint A for convenience
+  if (endpointA.Type !== 'polymer') [endpointA, endpointB] = [endpointB, endpointA]
 
   await channelHandshake(
     runtime,
-    src as self.dev.schemas.CosmosChainSet,
-    opts.srcAddress,
-    dst as self.dev.schemas.CosmosChainSet,
-    opts.dstAddress,
+    endpointA as self.dev.schemas.CosmosChainSet,
+    opts.endpointA.account,
+    endpointB as self.dev.schemas.CosmosChainSet,
+    opts.endpointB.account,
     log
   )
 }
