@@ -70,24 +70,36 @@ contract Dispatcher is Ownable, IbcDispatcher {
         uint64 sequence
     );
 
+    //
+    // fields
+    //
+
     ZKMintVerifier public verifier;
-    mapping(string => LightClient) public clients;
+    bool isClientCreated;
+    bytes public latestConsensusState;
+
+    //
+    // methods
+    //
 
     constructor(address _verifier) {
         verifier = ZKMintVerifier(_verifier);
+        isClientCreated = false;
     }
 
+    // 
+    // Client methods
+    // 
+
     /**
-     * @dev Creates a new client with the given `clientId`, `clientState`, and `consensusState`.
-     * @param clientId The identifier of the new client.
+     * @dev Creates a new client with the given `clientState`, and `consensusState`.
      * @param clientState The initial client state.
      * @param consensusState The initial consensus state.
-     * Requirements:
-     * - The `clientId` must not already exist.
      */
-    function createClient(string calldata clientId, bytes calldata clientState, bytes calldata consensusState) external {
-        require(clients[clientId].clientState.length == 0, "Client with this ID already exists");
-        clients[clientId] = LightClient(clientState, consensusState);
+    function createClient(bytes calldata clientState, bytes calldata consensusState) external onlyOwner {
+        require(!isClientCreated, "Client already created");
+        isClientCreated = true;
+        latestConsensusState = consensusState;
     }
 
     /**
@@ -97,30 +109,17 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * - The client with the given ID must already exist.
      * - The consensus state must pass verification.
      *
-     * @param clientId The ID of the client to update.
      * @param consensusState The new consensus state for the client.
      */
-    function updateClient(string calldata clientId, bytes calldata consensusState) external {
-        require(clients[clientId].clientState.length != 0, "Client with this ID doesn't exist");
-        require(verifier.verify(consensusState), "Proof verification failed");
-        clients[clientId].consensusState = consensusState;
+    function updateClient(bytes calldata consensusState) external {
+        require(isClientCreated, "Client not created");
+        require(verifier.verify(consensusState), "Consensus state verification failed");
+        latestConsensusState = consensusState;
     }
 
-    /**
-     * @notice Sends an IBC packet on a existing channel with the specified packet data and timeout block timestamp.
-     * @notice Data should be encoded in a format defined by the channel version, and the module on the other side should know how to parse this.
-     * @dev Emits an `IbcPacketEvent` event containing the sender address, channel ID, packet data, and timeout block timestamp.
-     * @param channelId The ID of the channel on which to send the packet.
-     * @param packet The packet data to send.
-     * @param timeoutTimestamp The timestamp in nanoseconds after which the packet times out if it has not been received.
-     */
-    function sendPacket(
-        bytes32 channelId,
-        bytes calldata packet,
-        uint64 timeoutTimestamp
-    ) external {
-        emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp);
-    }
+    // 
+    // IBC Channel methods
+    //
 
     /**
      * @notice Opens a new IBC channel on the Polymer chain.
@@ -213,6 +212,26 @@ contract Dispatcher is Ownable, IbcDispatcher {
     function onCloseIbcChannel(IbcReceiver receiver, string calldata channelId, Proof calldata proof, string calldata error) external {
         require(verify(proof), "Proof verification failed");
         receiver.onCloseIbcChannel(channelId, error);
+    }
+
+    //
+    // IBC Packet methods
+    //
+
+    /**
+     * @notice Sends an IBC packet on a existing channel with the specified packet data and timeout block timestamp.
+     * @notice Data should be encoded in a format defined by the channel version, and the module on the other side should know how to parse this.
+     * @dev Emits an `IbcPacketEvent` event containing the sender address, channel ID, packet data, and timeout block timestamp.
+     * @param channelId The ID of the channel on which to send the packet.
+     * @param packet The packet data to send.
+     * @param timeoutTimestamp The timestamp in nanoseconds after which the packet times out if it has not been received.
+     */
+    function sendPacket(
+        bytes32 channelId,
+        bytes calldata packet,
+        uint64 timeoutTimestamp
+    ) external {
+        emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp);
     }
 
     /**

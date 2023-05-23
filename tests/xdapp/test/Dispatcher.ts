@@ -1,79 +1,65 @@
-import { describe, it, beforeEach } from 'mocha'
-const { ethers } = require('hardhat')
-const { expect } = require('chai')
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { describe, it } from 'mocha'
+import { ethers } from 'hardhat'
+import { expect } from 'chai'
 
 describe('Client contract', function () {
-  let verifier
-  let dispatcher
-  let receiver
-  let owner
-  let clientState
-  let consensusState
-  let clientId
-
-  beforeEach(async () => {
+  async function setupFixture() {
     // Get the ContractFactory and Signers here.
     const Dispatcher = await ethers.getContractFactory('Dispatcher')
     const Verifier = await ethers.getContractFactory('Verifier')
-    const Receiver = await ethers.getContractFactory('Mars')
+    const Mars = await ethers.getContractFactory('Mars')
 
-    ;[owner] = await ethers.getSigners()
+    const signers = await ethers.getSigners()
+    const accounts = { owner: signers[0], user1: signers[1], user2: signers[2], otherUsers: signers.slice(3) }
 
-    // Deploy the contract and set the owner.
-    verifier = await Verifier.deploy()
-    await verifier.deployed()
+    // Deploy Verifier and CoreSC contracts by owner
+    const verifier = await Verifier.deploy()
+    const dispatcher = await Dispatcher.deploy(verifier.address)
 
-    dispatcher = await Dispatcher.deploy(verifier.address)
-    await dispatcher.deployed()
+    // Deploy Mars contract by user1
+    const mars = await Mars.connect(accounts.user1).deploy()
 
-    receiver = await Receiver.deploy()
-    await receiver.deployed()
+    // Set up Polymer light client on CoreSC
+    const clientState = ethers.utils.formatBytes32String('clientState')
+    const consensusState = ethers.utils.formatBytes32String('consensusState')
+    await dispatcher.createClient(clientState, consensusState)
 
-    // Set up test data.
-    clientState = ethers.utils.formatBytes32String('clientState')
-    consensusState = ethers.utils.formatBytes32String('consensusState')
-    clientId = 'testClient'
-  })
+    return { accounts, verifier, dispatcher, mars, clientState, consensusState }
+  }
 
   describe('createClient', function () {
     it('should create a new client', async function () {
-      await dispatcher.createClient(clientId, clientState, consensusState)
-      const client = await dispatcher.clients(clientId)
-      expect(client.clientState).to.equal(clientState)
-      expect(client.consensusState).to.equal(consensusState)
+      const { dispatcher } = await loadFixture(setupFixture)
+      const latestConsensusState = await dispatcher.latestConsensusState()
+
+      expect(latestConsensusState).to.equal(ethers.utils.formatBytes32String('consensusState'))
     })
 
-    it('should not create a client with the same id', async function () {
-      await dispatcher.createClient(clientId, clientState, consensusState)
-      await expect(dispatcher.createClient(clientId, clientState, consensusState)).to.be.revertedWith(
-        'Client with this ID already exists'
-      )
+    it('cannot create call creatClient twice', async function () {
+      const { dispatcher, clientState, consensusState } = await loadFixture(setupFixture)
+      await expect(dispatcher.createClient(clientState, consensusState)).to.be.revertedWith('Client already created')
     })
   })
 
   describe('updateClient', function () {
     it('should update the consensus state of an existing client', async function () {
+      const { dispatcher } = await loadFixture(setupFixture)
+
       const updatedConsensusState = ethers.utils.formatBytes32String('updatedConsensusState')
+      await dispatcher.updateClient(updatedConsensusState)
+      const latestConsensusState = await dispatcher.latestConsensusState()
 
-      await dispatcher.createClient(clientId, clientState, consensusState)
-      await dispatcher.updateClient(clientId, updatedConsensusState)
-
-      const client = await dispatcher.clients(clientId)
-
-      expect(client.consensusState).to.equal(updatedConsensusState)
-    })
-
-    it('should revert if client with the given ID does not exist', async function () {
-      const invalidClientId = ethers.utils.formatBytes32String('invalidConsensusState')
-
-      await expect(dispatcher.updateClient(invalidClientId, consensusState)).to.be.revertedWith(
-        "Client with this ID doesn't exist"
-      )
+      expect(latestConsensusState).to.equal(updatedConsensusState)
     })
   })
 
   describe('openIbcChannel', function () {
     it('should emit OpenIbcChannel event', async function () {
+      const {
+        dispatcher,
+        accounts: { owner }
+      } = await loadFixture(setupFixture)
       const connectionId = 'connection-id'
       const counterPartyConnectionId = 'counterparty-connection-id'
       const counterPartyPortId = 'counterparty-port-id'
@@ -90,6 +76,7 @@ describe('Client contract', function () {
 
   describe('onOpenIbcChannel', function () {
     it("calls the receiver's onOpenIbcChannel method", async () => {
+      const { dispatcher, mars } = await loadFixture(setupFixture)
       const channelId = 'channelId'
       const version = '1.0.0'
       const proof = {
@@ -98,8 +85,8 @@ describe('Client contract', function () {
         proof: ethers.utils.toUtf8Bytes('proof')
       }
       const error = ''
-      await dispatcher.onOpenIbcChannel(receiver.address, channelId, version, proof, error)
-      expect(await receiver.openChannels(0)).to.equal(channelId)
+      await dispatcher.onOpenIbcChannel(mars.address, channelId, version, proof, error)
+      expect(await mars.openChannels(0)).to.equal(channelId)
     })
   })
 })
