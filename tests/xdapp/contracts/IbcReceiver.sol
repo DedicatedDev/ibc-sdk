@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.9;
 
+import './IbcDispatcher.sol';
+
 struct IbcEndpoint {
     string portId;
     bytes32 channelId;
@@ -26,14 +28,36 @@ struct IbcPacket {
     IbcTimeout timeout;
 }
 
+/**
+ * @title IbcReceiver
+ * @author Polymer Labs
+ * @notice IBC receiver interface must be implemented by a IBC-enabled contract.
+ * The implementer, aka. dApp devs, should implement channel handshake and packet handling methods.
+ */
 interface IbcReceiver {
+    //
+    // Packet handling methods
+    //
+
     function onRecvPacket(IbcPacket calldata packet) external;
 
     function onAcknowledgementPacket(IbcPacket calldata packet) external;
 
     function onTimeoutPacket(IbcPacket calldata packet) external;
 
-    function onOpenIbcChannel(string calldata channelId, string calldata version, string calldata error) external;
+    //
+    // Channel handshake methods
+    //
+
+    function onOpenIbcChannel(
+        bytes32 channelId,
+        string calldata version,
+        ChannelOrder ordering,
+        string[] calldata connectionHops,
+        bytes32 counterPartyChannelId,
+        string calldata counterpartyPortId,
+        string calldata counterpartyVersion
+    ) external;
 
     function onConnectIbcChannel(string calldata channelId, string calldata error) external;
 

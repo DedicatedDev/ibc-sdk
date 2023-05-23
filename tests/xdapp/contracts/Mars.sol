@@ -10,7 +10,7 @@ contract Mars is IbcReceiver, Ownable {
     IbcPacket[] public recvedPackets;
     IbcPacket[] public ackPackets;
     IbcPacket[] public timeoutPackets;
-    string[] public openChannels;
+    bytes32[] public openChannels;
     string[] public connectedChannels;
 
     function onRecvPacket(IbcPacket calldata packet) external {
@@ -25,8 +25,16 @@ contract Mars is IbcReceiver, Ownable {
         timeoutPackets.push(packet);
     }
 
-    function onOpenIbcChannel(string calldata channelId, string calldata version, string calldata error) external {
-        openChannels.push(channelId);
+    function onOpenIbcChannel(
+        bytes32 channelId,
+        string calldata version,
+        ChannelOrder ordering,
+        string[] calldata connectionHops,
+        bytes32 counterPartyChannelId,
+        string calldata counterpartyPortId,
+        string calldata counterpartyVersion
+    ) external {
+        // openChannels.push(channelId);
     }
 
     function onConnectIbcChannel(string calldata channelId, string calldata error) external {
@@ -35,7 +43,7 @@ contract Mars is IbcReceiver, Ownable {
 
     function onCloseIbcChannel(string calldata channelId, string calldata error) external {
         for (uint i = 0; i < openChannels.length; i++) {
-            if (keccak256(bytes(openChannels[i])) == keccak256(bytes(channelId))) {
+            if (keccak256(abi.encodePacked(openChannels[i])) == keccak256(bytes(channelId))) {
                 delete openChannels[i];
                 break;
             }
@@ -49,11 +57,7 @@ contract Mars is IbcReceiver, Ownable {
         }
     }
 
-    function greet(
-        address dispatcher,
-        string calldata message,
-        bytes32 channelId
-    ) external {
+    function greet(address dispatcher, string calldata message, bytes32 channelId) external {
         IbcDispatcher(dispatcher).sendPacket(channelId, bytes(message), 0);
     }
 }

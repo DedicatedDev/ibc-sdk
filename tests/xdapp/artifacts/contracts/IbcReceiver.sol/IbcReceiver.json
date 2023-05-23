@@ -118,9 +118,9 @@
     {
       "inputs": [
         {
-          "internalType": "string",
+          "internalType": "bytes32",
           "name": "channelId",
-          "type": "string"
+          "type": "bytes32"
         },
         {
           "internalType": "string",
@@ -128,8 +128,28 @@
           "type": "string"
         },
         {
+          "internalType": "enum ChannelOrder",
+          "name": "ordering",
+          "type": "uint8"
+        },
+        {
+          "internalType": "string[]",
+          "name": "connectionHops",
+          "type": "string[]"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "counterPartyChannelId",
+          "type": "bytes32"
+        },
+        {
           "internalType": "string",
-          "name": "error",
+          "name": "counterpartyPortId",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "counterpartyVersion",
           "type": "string"
         }
       ],

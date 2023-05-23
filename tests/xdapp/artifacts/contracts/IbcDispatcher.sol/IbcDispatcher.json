@@ -160,146 +160,6 @@
           "type": "address"
         },
         {
-          "internalType": "string",
-          "name": "channelId",
-          "type": "string"
-        },
-        {
-          "components": [
-            {
-              "internalType": "bytes",
-              "name": "keyPath",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "value",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "proof",
-              "type": "bytes"
-            }
-          ],
-          "internalType": "struct Proof",
-          "name": "proof",
-          "type": "tuple"
-        },
-        {
-          "internalType": "string",
-          "name": "error",
-          "type": "string"
-        }
-      ],
-      "name": "onCloseIbcChannel",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "contract IbcReceiver",
-          "name": "receiver",
-          "type": "address"
-        },
-        {
-          "internalType": "string",
-          "name": "channelId",
-          "type": "string"
-        },
-        {
-          "components": [
-            {
-              "internalType": "bytes",
-              "name": "keyPath",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "value",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "proof",
-              "type": "bytes"
-            }
-          ],
-          "internalType": "struct Proof",
-          "name": "proof",
-          "type": "tuple"
-        },
-        {
-          "internalType": "string",
-          "name": "error",
-          "type": "string"
-        }
-      ],
-      "name": "onConnectIbcChannel",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "contract IbcReceiver",
-          "name": "receiver",
-          "type": "address"
-        },
-        {
-          "internalType": "string",
-          "name": "channelId",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "version",
-          "type": "string"
-        },
-        {
-          "components": [
-            {
-              "internalType": "bytes",
-              "name": "keyPath",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "value",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "proof",
-              "type": "bytes"
-            }
-          ],
-          "internalType": "struct Proof",
-          "name": "proof",
-          "type": "tuple"
-        },
-        {
-          "internalType": "string",
-          "name": "error",
-          "type": "string"
-        }
-      ],
-      "name": "onOpenIbcChannel",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "contract IbcReceiver",
-          "name": "receiver",
-          "type": "address"
-        },
-        {
           "components": [
             {
               "components": [
@@ -501,28 +361,38 @@
     {
       "inputs": [
         {
-          "internalType": "string",
-          "name": "connectionId",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "counterPartyConnectionId",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "counterPartyPort",
-          "type": "string"
-        },
-        {
-          "internalType": "enum IbcOrder",
-          "name": "order",
-          "type": "uint8"
+          "internalType": "address",
+          "name": "portAddress",
+          "type": "address"
         },
         {
           "internalType": "string",
           "name": "version",
+          "type": "string"
+        },
+        {
+          "internalType": "enum ChannelOrder",
+          "name": "ordering",
+          "type": "uint8"
+        },
+        {
+          "internalType": "string[]",
+          "name": "connectionHops",
+          "type": "string[]"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "counterPartyChannelId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "counterpartyPortId",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "counterpartyVersion",
           "type": "string"
         }
       ],

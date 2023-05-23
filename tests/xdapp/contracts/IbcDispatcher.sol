@@ -4,38 +4,31 @@ pragma solidity ^0.8.9;
 
 import './IbcReceiver.sol';
 
-enum IbcOrder {
+enum ChannelOrder {
     UNORDERED,
     ORDERED
 }
 
 struct Proof {
-    bytes keyPath;  // packet key path
-    bytes value;  // packet commitment
+    bytes keyPath; // packet key path
+    bytes value; // packet commitment
     bytes proof;
 }
 
 /**
- * @title IbcDispatcher 
+ * @title IbcDispatcher
  * @author Polymer Labs
  * @notice IBC dispatcher interface is the Polymer Core Smart Contract that implements the core IBC protocol.
  */
 interface IbcDispatcher {
-
     function openIbcChannel(
-        string calldata connectionId,
-        string calldata counterPartyConnectionId,
-        string calldata counterPartyPort,
-        IbcOrder order,
-        string calldata version
-    ) external;
-
-    function onOpenIbcChannel(
-        IbcReceiver receiver,
-        string calldata channelId,
+        address portAddress,
         string calldata version,
-        Proof calldata proof,
-        string calldata error
+        ChannelOrder ordering,
+        string[] calldata connectionHops,
+        bytes32 counterPartyChannelId,
+        string calldata counterpartyPortId,
+        string calldata counterpartyVersion
     ) external;
 
     function connectIbcChannel(
@@ -45,36 +38,11 @@ interface IbcDispatcher {
         string calldata counterpartyVersion
     ) external;
 
-    function onConnectIbcChannel(
-        IbcReceiver receiver,
-        string calldata channelId,
-        Proof calldata proof,
-        string calldata error
-    ) external;
+    function closeIbcChannel(string calldata channelId) external;
 
-    function closeIbcChannel(
-        string calldata channelId
-    ) external;
+    function sendPacket(bytes32 channelId, bytes calldata payload, uint64 timeoutTimestamp) external;
 
-    function onCloseIbcChannel(
-        IbcReceiver receiver,
-        string calldata channelId,
-        Proof calldata proof,
-        string calldata error
-    ) external;
-
-
-    function sendPacket(
-        bytes32 channelId,
-        bytes calldata payload,
-        uint64 timeoutTimestamp
-    ) external;
-
-    function onRecvPacket(
-        IbcReceiver receiver,
-        IbcPacket calldata packet,
-        Proof calldata proof
-    ) external;
+    function onRecvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external;
 
     function onAcknowledgementPacket(
         IbcReceiver receiver,
@@ -83,10 +51,5 @@ interface IbcDispatcher {
         Proof calldata proof
     ) external;
 
-    function onTimeoutPacket(
-        IbcReceiver receiver,
-        IbcPacket calldata packet,
-        Proof calldata proof
-    ) external;
+    function onTimeoutPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external;
 }
-

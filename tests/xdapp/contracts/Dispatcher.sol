@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.9;
 
+import '@openzeppelin/contracts/utils/Strings.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import 'hardhat/console.sol';
 
@@ -27,11 +28,13 @@ contract Dispatcher is Ownable, IbcDispatcher {
     //
 
     event OpenIbcChannel(
-        string connectionId,
-        address indexed connectionPortId,
-        string counterPartyConnectionId,
-        string counterPartyPortId,
-        string version
+        address indexed portAddress,
+        bytes32 indexed counterpartyChannelId,
+        string version,
+        ChannelOrder ordering,
+        string[] connectionHops,
+        string counterpartyPortId,
+        string counterpartyVersion
     );
 
     event ConnectIbcChannel(
@@ -74,6 +77,8 @@ contract Dispatcher is Ownable, IbcDispatcher {
     ZKMintVerifier public verifier;
     bool isClientCreated;
     bytes public latestConsensusState;
+
+    uint64 channelCounter = 0;
 
     //
     // methods
@@ -120,7 +125,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @param proof The proof data to be verified
      * @return A boolean value indicating if the proof is valid
      */
-    function verify(Proof calldata proof) internal returns (bool) {
+    function verify(Proof calldata proof) internal pure returns (bool) {
         // TODO: replace with real merkle verification logic
         if (proof.proof.length == 0) {
             return false;
@@ -132,46 +137,53 @@ contract Dispatcher is Ownable, IbcDispatcher {
     // IBC Channel methods
     //
 
-    /**
-     * @notice Opens a new IBC channel on the Polymer chain.
-     * @dev Emits an OpenIbcChannel event.
-     * @param connectionId ID of the connection to open the channel on
-     * @param counterPartyConnectionId ID of the counterparty connection
-     * @param counterPartyPortId ID of the counterparty port
-     * @param order the order of the channel
-     * @param version version of the channel
-     */
-    function openIbcChannel(
-        string calldata connectionId,
-        string calldata counterPartyConnectionId,
-        string calldata counterPartyPortId,
-        IbcOrder order,
-        string calldata version
-    ) external {
-        emit OpenIbcChannel(connectionId, msg.sender, counterPartyConnectionId, counterPartyPortId, version);
+    function concatStrings(string memory str1, string memory str2) private pure returns (bytes memory) {
+        return abi.encodePacked(str1, str2);
     }
 
     /**
-     * @notice Callback function called by the relayer when the channel is opened on the Polymer chain.
-     * @dev Verifies the given proof and calls the `onOpenIbcChannel` function on the given `receiver` contract
-     * @param receiver The contract address that adhere to IbReceiver interface. It will be called when provided proof is verified.
-     * If the address doesn't satisfy the interface, the transaction will be reverted.
-     * @param channelId The ID of the opened IBC channel
-     * @param version The version of the opened IBC channel
-     * @param proof The proof data needed to verify the channel opening
-     * @param error Any error message associated with the channel opening, or an empty string if successful
-     * @dev Throws an error if the proof verification fails
+     * @notice Opens a new IBC channel on the Polymer chain.
+     * @dev Emits an OpenIbcChannel event.
+     * @param portAddress The address of the port that the channel is opened on. Actual port ID is prefixed with
+       CoreSC's portPrefix.
+     * @param connectionHops IBC connection IDs from the running chain's perspective
+     * @param counterpartyPortId full IBC portID of the counterparty
+     * @param ordering the order of the channel
+     * @param version version of the channel
      */
-    function onOpenIbcChannel(
-        IbcReceiver receiver,
-        string calldata channelId,
+    function openIbcChannel(
+        address portAddress,
         string calldata version,
-        Proof calldata proof,
-        string calldata error
+        ChannelOrder ordering,
+        string[] calldata connectionHops,
+        bytes32 counterPartyChannelId,
+        string calldata counterpartyPortId,
+        string calldata counterpartyVersion
     ) external {
-        require(verify(proof), 'Proof verification failed');
-        // TODO: we need to provide a way to user SC to map original request to the callback
-        receiver.onOpenIbcChannel(channelId, version, error);
+        console.log('====> openIbcChannel started');
+        IbcReceiver receiver = IbcReceiver(portAddress);
+        bytes32 channelId = bytes32(concatStrings('channel-', Strings.toString(channelCounter++)));
+        console.log('===>channelId');
+        console.log(string(abi.encodePacked(channelId)));
+        receiver.onOpenIbcChannel(
+            channelId,
+            version,
+            ordering,
+            connectionHops,
+            counterPartyChannelId,
+            counterpartyPortId,
+            counterpartyVersion
+        );
+        console.log('===>channelId');
+        emit OpenIbcChannel(
+            portAddress,
+            counterPartyChannelId,
+            version,
+            ordering,
+            connectionHops,
+            counterpartyPortId,
+            counterpartyVersion
+        );
     }
 
     /**

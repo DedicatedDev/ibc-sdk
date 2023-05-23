@@ -56,37 +56,27 @@ describe('Client contract', function () {
 
   describe('openIbcChannel', function () {
     it('should emit OpenIbcChannel event', async function () {
-      const {
-        dispatcher,
-        accounts: { owner }
-      } = await loadFixture(setupFixture)
-      const connectionId = 'connection-id'
-      const counterPartyConnectionId = 'counterparty-connection-id'
-      const counterPartyPortId = 'counterparty-port-id'
+      const { dispatcher, mars } = await loadFixture(setupFixture)
+
+      const connHops = ['connection-0', 'connection-1']
+      const counterpartyPortId = 'bsc.polyibc.9876543210'
       const order = 0
       const version = '1.0'
+      const counterpartyChannelId = ethers.utils.formatBytes32String('')
 
       await expect(
-        dispatcher.openIbcChannel(connectionId, counterPartyConnectionId, counterPartyPortId, order, version)
+        dispatcher.openIbcChannel(
+          mars.address,
+          version,
+          order,
+          connHops,
+          counterpartyChannelId,
+          counterpartyPortId,
+          version
+        )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
-        .withArgs(connectionId, owner.address, counterPartyConnectionId, counterPartyPortId, version)
-    })
-  })
-
-  describe('onOpenIbcChannel', function () {
-    it("calls the receiver's onOpenIbcChannel method", async () => {
-      const { dispatcher, mars } = await loadFixture(setupFixture)
-      const channelId = 'channelId'
-      const version = '1.0.0'
-      const proof = {
-        keyPath: ethers.utils.toUtf8Bytes('key'),
-        value: ethers.utils.toUtf8Bytes('value'),
-        proof: ethers.utils.toUtf8Bytes('proof')
-      }
-      const error = ''
-      await dispatcher.onOpenIbcChannel(mars.address, channelId, version, proof, error)
-      expect(await mars.openChannels(0)).to.equal(channelId)
+        .withArgs(mars.address, counterpartyChannelId, version, order, connHops, counterpartyPortId, version)
     })
   })
 })
