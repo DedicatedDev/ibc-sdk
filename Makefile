@@ -19,11 +19,11 @@ test-evm-deploy: build
 	npx ava src/tests/devnet/evm-deploy.test.ts
 
 start: build-ibctl
-	./bin/ibctl init
-	./bin/ibctl start
+	./bin/ibctl init -l verbose
+	./bin/ibctl start -l verbose
 
 stop: build-ibctl
-	./bin/ibctl stop
+	./bin/ibctl stop -l verbose
 
 clean: stop
 	rm -rf bin dist node_modules ~/.ibc-sdk
@@ -36,7 +36,7 @@ build-vibc-core-contracts:
 		src/cli/contracts.template.ts
 
 test-all:
-	npx ava src
+	npx ava
 
 clean-docker:
 	docker ps -a --format json | grep 'org.polymerlabs.runner=ibc-sdk' | jq .ID | xargs docker rm -f
