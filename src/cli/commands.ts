@@ -292,21 +292,20 @@ export async function channel(opts: ChannelOpts, log: winston.Logger) {
 
 type TracePacketsOpts = {
   workspace: string
-  source: EndpointInfo
-  destination: EndpointInfo
+  endpointA: EndpointInfo
+  endpointB: EndpointInfo
 }
 
 export async function tracePackets(opts: TracePacketsOpts, log: winston.Logger) {
   const runtime = loadWorkspace(opts.workspace)
-  if (!opts.source || !opts.destination)
-    throw new Error('Invalid argument format. Need to specify both a source and a destination')
-  const src = runtime.ChainSets.find((c) => c.Name === opts.source.chainID)
-  const dst = runtime.ChainSets.find((c) => c.Name === opts.destination.chainID)
+
+  const src = runtime.ChainSets.find((c) => c.Name === opts.endpointA.chainID)
+  const dst = runtime.ChainSets.find((c) => c.Name === opts.endpointB.chainID)
   if (!src || !dst) {
     throw new Error('Could not find chain runtime object!')
   }
   const packets = await self.dev
-    .tracePackets(src.Nodes[0].RpcHost, dst.Nodes[0].RpcHost, opts.source, opts.destination, log)
+    .tracePackets(src.Nodes[0].RpcHost, dst.Nodes[0].RpcHost, opts.endpointA, opts.endpointB, log)
     .then(...thenClause)
 
   console.table(

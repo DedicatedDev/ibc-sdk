@@ -161,7 +161,7 @@ program
     async (opts) => await commands.createLightClient({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel))
   )
 
-const parseEndpointInfo = (value: string): EndpointInfo => {
+function parseEndpointInfo(value: string): EndpointInfo {
   const args = value.split(':')
   if (args.length !== 3) {
     throw new Error('Invalid argument format. Expected a <chain_id:channel_id:port_id> tuple separated by a :.')
@@ -175,22 +175,16 @@ const parseEndpointInfo = (value: string): EndpointInfo => {
 
 program
   .command('trace-packets')
-  .description('Trace packet execution over the specified channel')
+  .description(
+    'Trace packet execution over the specified endpoints. The endpoint format must be `chain_id:account_name_or_address`'
+  )
   .allowExcessArguments(false)
-  // TODO: Can prob come up w/ better naming than source <> destination as communication is bidirectional.
-  .option(
-    '-s, --source <chain_id:port_id:channel_id>',
-    'The source chain/port/channel to trace packets from',
-    parseEndpointInfo
-  )
-  .option(
-    '-d, --destination <chain_id:port_id:channel_id>',
-    'The destination chain/port/channel to trace packets to',
-    parseEndpointInfo
-  )
-  .action(
-    async (opts) => await commands.tracePackets({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel))
-  )
+  .arguments('<endpoint-a> <endpoint-b>')
+  .action(async (a, b) => {
+    const endpointA = parseEndpointInfo(a)
+    const endpointB = parseEndpointInfo(b)
+    await commands.tracePackets({ ...program.opts(), endpointA, endpointB }, newLogger(program.opts().logLevel))
+  })
 
 program
   .command('channels')
