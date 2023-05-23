@@ -22,15 +22,9 @@ struct LightClient {
 *     which can be relayed to a rollup module on the Polymerase chain
 */
 contract Dispatcher is Ownable, IbcDispatcher {
-    event SendPacket(
-        address indexed portId,
-        bytes32 indexed channelId,
-        bytes packet,
-        // timeoutTimestamp is in UNIX nano seconds; packet will be rejected if
-        // delivered after this timestamp on the receiving chain.
-        // Timeout semantics is compliant to IBC spec and ibc-go implementation 
-        uint64 timeoutTimestamp
-    );
+    // 
+    // channel events
+    //
 
     event OpenIbcChannel(
         string connectionId,
@@ -51,6 +45,20 @@ contract Dispatcher is Ownable, IbcDispatcher {
     event CloseIbcChannel(
         string channelId,
         address indexed portId
+    );
+
+    // 
+    // packet events
+    //
+
+    event SendPacket(
+        address indexed portId,
+        bytes32 indexed channelId,
+        bytes packet,
+        // timeoutTimestamp is in UNIX nano seconds; packet will be rejected if
+        // delivered after this timestamp on the receiving chain.
+        // Timeout semantics is compliant to IBC spec and ibc-go implementation 
+        uint64 timeoutTimestamp
     );
 
     event OnRecvPacket(
