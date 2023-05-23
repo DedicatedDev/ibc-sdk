@@ -2,17 +2,26 @@
 
 A NodeJS package that facilitates cross-chain dapp (xdapp) development using IBC.
 
+## Quick start
+
+Obtain an GitHub token to pull relevant containers and run:
+
+```bash
+echo "//npm.pkg.github.com/:_authToken=TOKEN" >> ~/.npmrc
+npm install
+```
+
 ## What does this package do?
 
 It launches multiple chains from a simple config, funds dev accounts for testing, starts off-chain relayer processes, connects IBC clients/channels, and provides queries of xDapp port/message status
 
-### Who use this package?
+### Who uses this package?
 
 xDapp developers who use it to test their xDapps before release them on public testnets or mainnets.
 
 And Polymer devs to ensure Polymer Core Protocol works to the specs.
 
-## What pain points do it solve?
+## What pain points does it solve?
 
 A xdapp requires deploying Smart Contracts (SCs, or similar constructs) on multiple blockchains. Polymer Core Protocol enables cross-chain messages in a permissinoless and trustless way.
 
