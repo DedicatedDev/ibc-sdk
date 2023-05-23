@@ -15,25 +15,16 @@ struct LightClient {
 }
 
 /**
-* @title Dispatcher
-* @author Polymer Labs
-* @notice
-*     Contract callers call this contract to send IBC-like msg,
-*     which can be relayed to a rollup module on the Polymerase chain
-*/
+ * @title Dispatcher
+ * @author Polymer Labs
+ * @notice
+ *     Contract callers call this contract to send IBC-like msg,
+ *     which can be relayed to a rollup module on the Polymerase chain
+ */
 contract Dispatcher is Ownable, IbcDispatcher {
-    // 
+    //
     // channel events
     //
-    event SendPacket(
-        address indexed portId,
-        bytes32 indexed channelId,
-        bytes packet,
-        // timeoutTimestamp is in UNIX nano seconds; packet will be rejected if
-        // delivered after this timestamp on the receiving chain.
-        // Timeout semantics is compliant to IBC spec and ibc-go implementation 
-        uint64 timeoutTimestamp
-    );
 
     event OpenIbcChannel(
         string connectionId,
@@ -51,12 +42,9 @@ contract Dispatcher is Ownable, IbcDispatcher {
         string counterPartyVersion
     );
 
-    event CloseIbcChannel(
-        string channelId,
-        address indexed portId
-    );
+    event CloseIbcChannel(string channelId, address indexed portId);
 
-    // 
+    //
     // packet events
     //
 
@@ -66,7 +54,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
         bytes packet,
         // timeoutTimestamp is in UNIX nano seconds; packet will be rejected if
         // delivered after this timestamp on the receiving chain.
-        // Timeout semantics is compliant to IBC spec and ibc-go implementation 
+        // Timeout semantics is compliant to IBC spec and ibc-go implementation
         uint64 timeoutTimestamp
     );
 
@@ -96,9 +84,9 @@ contract Dispatcher is Ownable, IbcDispatcher {
         isClientCreated = false;
     }
 
-    // 
+    //
     // Client methods
-    // 
+    //
 
     /**
      * @dev Creates a new client with the given `clientState`, and `consensusState`.
@@ -106,7 +94,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @param consensusState The initial consensus state.
      */
     function createClient(bytes calldata clientState, bytes calldata consensusState) external onlyOwner {
-        require(!isClientCreated, "Client already created");
+        require(!isClientCreated, 'Client already created');
         isClientCreated = true;
         latestConsensusState = consensusState;
     }
@@ -121,29 +109,28 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @param consensusState The new consensus state for the client.
      */
     function updateClient(bytes calldata consensusState) external {
-        require(isClientCreated, "Client not created");
-        require(verifier.verify(consensusState), "Consensus state verification failed");
+        require(isClientCreated, 'Client not created');
+        require(verifier.verify(consensusState), 'Consensus state verification failed');
         latestConsensusState = consensusState;
     }
 
-    // 
+    /**
+     * @notice Verify the given proof data
+     * @dev This function currently only checks if the proof length is non-zero
+     * @param proof The proof data to be verified
+     * @return A boolean value indicating if the proof is valid
+     */
+    function verify(Proof calldata proof) internal returns (bool) {
+        // TODO: replace with real merkle verification logic
+        if (proof.proof.length == 0) {
+            return false;
+        }
+        return true;
+    }
+
+    //
     // IBC Channel methods
     //
-    /**
-     * @notice Sends an IBC packet on a existing channel with the specified packet data and timeout block timestamp.
-     * @notice Data should be encoded in a format defined by the channel version, and the module on the other side should know how to parse this.
-     * @dev Emits an `IbcPacketEvent` event containing the sender address, channel ID, packet data, and timeout block timestamp.
-     * @param channelId The ID of the channel on which to send the packet.
-     * @param packet The packet data to send.
-     * @param timeoutTimestamp The timestamp in nanoseconds after which the packet times out if it has not been received.
-     */
-    function sendPacket(
-        bytes32 channelId,
-        bytes calldata packet,
-        uint64 timeoutTimestamp
-    ) external {
-        emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp);
-    }
 
     /**
      * @notice Opens a new IBC channel on the Polymer chain.
@@ -175,8 +162,14 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @param error Any error message associated with the channel opening, or an empty string if successful
      * @dev Throws an error if the proof verification fails
      */
-    function onOpenIbcChannel(IbcReceiver receiver, string calldata channelId, string calldata version, Proof calldata proof, string calldata error) external {
-        require(verify(proof), "Proof verification failed");
+    function onOpenIbcChannel(
+        IbcReceiver receiver,
+        string calldata channelId,
+        string calldata version,
+        Proof calldata proof,
+        string calldata error
+    ) external {
+        require(verify(proof), 'Proof verification failed');
         // TODO: we need to provide a way to user SC to map original request to the callback
         receiver.onOpenIbcChannel(channelId, version, error);
     }
@@ -208,8 +201,13 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @param error Any error message associated with the connection, or an empty string if successful
      * @dev Throws an error if the proof verification fails
      */
-    function onConnectIbcChannel(IbcReceiver receiver, string calldata channelId, Proof calldata proof, string calldata error) external {
-        require(verify(proof), "Proof verification failed");
+    function onConnectIbcChannel(
+        IbcReceiver receiver,
+        string calldata channelId,
+        Proof calldata proof,
+        string calldata error
+    ) external {
+        require(verify(proof), 'Proof verification failed');
         // TODO: we need to provide a way to user SC to map original request to the callback
         receiver.onConnectIbcChannel(channelId, error);
     }
@@ -233,8 +231,13 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @param error Any error message associated with the channel closing, or an empty string if successful
      * @dev Throws an error if the proof verification fails
      */
-    function onCloseIbcChannel(IbcReceiver receiver, string calldata channelId, Proof calldata proof, string calldata error) external {
-        require(verify(proof), "Proof verification failed");
+    function onCloseIbcChannel(
+        IbcReceiver receiver,
+        string calldata channelId,
+        Proof calldata proof,
+        string calldata error
+    ) external {
+        require(verify(proof), 'Proof verification failed');
         receiver.onCloseIbcChannel(channelId, error);
     }
 
@@ -250,11 +253,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @param packet The packet data to send.
      * @param timeoutTimestamp The timestamp in nanoseconds after which the packet times out if it has not been received.
      */
-    function sendPacket(
-        bytes32 channelId,
-        bytes calldata packet,
-        uint64 timeoutTimestamp
-    ) external {
+    function sendPacket(bytes32 channelId, bytes calldata packet, uint64 timeoutTimestamp) external {
         emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp);
     }
 
@@ -269,9 +268,17 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @dev Emits an `OnRecvPacket` event with the details of the received packet
      */
     function onRecvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external {
-        require(verify(proof), "Proof verification failed");
-        receiver.onRecvPacket(packet);
-        emit OnRecvPacket(packet.src.channelId, packet.src.portId, packet.dest.channelId, packet.dest.portId, packet.data, packet.sequence);
+        require(verify(proof), 'Proof verification failed');
+        // TODO: comment this out for now since we won't need it for the demo
+        //  receiver.onRecvPacket(packet);
+        emit OnRecvPacket(
+            packet.src.channelId,
+            packet.src.portId,
+            packet.dest.channelId,
+            packet.dest.portId,
+            packet.data,
+            packet.sequence
+        );
     }
 
     /**
@@ -284,8 +291,13 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @param proof The proof data needed to verify the packet acknowledgement
      * @dev Throws an error if the proof verification fails
      */
-    function onAcknowledgementPacket(IbcReceiver receiver, IbcPacket calldata packet, bytes calldata acknowledgement, Proof calldata proof) external {
-        require(verify(proof), "Proof verification failed");
+    function onAcknowledgementPacket(
+        IbcReceiver receiver,
+        IbcPacket calldata packet,
+        bytes calldata acknowledgement,
+        Proof calldata proof
+    ) external {
+        require(verify(proof), 'Proof verification failed');
         receiver.onAcknowledgementPacket(packet);
     }
 
@@ -299,22 +311,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * @dev Throws an error if the proof verification fails
      */
     function onTimeoutPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external {
-        require(verify(proof), "Proof verification failed");
+        require(verify(proof), 'Proof verification failed');
         receiver.onTimeoutPacket(packet);
     }
-
-    /**
-     * @notice Verify the given proof data
-     * @dev This function currently only checks if the proof length is non-zero
-     * @param proof The proof data to be verified
-     * @return A boolean value indicating if the proof is valid
-     */
-    function verify(Proof calldata proof) internal returns (bool) {
-        // TODO: replace with real merkle verification logic
-        if (proof.proof.length == 0) {
-            return false;
-        }
-        return true;
-    }
-
 }
