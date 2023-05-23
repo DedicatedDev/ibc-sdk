@@ -68,10 +68,12 @@ export async function newContainer(
   if (parsed.label) {
     args.push('--label', 'label=' + parsed.label)
   }
+  args.push('--label', 'org.polymerlabs.runner=ibc-sdk')
   args.push(parsed.imageRepoTag)
   if (parsed.args) {
     args.push(...parsed.args)
   }
+
   logger.verbose(`creating container: ${args.map($.quote).join(' ')}`)
   const process = $`${args}`
   process.child?.unref()

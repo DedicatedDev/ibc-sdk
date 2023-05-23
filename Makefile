@@ -38,5 +38,8 @@ build-vibc-core-contracts:
 test-all:
 	npx ava src
 
+clean-docker:
+	docker ps -a --format json | grep 'org.polymerlabs.runner=ibc-sdk' | jq .ID | xargs docker rm -f
+
 .PHONY: test test-e2e test-cli test-vibc-relayer-config test-evm-deploy
 .PHONY: clean package-contracts
