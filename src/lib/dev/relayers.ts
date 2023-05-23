@@ -46,6 +46,8 @@ async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: string[], lo
   await relayer.relay()
 
   runtime.Relayers.push(await relayer.runtime())
+  self.dev.saveChainSetsRuntime(runtime)
+
   log.info('ibc-relayer started')
 }
 
@@ -60,6 +62,8 @@ async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: string[][], log
   if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
 
   runtime.Relayers.push(await relayer.runtime())
+  self.dev.saveChainSetsRuntime(runtime)
+
   log.info('vibc-relayer started')
 }
 
@@ -70,6 +74,8 @@ async function setupEthRelayer(runtime: ChainSetsRunObj, paths: string[], log: w
   if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
 
   runtime.Relayers.push(relayer.runtime())
+  self.dev.saveChainSetsRuntime(runtime)
+
   log.info('eth-relayer started')
 }
 
@@ -143,7 +149,6 @@ export async function runRelayers(
 
   await Promise.all(promises)
 
-  self.dev.saveChainSetsRuntime(runtime)
   return runtime
 }
 
