@@ -233,6 +233,18 @@ program
     await commands.tx({ ...program.opts(), name: name, tx: tx, ...opts }, newLogger(program.opts().logLevel))
   })
 
+program
+  .command('accounts')
+  .description(
+    'Queries the auto-generated accounts on the selected chain. The chain name can be in the form of `name:label`.'
+  )
+  .argument('<name>')
+  .option('--json', 'Output in JSON format')
+  .allowExcessArguments(false)
+  .action(async (name, opts) => {
+    await commands.accounts({ ...program.opts(), name: name, ...opts })
+  })
+
 process.stdout.on('error', (err) => err.code === 'EPIPE' ?? process.exit(0))
 process.stderr.on('error', (err) => err.code === 'EPIPE' ?? process.exit(0))
 

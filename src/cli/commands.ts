@@ -377,3 +377,12 @@ export async function tx(opts: WrapCommandsOpts & { tx: string }, log: winston.L
 
   throw new Error(`Cannot query transactions on chain type: ${chain.Type}`)
 }
+
+export async function accounts(opts: WrapCommandsOpts) {
+  const runtime = loadWorkspace(opts.workspace)
+  const found = filterContainers(runtime, opts.name)
+  const chain = runtime.ChainSets.find((c) => c.Name === found.name)
+  if (!chain) throw new Error(`Expected any chain`)
+
+  process.stdout.write(opts.json ? JSON.stringify(chain.Accounts) : utils.dumpYamlSafe(chain.Accounts))
+}
