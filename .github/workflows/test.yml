@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    runs-on: gce-runner-x64
+    runs-on: ubuntu-latest
 
     steps:
 

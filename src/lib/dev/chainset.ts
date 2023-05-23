@@ -257,6 +257,7 @@ export class RunningChainSets {
 
   private async createRunningChain(chainConfig: ChainConfig): Promise<RunningChain> {
     const containerDir = utils.ensureDir(utils.path.join(this.wd, chainConfig.Name))
+    fs.chmodSync(containerDir, 0o777)
 
     utils.ignoreUnused(RunningCosmosChain)
     const chainFactories = new Map<string, RunningChainCreator>([
