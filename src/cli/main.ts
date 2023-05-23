@@ -41,16 +41,14 @@ const connectionOption = new Option(
     return previous.concat([current])
   })
 
-const defaultWorkspace = path.join(homedir(), ".ibc-sdk")
+const defaultWorkspace = path.join(homedir(), '.ibc-sdk')
 const program = new Command()
   .helpOption('-h, --help', 'Display help command')
   .description('IBC SDK control')
   .addOption(
     new Option('-l, --log-level <level>', 'Log level').choices(['error', 'warn', 'info', 'verbose']).default('info')
   )
-  .addOption(
-    new Option('-w, --workspace <workspace>', 'Working directory').default(defaultWorkspace, defaultWorkspace)
-  )
+  .addOption(new Option('-w, --workspace <workspace>', 'Working directory').default(defaultWorkspace, defaultWorkspace))
 
 const useZkMintOption = new Option('--use-zk-mint', 'Use ZK minting').default(false)
 
@@ -114,10 +112,10 @@ program
   .description(
     'Deploys a smart contract on the selected chain. If the SC constructor needs arguments, list them in order'
   )
-  .arguments('<chain> <smart-contract-path> [args...]')
+  .arguments('<chain> <account> <smart-contract-path> [args...]')
   .allowExcessArguments(false)
-  .action(async (chain, scpath, scargs) => {
-    await commands.deploy({ ...program.opts(), chain, scpath, scargs }, newLogger(program.opts().logLevel))
+  .action(async (chain, account, scpath, scargs) => {
+    await commands.deploy({ ...program.opts(), chain, account, scpath, scargs }, newLogger(program.opts().logLevel))
   })
 
 program

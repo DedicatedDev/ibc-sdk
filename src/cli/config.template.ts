@@ -39,7 +39,7 @@ ChainSets:
       Mnemonic: "develop test test test test only develop test test test test only"
 
       # These many accounts will be generated
-      Count: 1
+      Count: 5
 
       # The accounts will be funded with these many tokens
       Balance: 1000

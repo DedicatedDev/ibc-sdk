@@ -236,13 +236,14 @@ export async function createLightClient(opts: CreateLightClientOpts, log: winsto
 type DeployOpts = {
   workspace: string
   chain: string
+  account: string
   scpath: string
   scargs: string[]
 }
 
 export async function deploy(opts: DeployOpts, log: winston.Logger) {
   const runtime = loadWorkspace(opts.workspace)
-  const deployed = await self.dev.deploySmartContract(runtime, opts.chain, opts.scpath, opts.scargs, log)
+  const deployed = await self.dev.deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs, log)
   console.log(deployed.Address)
 }
 

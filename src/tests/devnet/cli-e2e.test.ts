@@ -4,7 +4,7 @@ import anyTest, { TestFn } from 'ava'
 import { ethers } from 'ethers'
 import { ProcessOutput } from 'zx-cjs'
 import { utils } from '../../lib'
-import { ChainConfig, RelayerRunObj, CosmosAccount } from '../../lib/dev/schemas'
+import { ChainConfig, RelayerRunObj, CosmosAccount, EvmChainSet } from '../../lib/dev/schemas'
 import { fs, path, $ } from '../../lib/utils'
 
 const test = anyTest as TestFn<{
@@ -41,10 +41,32 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
       .exitCode === 0
   )
 
+  const runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
+  t.assert(runtime)
+
+  const eth1Chain: EvmChainSet = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-exec-0')
+  t.assert(eth1Chain)
+
+  const vibcRelayer = runtime.Relayers.find((r: RelayerRunObj) => r.Name === 'vibc-relayer')
+  t.assert(vibcRelayer)
+
+  // Do not use account[0] since that's reserved for the vibc relayer
+  const eth1Account = eth1Chain.Accounts[1]
+  t.assert(eth1Account)
+
+  const wasmChain = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'wasm-0')
+  t.assert(wasmChain)
+
+  const wasmAccount = wasmChain.Accounts.find((a: CosmosAccount) => a.Name === 'relayer')
+  t.assert(wasmAccount)
+
+  const dispatcher = eth1Chain.Contracts.find((c: any) => c.Name === 'Dispatcher')
+  t.assert(dispatcher)
+
   // deploy wasm contract
   const wasm = path.resolve(__dirname, '..', '..', '..', 'src', 'tests', 'devnet', 'demo.wasm')
   t.assert(fs.existsSync(wasm))
-  const out = await runCommand(t, 'deploy', 'wasm-0', wasm)
+  const out = await runCommand(t, 'deploy', 'wasm-0', wasmAccount.Address, wasm)
   t.assert(out.exitCode === 0)
   const wasmAddress = out.stdout.trim()
   t.assert(wasmAddress.startsWith('wasm'))
@@ -67,27 +89,6 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
 
   t.assert(polyChannel.channels[0].state === 'STATE_OPEN')
   t.assert(wasmChannel.channels[0].state === 'STATE_OPEN')
-
-  const runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
-  t.assert(runtime)
-
-  const vibcRelayer = runtime.Relayers.find((r: RelayerRunObj) => r.Name === 'vibc-relayer')
-  t.assert(vibcRelayer)
-
-  const eth1Chain = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-exec-0')
-  t.assert(eth1Chain)
-
-  const eth1Account = eth1Chain.Accounts[0]
-  t.assert(eth1Account)
-
-  const wasmChain = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'wasm-0')
-  t.assert(wasmChain)
-
-  const wasmAccount = wasmChain.Accounts.find((a: CosmosAccount) => a.Name === 'relayer')
-  t.assert(wasmAccount)
-
-  const dispatcher = eth1Chain.Contracts.find((c: any) => c.Name === 'Dispatcher')
-  t.assert(dispatcher)
 
   const config = {
     runtime: runtime,

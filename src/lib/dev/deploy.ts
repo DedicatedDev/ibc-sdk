@@ -14,29 +14,25 @@ async function deployVIBCCoreContractsOnChain(
   log: winston.Logger
 ) {
   const contracts: DeployedContract[] = []
-  log.info(`deploying vIBC core smart contracts on chain ${chain.Name}, type ${chain.Type}`)
+  const account = chain.Accounts[0].Address
+
+  log.info(`deploying vIBC core smart contracts on chain ${chain.Name}, type ${chain.Type}, using account ${account}`)
 
   let scpath = path.join(contractsDir, 'IbcDispatcher.sol', 'IbcDispatcher.json')
-  contracts.push(await deployEvmSmartContract(chain, scpath))
+  contracts.push(await deployEvmSmartContract(chain, account, scpath))
 
   scpath = path.join(contractsDir, 'IbcReceiver.sol', 'IbcReceiver.json')
-  contracts.push(await deployEvmSmartContract(chain, scpath))
+  contracts.push(await deployEvmSmartContract(chain, account, scpath))
 
   scpath = path.join(contractsDir, 'IbcVerifier.sol', 'ZKMintVerifier.json')
-  contracts.push(await deployEvmSmartContract(chain, scpath))
-
-  scpath = path.join(contractsDir, 'Earth.sol', 'Earth.json')
-  contracts.push(await deployEvmSmartContract(chain, scpath))
-
-  scpath = path.join(contractsDir, 'Mars.sol', 'Mars.json')
-  contracts.push(await deployEvmSmartContract(chain, scpath))
+  contracts.push(await deployEvmSmartContract(chain, account, scpath))
 
   scpath = path.join(contractsDir, 'Verifier.sol', 'Verifier.json')
-  const verifier = await deployEvmSmartContract(chain, scpath)
+  const verifier = await deployEvmSmartContract(chain, account, scpath)
   contracts.push(verifier)
 
   scpath = path.join(contractsDir, 'Dispatcher.sol', 'Dispatcher.json')
-  contracts.push(await deployEvmSmartContract(chain, scpath, verifier.Address))
+  contracts.push(await deployEvmSmartContract(chain, account, scpath, verifier.Address))
 
   chain.Contracts = contracts
   saveChainSetsRuntime(runtime)
@@ -65,24 +61,26 @@ export async function deployVIBCCoreContractsOnChainSets(
 
 async function deployEvmSmartContract(
   chain: EvmChainSet,
+  account: string,
   scpath: string,
   ...scargs: string[]
 ): Promise<DeployedContract> {
   const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
-  // TODO: need to check if the account exists?
-  const signer = new ethers.Wallet(chain.Accounts[0].PrivateKey!, provider)
+
+  const deployer = chain.Accounts.find((a) => a.Address === account)
+  if (!deployer) throw new Error(`Could not find account '${account}' on chain ${chain.Name}`)
+
+  const signer = new ethers.Wallet(deployer.PrivateKey!, provider)
 
   const contract = JSON.parse(fs.readFileSync(scpath, 'utf-8'))
   const factory = new ethers.ContractFactory(contract.abi, contract.bytecode, signer)
   const deploy = await factory.deploy(...scargs)
   const receipt = await deploy.deployTransaction.wait()
 
-  const deployerAddress = await signer.getAddress()
-
   return {
     Name: contract.contractName,
     Address: deploy.address,
-    DeployerAddress: deployerAddress,
+    DeployerAddress: deployer.Address,
     Abi: JSON.stringify(contract.abi),
     TxHash: receipt.transactionHash
   }
@@ -163,16 +161,17 @@ class Container {
 
 async function deployCosmosSmartContract(
   chain: CosmosChainSet,
+  account: string,
   scpath: string,
   scargs: string[]
 ): Promise<DeployedContract> {
-  const relayer_account = chain.Accounts.find((a) => a.Name === 'relayer')
-  if (!relayer_account) throw new Error('Could not find relayer account')
+  const deployer = chain.Accounts.find((a) => a.Name === account || a.Address === account)
+  if (!deployer) throw new Error(`Could not find account '${account}' on chain ${chain.Name}`)
 
   const container_id = chain.Nodes[0].ContainerId
 
   await $`docker cp ${scpath} ${container_id}:/tmp/sc.wasm`
-  const container = new Container(container_id, relayer_account.Address, chain.Name)
+  const container = new Container(container_id, deployer.Address, chain.Name)
 
   const tx = await container.tx('store', '/tmp/sc.wasm', ...scargs)
   const store_code = container.flat(tx, 'store_code')
@@ -182,7 +181,7 @@ async function deployCosmosSmartContract(
   return {
     Name: path.basename(scpath),
     Address: contract._contract_address,
-    DeployerAddress: relayer_account.Address,
+    DeployerAddress: deployer.Address,
     TxHash: instantiate_tx.txhash
   }
 }
@@ -193,6 +192,7 @@ async function deployCosmosSmartContract(
 export async function deploySmartContract(
   runtime: ChainSetsRunObj,
   chainName: string,
+  account: string,
   scpath: string,
   scargs: string[],
   log: winston.Logger
@@ -202,11 +202,11 @@ export async function deploySmartContract(
 
   let contract: DeployedContract | undefined
   if (isEvmChain(chain.Type)) {
-    contract = await deployEvmSmartContract(chain as EvmChainSet, scpath, ...scargs)
+    contract = await deployEvmSmartContract(chain as EvmChainSet, account, scpath, ...scargs)
   }
 
   if (isCosmosChain(chain.Type)) {
-    contract = await deployCosmosSmartContract(chain as CosmosChainSet, scpath, scargs)
+    contract = await deployCosmosSmartContract(chain as CosmosChainSet, account, scpath, scargs)
   }
 
   if (!contract) throw new Error(`Deploying contracts to chain type ${chain.Type} is currently not supported`)
