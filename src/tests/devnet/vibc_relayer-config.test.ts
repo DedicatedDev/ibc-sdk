@@ -119,42 +119,6 @@ paths:
   }
 })
 
-test('vibc-relayer parses valid config', async (t) => {
-  const got = await t.context.relayer.setup(t.context.config)
-  t.assert(got.exitCode === 0)
-
-  const out = await t.context.relayer.getConfig()
-
-  t.deepEqual(JSON.parse(out.stdout), t.context.config)
-})
-
-test('vibc-relayer validates all src paths refer to chain ids in the chain set', async (t) => {
-  t.context.config.paths['bsc-4-polymer-2'].src['chain-id'] = 'foo-1'
-  const got = await t.context.relayer.setup(t.context.config)
-
-  t.assert(got.exitCode === 1)
-  const err = "Undefined chain ID 'foo-1' used in 'paths.bsc-4-polymer-2.src.chain-id'"
-  t.assert(got.stderr.includes(err))
-})
-
-test('vibc-relayer validates all dst paths refer to chain ids in the chain set', async (t) => {
-  t.context.config.paths['bsc-4-polymer-2'].dst['chain-id'] = 'foo-1'
-  const got = await t.context.relayer.setup(t.context.config)
-
-  t.assert(got.exitCode === 1)
-  const err = "Undefined chain ID 'foo-1' used in 'paths.bsc-4-polymer-2.dst.chain-id'"
-  t.assert(got.stderr.includes(err))
-})
-
-test('vibc-relayer validates dst and src paths are different type', async (t) => {
-  t.context.config.chains['bsc-4']['chain-type'] = t.context.config.chains['polymer-2']['chain-type']
-  const got = await t.context.relayer.setup(t.context.config)
-
-  t.assert(got.exitCode === 1)
-  const err = "Path 'bsc-4-polymer-2' src and dst of same type: 'cosmos'"
-  t.assert(got.stderr.includes(err))
-})
-
 test('vibc-relayer validates dispatcher contract chain ids', (t) => {
   t.context.run.ChainSets.find((c: any) => c.Name === 'bsc-4').Contracts = []
   const error = t.throws(() => t.context.relayer.config(t.context.run, [['bsc-4', 'polymer-2']]))

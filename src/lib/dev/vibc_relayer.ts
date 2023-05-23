@@ -39,29 +39,6 @@ export class VIBCRelayer {
     return new VIBCRelayer(container, logger)
   }
 
-  async events(
-    expected: number,
-    eventTypes: string[] = [],
-    retries: number = 20,
-    delay: number = 5000
-  ): Promise<any[]> {
-    for (let i = 0; i < retries; i++) {
-      const out = await this.container.exec([this.binary, 'event_log'])
-      const allEvents = JSON.parse(out.stdout) as any[]
-      this.logger.info(`Found ${allEvents.length} events`)
-      const filteredEvents = allEvents.filter(
-        (eventLog) => eventTypes.includes(eventLog.event_name) || eventTypes.length === 0
-      )
-      this.logger.info(`Found ${filteredEvents.length} events`)
-      if (filteredEvents.length === expected) {
-        return filteredEvents
-      }
-      await utils.sleep(delay)
-    }
-    // return something to signal the caller that we couldn't find the expected number of events
-    return Array.from(Array(expected + 1).keys())
-  }
-
   async exec(commands: string[], tty = false, detach = false): Promise<ProcessOutput> {
     return await this.container.exec(commands, tty, detach).then(
       (resolve) => resolve,
