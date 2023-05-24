@@ -123,9 +123,9 @@
           "type": "bytes32"
         },
         {
-          "internalType": "string",
+          "internalType": "bytes32",
           "name": "version",
-          "type": "string"
+          "type": "bytes32"
         },
         {
           "internalType": "enum ChannelOrder",
@@ -148,13 +148,19 @@
           "type": "string"
         },
         {
-          "internalType": "string",
+          "internalType": "bytes32",
           "name": "counterpartyVersion",
-          "type": "string"
+          "type": "bytes32"
         }
       ],
       "name": "onOpenIbcChannel",
-      "outputs": [],
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "selectedVersion",
+          "type": "bytes32"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },

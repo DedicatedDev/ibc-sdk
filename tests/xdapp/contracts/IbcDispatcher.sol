@@ -23,12 +23,12 @@ struct Proof {
 interface IbcDispatcher {
     function openIbcChannel(
         address portAddress,
-        string calldata version,
+        bytes32 version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
         bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        string calldata counterpartyVersion
+        bytes32 counterpartyVersion
     ) external;
 
     function connectIbcChannel(

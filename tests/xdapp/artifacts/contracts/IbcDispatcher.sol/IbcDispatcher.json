@@ -366,9 +366,9 @@
           "type": "address"
         },
         {
-          "internalType": "string",
+          "internalType": "bytes32",
           "name": "version",
-          "type": "string"
+          "type": "bytes32"
         },
         {
           "internalType": "enum ChannelOrder",
@@ -391,9 +391,9 @@
           "type": "string"
         },
         {
-          "internalType": "string",
+          "internalType": "bytes32",
           "name": "counterpartyVersion",
-          "type": "string"
+          "type": "bytes32"
         }
       ],
       "name": "openIbcChannel",

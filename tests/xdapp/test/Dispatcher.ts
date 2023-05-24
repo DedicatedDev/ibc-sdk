@@ -3,7 +3,9 @@ import { describe, it } from 'mocha'
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
 
-describe('Client contract', function () {
+const toBytes32 = ethers.utils.formatBytes32String
+
+describe('IBC Core Smart Contract', function () {
   /**
    * @description Deploy IBC Core SC and verifier contract
    */
@@ -42,8 +44,8 @@ describe('Client contract', function () {
     const mars = await Mars.connect(accounts.user1).deploy()
 
     // Set up Polymer light client on CoreSC
-    const clientState = ethers.utils.formatBytes32String('clientState')
-    const consensusState = ethers.utils.formatBytes32String('consensusState')
+    const clientState = toBytes32('clientState')
+    const consensusState = toBytes32('consensusState')
     await dispatcher.createClient(clientState, consensusState)
 
     return { accounts, verifier, dispatcher, mars, clientState, consensusState }
@@ -52,19 +54,17 @@ describe('Client contract', function () {
   describe('createClient', function () {
     it('only owner can create a new client', async function () {
       const { accounts, dispatcher } = await loadFixture(deployIbcCoreFixture)
-      const clientState = ethers.utils.formatBytes32String('clientState')
-      const consensusState = ethers.utils.formatBytes32String('consensusState')
 
-      await expect(dispatcher.connect(accounts.user1).createClient(clientState, consensusState)).to.be.revertedWith(
-        'Ownable: caller is not the owner'
-      )
+      await expect(
+        dispatcher.connect(accounts.user1).createClient(toBytes32('clientState'), toBytes32('consensusState'))
+      ).to.be.revertedWith('Ownable: caller is not the owner')
     })
 
     it('should create a new client', async function () {
       const { dispatcher } = await loadFixture(setupFixture)
       const latestConsensusState = await dispatcher.latestConsensusState()
 
-      expect(latestConsensusState).to.equal(ethers.utils.formatBytes32String('consensusState'))
+      expect(latestConsensusState).to.equal(toBytes32('consensusState'))
     })
 
     it('cannot create call creatClient twice', async function () {
@@ -77,7 +77,7 @@ describe('Client contract', function () {
     it('should update the consensus state of an existing client', async function () {
       const { dispatcher } = await loadFixture(setupFixture)
 
-      const updatedConsensusState = ethers.utils.formatBytes32String('updatedConsensusState')
+      const updatedConsensusState = toBytes32('updatedConsensusState')
       await dispatcher.updateClient(updatedConsensusState)
       const latestConsensusState = await dispatcher.latestConsensusState()
 
@@ -87,25 +87,19 @@ describe('Client contract', function () {
 
   describe('openIbcChannel', function () {
     it('ChanOpenInit', async function () {
-      const { dispatcher, mars } = await loadFixture(setupFixture)
+      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
 
       const connHops = ['connection-0', 'connection-2']
       const counterpartyPortId = 'bsc.polyibc.9876543210'
       const order = 0
-      const version = '1.0'
-      const newChannelId = ethers.utils.formatBytes32String('channel-0')
-      const counterpartyChannelId = ethers.utils.formatBytes32String('')
+      const version = toBytes32('1.0')
+      const newChannelId = toBytes32('channel-0')
+      const counterpartyChannelId = toBytes32('')
 
       await expect(
-        dispatcher.openIbcChannel(
-          mars.address,
-          version,
-          order,
-          connHops,
-          counterpartyChannelId,
-          counterpartyPortId,
-          version
-        )
+        dispatcher
+          .connect(accounts.otherUsers[0])
+          .openIbcChannel(mars.address, version, order, connHops, counterpartyChannelId, counterpartyPortId, version)
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
         .withArgs(
@@ -121,25 +115,19 @@ describe('Client contract', function () {
     })
 
     it('ChanOpenTry', async function () {
-      const { dispatcher, mars } = await loadFixture(setupFixture)
+      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
 
       const connHops = ['connection-1', 'connection-3']
       const counterpartyPortId = 'bsc.polyibc.9876543210'
       const order = 0
-      const version = '1.0'
-      const newChannelId = ethers.utils.formatBytes32String('channel-0')
-      const counterpartyChannelId = ethers.utils.formatBytes32String('channel-123')
+      const version = toBytes32('1.0')
+      const newChannelId = toBytes32('channel-0')
+      const counterpartyChannelId = toBytes32('channel-123')
 
       await expect(
-        dispatcher.openIbcChannel(
-          mars.address,
-          version,
-          order,
-          connHops,
-          counterpartyChannelId,
-          counterpartyPortId,
-          version
-        )
+        dispatcher
+          .connect(accounts.otherUsers[0])
+          .openIbcChannel(mars.address, version, order, connHops, counterpartyChannelId, counterpartyPortId, version)
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
         .withArgs(
@@ -152,6 +140,44 @@ describe('Client contract', function () {
           counterpartyPortId,
           version
         )
+    })
+
+    it('unsupported version', async function () {
+      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+      const connHops = ['connection-1', 'connection-3']
+
+      await expect(
+        dispatcher
+          .connect(accounts.otherUsers[0])
+          .openIbcChannel(
+            mars.address,
+            toBytes32('unknown-version'),
+            0,
+            connHops,
+            toBytes32('channel-123'),
+            'bsc.polyibc.9876543210',
+            toBytes32('1.0')
+          )
+      ).to.be.revertedWith('Unsupported version')
+    })
+
+    it('onOpenIbcChannel callback error', async function () {
+      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+      const connHops = ['connection-1', 'connection-3']
+
+      await expect(
+        dispatcher
+          .connect(accounts.otherUsers[0])
+          .openIbcChannel(
+            mars.address,
+            toBytes32('1.0'),
+            0,
+            connHops,
+            toBytes32('channel-123'),
+            'portX',
+            toBytes32('1.0')
+          )
+      ).to.be.revertedWith('Invalid counterpartyPortId')
     })
   })
 })

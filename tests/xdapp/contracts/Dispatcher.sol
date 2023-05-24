@@ -31,11 +31,11 @@ contract Dispatcher is Ownable, IbcDispatcher {
         address indexed portAddress,
         bytes32 indexed channelId,
         bytes32 indexed counterpartyChannelId,
-        string version,
+        bytes32 version,
         ChannelOrder ordering,
         string[] connectionHops,
         string counterpartyPortId,
-        string counterpartyVersion
+        bytes32 counterpartyVersion
     );
 
     event ConnectIbcChannel(
@@ -154,12 +154,12 @@ contract Dispatcher is Ownable, IbcDispatcher {
      */
     function openIbcChannel(
         address portAddress,
-        string calldata version,
+        bytes32 version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
         bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        string calldata counterpartyVersion
+        bytes32 counterpartyVersion
     ) external {
         IbcReceiver receiver = IbcReceiver(portAddress);
         bytes32 channelId = bytes32(concatStrings('channel-', Strings.toString(channelCounter++)));

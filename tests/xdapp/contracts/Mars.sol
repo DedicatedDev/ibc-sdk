@@ -13,6 +13,8 @@ contract Mars is IbcReceiver, Ownable {
     bytes32[] public openChannels;
     string[] public connectedChannels;
 
+    bytes32[] supportedVersions = [bytes32('1.0'), bytes32('2.0')];
+
     function onRecvPacket(IbcPacket calldata packet) external {
         recvedPackets.push(packet);
     }
@@ -27,14 +29,25 @@ contract Mars is IbcReceiver, Ownable {
 
     function onOpenIbcChannel(
         bytes32 channelId,
-        string calldata version,
+        bytes32 version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
         bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        string calldata counterpartyVersion
-    ) external {
+        bytes32 counterpartyVersion
+    ) external returns (bytes32 selectedVersion) {
+        require(bytes(counterpartyPortId).length > 8, 'Invalid counterpartyPortId');
+        bool foundVersion = false;
+        for (uint i = 0; i < supportedVersions.length; i++) {
+            if (supportedVersions[i] == version) {
+                foundVersion = true;
+                break;
+            }
+        }
+        require(foundVersion, 'Unsupported version');
         openChannels.push(channelId);
+
+        return bytes32('1.0');
     }
 
     function onConnectIbcChannel(string calldata channelId, string calldata error) external {
