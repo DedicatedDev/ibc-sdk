@@ -163,7 +163,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
     ) external {
         IbcReceiver receiver = IbcReceiver(portAddress);
         bytes32 channelId = bytes32(concatStrings('channel-', Strings.toString(channelCounter++)));
-        receiver.onOpenIbcChannel(
+        bytes32 selectedVersion = receiver.onOpenIbcChannel(
             channelId,
             version,
             ordering,
@@ -176,7 +176,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
             portAddress,
             channelId,
             counterpartyChannelId,
-            version,
+            selectedVersion,
             ordering,
             connectionHops,
             counterpartyPortId,

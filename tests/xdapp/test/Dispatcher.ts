@@ -6,6 +6,25 @@ import { expect } from 'chai'
 const toBytes32 = ethers.utils.formatBytes32String
 
 describe('IBC Core Smart Contract', function () {
+  // Constants for testing
+  const C = {
+    ClientState: toBytes32('clientState'),
+    ConsensusStates: ['consState1', 'consState2', 'consState3'].map(toBytes32),
+    ConnHops1: ['connection-0', 'connection-2'],
+    ConnHops2: ['connection-1', 'connection-3'],
+    EmptyVersion: toBytes32(''),
+    V1: toBytes32('1.0'),
+    V2: toBytes32('2.0'),
+    Unordered: 0,
+    Ordered: 1,
+    InvalidProof: '0x',
+    ValidProof: '0x1234',
+    ChannelIds: ['channel-0', 'channel-1'].map(toBytes32),
+    RemoteChannelIds: ['channel-100', 'channel-101'].map(toBytes32),
+    EmptyChannelId: toBytes32(''),
+    BscPortId: toBytes32('bsc.polyibc.9876543210')
+  }
+
   /**
    * @description Deploy IBC Core SC and verifier contract
    */
@@ -15,7 +34,13 @@ describe('IBC Core Smart Contract', function () {
     const Verifier = await ethers.getContractFactory('Verifier')
 
     const signers = await ethers.getSigners()
-    const accounts = { owner: signers[0], user1: signers[1], user2: signers[2], otherUsers: signers.slice(3) }
+    const accounts = {
+      owner: signers[0],
+      user1: signers[1],
+      user2: signers[2],
+      relayer: signers[3],
+      otherUsers: signers.slice(4)
+    }
 
     // Deploy Verifier and CoreSC contracts by owner
     const verifier = await Verifier.deploy()
@@ -34,8 +59,13 @@ describe('IBC Core Smart Contract', function () {
     const Mars = await ethers.getContractFactory('Mars')
 
     const signers = await ethers.getSigners()
-    const accounts = { owner: signers[0], user1: signers[1], user2: signers[2], otherUsers: signers.slice(3) }
-
+    const accounts = {
+      owner: signers[0],
+      user1: signers[1],
+      user2: signers[2],
+      relayer: signers[3],
+      otherUsers: signers.slice(4)
+    }
     // Deploy Verifier and CoreSC contracts by owner
     const verifier = await Verifier.deploy()
     const dispatcher = await Dispatcher.deploy(verifier.address)
@@ -44,11 +74,9 @@ describe('IBC Core Smart Contract', function () {
     const mars = await Mars.connect(accounts.user1).deploy()
 
     // Set up Polymer light client on CoreSC
-    const clientState = toBytes32('clientState')
-    const consensusState = toBytes32('consensusState')
-    await dispatcher.createClient(clientState, consensusState)
+    await dispatcher.createClient(C.ClientState, C.ConsensusStates[0])
 
-    return { accounts, verifier, dispatcher, mars, clientState, consensusState }
+    return { accounts, verifier, dispatcher, mars }
   }
 
   describe('createClient', function () {
@@ -56,7 +84,7 @@ describe('IBC Core Smart Contract', function () {
       const { accounts, dispatcher } = await loadFixture(deployIbcCoreFixture)
 
       await expect(
-        dispatcher.connect(accounts.user1).createClient(toBytes32('clientState'), toBytes32('consensusState'))
+        dispatcher.connect(accounts.user1).createClient(C.ClientState, C.ConsensusStates[0])
       ).to.be.revertedWith('Ownable: caller is not the owner')
     })
 
@@ -64,12 +92,14 @@ describe('IBC Core Smart Contract', function () {
       const { dispatcher } = await loadFixture(setupFixture)
       const latestConsensusState = await dispatcher.latestConsensusState()
 
-      expect(latestConsensusState).to.equal(toBytes32('consensusState'))
+      expect(latestConsensusState).to.equal(C.ConsensusStates[0])
     })
 
     it('cannot create call creatClient twice', async function () {
-      const { dispatcher, clientState, consensusState } = await loadFixture(setupFixture)
-      await expect(dispatcher.createClient(clientState, consensusState)).to.be.revertedWith('Client already created')
+      const { dispatcher } = await loadFixture(setupFixture)
+      await expect(dispatcher.createClient(C.ClientState, C.ConsensusStates[1])).to.be.revertedWith(
+        'Client already created'
+      )
     })
   })
 
@@ -77,11 +107,10 @@ describe('IBC Core Smart Contract', function () {
     it('should update the consensus state of an existing client', async function () {
       const { dispatcher } = await loadFixture(setupFixture)
 
-      const updatedConsensusState = toBytes32('updatedConsensusState')
-      await dispatcher.updateClient(updatedConsensusState)
+      await dispatcher.updateClient(C.ConsensusStates[1])
       const latestConsensusState = await dispatcher.latestConsensusState()
 
-      expect(latestConsensusState).to.equal(updatedConsensusState)
+      expect(latestConsensusState).to.equal(C.ConsensusStates[1])
     })
   })
 
@@ -89,94 +118,85 @@ describe('IBC Core Smart Contract', function () {
     it('ChanOpenInit', async function () {
       const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
 
-      const connHops = ['connection-0', 'connection-2']
-      const counterpartyPortId = 'bsc.polyibc.9876543210'
-      const order = 0
-      const version = toBytes32('1.0')
-      const newChannelId = toBytes32('channel-0')
-      const counterpartyChannelId = toBytes32('')
-
       await expect(
         dispatcher
-          .connect(accounts.otherUsers[0])
-          .openIbcChannel(mars.address, version, order, connHops, counterpartyChannelId, counterpartyPortId, version)
+          .connect(accounts.relayer)
+          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.EmptyChannelId, C.BscPortId, C.EmptyVersion)
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
         .withArgs(
           mars.address,
-          newChannelId,
-          counterpartyChannelId,
-          version,
-          order,
-          connHops,
-          counterpartyPortId,
-          version
+          C.ChannelIds[0],
+          C.EmptyChannelId,
+          C.V1,
+          C.Unordered,
+          C.ConnHops1,
+          C.BscPortId,
+          C.EmptyVersion
         )
     })
 
     it('ChanOpenTry', async function () {
       const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
 
-      const connHops = ['connection-1', 'connection-3']
-      const counterpartyPortId = 'bsc.polyibc.9876543210'
-      const order = 0
-      const version = toBytes32('1.0')
-      const newChannelId = toBytes32('channel-0')
-      const counterpartyChannelId = toBytes32('channel-123')
-
       await expect(
         dispatcher
-          .connect(accounts.otherUsers[0])
-          .openIbcChannel(mars.address, version, order, connHops, counterpartyChannelId, counterpartyPortId, version)
+          .connect(accounts.relayer)
+          .openIbcChannel(
+            mars.address,
+            C.EmptyVersion,
+            C.Ordered,
+            C.ConnHops2,
+            C.RemoteChannelIds[0],
+            C.BscPortId,
+            C.V2
+          )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
-        .withArgs(
-          mars.address,
-          newChannelId,
-          counterpartyChannelId,
-          version,
-          order,
-          connHops,
-          counterpartyPortId,
-          version
-        )
+        .withArgs(mars.address, C.ChannelIds[0], C.RemoteChannelIds[0], C.V2, C.Ordered, C.ConnHops2, C.BscPortId, C.V2)
     })
 
     it('unsupported version', async function () {
       const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
-      const connHops = ['connection-1', 'connection-3']
 
+      // invalid version in ChanOpenInit
       await expect(
         dispatcher
-          .connect(accounts.otherUsers[0])
+          .connect(accounts.relayer)
           .openIbcChannel(
             mars.address,
             toBytes32('unknown-version'),
-            0,
-            connHops,
-            toBytes32('channel-123'),
-            'bsc.polyibc.9876543210',
-            toBytes32('1.0')
+            C.Unordered,
+            C.ConnHops1,
+            C.EmptyChannelId,
+            C.BscPortId,
+            C.EmptyVersion
+          )
+      ).to.be.revertedWith('Unsupported version')
+
+      // invalid version in ChanOpenTry
+      await expect(
+        dispatcher
+          .connect(accounts.relayer)
+          .openIbcChannel(
+            mars.address,
+            C.EmptyVersion,
+            C.Unordered,
+            C.ConnHops2,
+            C.RemoteChannelIds[0],
+            C.BscPortId,
+            toBytes32('unknown-version')
           )
       ).to.be.revertedWith('Unsupported version')
     })
 
     it('onOpenIbcChannel callback error', async function () {
       const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
-      const connHops = ['connection-1', 'connection-3']
 
       await expect(
         dispatcher
-          .connect(accounts.otherUsers[0])
-          .openIbcChannel(
-            mars.address,
-            toBytes32('1.0'),
-            0,
-            connHops,
-            toBytes32('channel-123'),
-            'portX',
-            toBytes32('1.0')
-          )
+          .connect(accounts.relayer)
+          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.RemoteChannelIds[0], 'portX', C.EmptyVersion)
       ).to.be.revertedWith('Invalid counterpartyPortId')
     })
   })

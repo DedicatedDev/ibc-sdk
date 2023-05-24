@@ -37,9 +37,16 @@ contract Mars is IbcReceiver, Ownable {
         bytes32 counterpartyVersion
     ) external returns (bytes32 selectedVersion) {
         require(bytes(counterpartyPortId).length > 8, 'Invalid counterpartyPortId');
+        /**
+         * Version selection is determined by if the callback is invoked on behalf of ChanOpenInit or ChanOpenTry.
+         * ChanOpenInit: self version should be provided whereas the counterparty version is empty.
+         * ChanOpenTry: counterparty version should be provided whereas the self version is empty.
+         * In both cases, the selected version should be in the supported versions list.
+         */
         bool foundVersion = false;
+        selectedVersion = version == bytes32('') ? counterpartyVersion : version;
         for (uint i = 0; i < supportedVersions.length; i++) {
-            if (supportedVersions[i] == version) {
+            if (selectedVersion == supportedVersions[i]) {
                 foundVersion = true;
                 break;
             }
@@ -47,7 +54,7 @@ contract Mars is IbcReceiver, Ownable {
         require(foundVersion, 'Unsupported version');
         openChannels.push(channelId);
 
-        return bytes32('1.0');
+        return selectedVersion;
     }
 
     function onConnectIbcChannel(string calldata channelId, string calldata error) external {
