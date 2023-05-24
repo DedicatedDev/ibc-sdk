@@ -4,6 +4,27 @@ import { ethers } from 'hardhat'
 import { expect } from 'chai'
 
 describe('Client contract', function () {
+  /**
+   * @description Deploy IBC Core SC and verifier contract
+   */
+  async function deployIbcCoreFixture() {
+    // Get the ContractFactory and Signers here.
+    const Dispatcher = await ethers.getContractFactory('Dispatcher')
+    const Verifier = await ethers.getContractFactory('Verifier')
+
+    const signers = await ethers.getSigners()
+    const accounts = { owner: signers[0], user1: signers[1], user2: signers[2], otherUsers: signers.slice(3) }
+
+    // Deploy Verifier and CoreSC contracts by owner
+    const verifier = await Verifier.deploy()
+    const dispatcher = await Dispatcher.deploy(verifier.address)
+
+    return { accounts, verifier, dispatcher }
+  }
+
+  /**
+   * @description Deploy IBC Core SC and verifier contract, create Polymer client and deploy a dApp Mars contract as an IBC-enabled contract
+   */
   async function setupFixture() {
     // Get the ContractFactory and Signers here.
     const Dispatcher = await ethers.getContractFactory('Dispatcher')
@@ -29,6 +50,16 @@ describe('Client contract', function () {
   }
 
   describe('createClient', function () {
+    it('only owner can create a new client', async function () {
+      const { accounts, dispatcher } = await loadFixture(deployIbcCoreFixture)
+      const clientState = ethers.utils.formatBytes32String('clientState')
+      const consensusState = ethers.utils.formatBytes32String('consensusState')
+
+      await expect(dispatcher.connect(accounts.user1).createClient(clientState, consensusState)).to.be.revertedWith(
+        'Ownable: caller is not the owner'
+      )
+    })
+
     it('should create a new client', async function () {
       const { dispatcher } = await loadFixture(setupFixture)
       const latestConsensusState = await dispatcher.latestConsensusState()

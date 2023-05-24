@@ -160,11 +160,8 @@ contract Dispatcher is Ownable, IbcDispatcher {
         string calldata counterpartyPortId,
         string calldata counterpartyVersion
     ) external {
-        console.log('====> openIbcChannel started');
         IbcReceiver receiver = IbcReceiver(portAddress);
         bytes32 channelId = bytes32(concatStrings('channel-', Strings.toString(channelCounter++)));
-        console.log('===>channelId');
-        console.log(string(abi.encodePacked(channelId)));
         receiver.onOpenIbcChannel(
             channelId,
             version,
@@ -174,7 +171,6 @@ contract Dispatcher is Ownable, IbcDispatcher {
             counterpartyPortId,
             counterpartyVersion
         );
-        console.log('===>channelId');
         emit OpenIbcChannel(
             portAddress,
             counterPartyChannelId,
