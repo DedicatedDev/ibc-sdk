@@ -75,7 +75,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
     // fields
     //
 
-    ZKMintVerifier public verifier;
+    ZKMintVerifier verifier;
     bool isClientCreated;
     bytes public latestConsensusState;
 
@@ -116,7 +116,10 @@ contract Dispatcher is Ownable, IbcDispatcher {
      */
     function updateClient(bytes calldata consensusState) external {
         require(isClientCreated, 'Client not created');
-        require(verifier.verify(consensusState), 'Consensus state verification failed');
+        require(
+            verifier.verifyConsensusState(latestConsensusState, consensusState),
+            'Consensus state verification failed'
+        );
         latestConsensusState = consensusState;
     }
 
@@ -159,8 +162,18 @@ contract Dispatcher is Ownable, IbcDispatcher {
         string[] calldata connectionHops,
         bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        bytes32 counterpartyVersion
+        bytes32 counterpartyVersion,
+        Proof calldata proof
     ) external {
+        require(
+            verifier.verifyMembership(
+                latestConsensusState,
+                proof,
+                'channel/path/to/be/added/here',
+                bytes('expected channel bytes constructed from params')
+            ),
+            'Fail to prove channel state'
+        );
         IbcReceiver receiver = IbcReceiver(portAddress);
         bytes32 channelId = bytes32(concatStrings('channel-', Strings.toString(channelCounter++)));
         bytes32 selectedVersion = receiver.onOpenIbcChannel(

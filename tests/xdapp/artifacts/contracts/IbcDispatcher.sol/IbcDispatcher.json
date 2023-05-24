@@ -127,14 +127,9 @@
         {
           "components": [
             {
-              "internalType": "bytes",
-              "name": "keyPath",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "value",
-              "type": "bytes"
+              "internalType": "uint64",
+              "name": "proofHeight",
+              "type": "uint64"
             },
             {
               "internalType": "bytes",
@@ -230,14 +225,9 @@
         {
           "components": [
             {
-              "internalType": "bytes",
-              "name": "keyPath",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "value",
-              "type": "bytes"
+              "internalType": "uint64",
+              "name": "proofHeight",
+              "type": "uint64"
             },
             {
               "internalType": "bytes",
@@ -333,14 +323,9 @@
         {
           "components": [
             {
-              "internalType": "bytes",
-              "name": "keyPath",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "value",
-              "type": "bytes"
+              "internalType": "uint64",
+              "name": "proofHeight",
+              "type": "uint64"
             },
             {
               "internalType": "bytes",
@@ -394,6 +379,23 @@
           "internalType": "bytes32",
           "name": "counterpartyVersion",
           "type": "bytes32"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint64",
+              "name": "proofHeight",
+              "type": "uint64"
+            },
+            {
+              "internalType": "bytes",
+              "name": "proof",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct Proof",
+          "name": "proof",
+          "type": "tuple"
         }
       ],
       "name": "openIbcChannel",

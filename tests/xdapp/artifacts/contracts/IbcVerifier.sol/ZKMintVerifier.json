@@ -7,11 +7,16 @@
       "inputs": [
         {
           "internalType": "bytes",
-          "name": "consensusState",
+          "name": "lastConsensusState",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes",
+          "name": "newConsensusState",
           "type": "bytes"
         }
       ],
-      "name": "verify",
+      "name": "verifyConsensusState",
       "outputs": [
         {
           "internalType": "bool",
@@ -19,7 +24,94 @@
           "type": "bool"
         }
       ],
-      "stateMutability": "nonpayable",
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "consensusState",
+          "type": "bytes"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint64",
+              "name": "proofHeight",
+              "type": "uint64"
+            },
+            {
+              "internalType": "bytes",
+              "name": "proof",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct Proof",
+          "name": "proof",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "key",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes",
+          "name": "expectedValue",
+          "type": "bytes"
+        }
+      ],
+      "name": "verifyMembership",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "consensusState",
+          "type": "bytes"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint64",
+              "name": "proofHeight",
+              "type": "uint64"
+            },
+            {
+              "internalType": "bytes",
+              "name": "proof",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct Proof",
+          "name": "proof",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "key",
+          "type": "bytes"
+        }
+      ],
+      "name": "verifyNonMembership",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "pure",
       "type": "function"
     }
   ],

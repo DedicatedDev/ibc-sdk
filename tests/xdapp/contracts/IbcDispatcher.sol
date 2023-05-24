@@ -10,8 +10,9 @@ enum ChannelOrder {
 }
 
 struct Proof {
-    bytes keyPath; // packet key path
-    bytes value; // packet commitment
+    // block height at which the proof is valid for a membership or non-membership at the given keyPath
+    uint64 proofHeight;
+    // ics23 merkle proof
     bytes proof;
 }
 
@@ -28,7 +29,8 @@ interface IbcDispatcher {
         string[] calldata connectionHops,
         bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        bytes32 counterpartyVersion
+        bytes32 counterpartyVersion,
+        Proof calldata proof
     ) external;
 
     function connectIbcChannel(

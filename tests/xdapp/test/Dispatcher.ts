@@ -17,8 +17,8 @@ describe('IBC Core Smart Contract', function () {
     V2: toBytes32('2.0'),
     Unordered: 0,
     Ordered: 1,
-    InvalidProof: '0x',
-    ValidProof: '0x1234',
+    InvalidProof: { proofHeight: 42, proof: ethers.utils.toUtf8Bytes('') },
+    ValidProof: { proofHeight: 42, proof: ethers.utils.toUtf8Bytes('valid proof') },
     ChannelIds: ['channel-0', 'channel-1'].map(toBytes32),
     RemoteChannelIds: ['channel-100', 'channel-101'].map(toBytes32),
     EmptyChannelId: toBytes32(''),
@@ -112,6 +112,12 @@ describe('IBC Core Smart Contract', function () {
 
       expect(latestConsensusState).to.equal(C.ConsensusStates[1])
     })
+
+    it('cannot update client with invalid consensusState', async function () {
+      const { dispatcher } = await loadFixture(setupFixture)
+      const invalidConsState = ethers.utils.toUtf8Bytes('short')
+      await expect(dispatcher.updateClient(invalidConsState)).to.be.revertedWith('Consensus state verification failed')
+    })
   })
 
   describe('openIbcChannel', function () {
@@ -121,7 +127,16 @@ describe('IBC Core Smart Contract', function () {
       await expect(
         dispatcher
           .connect(accounts.relayer)
-          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.EmptyChannelId, C.BscPortId, C.EmptyVersion)
+          .openIbcChannel(
+            mars.address,
+            C.V1,
+            C.Unordered,
+            C.ConnHops1,
+            C.EmptyChannelId,
+            C.BscPortId,
+            C.EmptyVersion,
+            C.ValidProof
+          )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
         .withArgs(
@@ -149,7 +164,8 @@ describe('IBC Core Smart Contract', function () {
             C.ConnHops2,
             C.RemoteChannelIds[0],
             C.BscPortId,
-            C.V2
+            C.V2,
+            C.ValidProof
           )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
@@ -170,7 +186,8 @@ describe('IBC Core Smart Contract', function () {
             C.ConnHops1,
             C.EmptyChannelId,
             C.BscPortId,
-            C.EmptyVersion
+            C.EmptyVersion,
+            C.ValidProof
           )
       ).to.be.revertedWith('Unsupported version')
 
@@ -185,7 +202,8 @@ describe('IBC Core Smart Contract', function () {
             C.ConnHops2,
             C.RemoteChannelIds[0],
             C.BscPortId,
-            toBytes32('unknown-version')
+            toBytes32('unknown-version'),
+            C.ValidProof
           )
       ).to.be.revertedWith('Unsupported version')
     })
@@ -196,8 +214,36 @@ describe('IBC Core Smart Contract', function () {
       await expect(
         dispatcher
           .connect(accounts.relayer)
-          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.RemoteChannelIds[0], 'portX', C.EmptyVersion)
+          .openIbcChannel(
+            mars.address,
+            C.V1,
+            C.Unordered,
+            C.ConnHops1,
+            C.RemoteChannelIds[0],
+            'portX',
+            C.EmptyVersion,
+            C.ValidProof
+          )
       ).to.be.revertedWith('Invalid counterpartyPortId')
+    })
+
+    it('proof error', async function () {
+      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+
+      await expect(
+        dispatcher
+          .connect(accounts.relayer)
+          .openIbcChannel(
+            mars.address,
+            C.V1,
+            C.Unordered,
+            C.ConnHops1,
+            C.RemoteChannelIds[0],
+            C.BscPortId,
+            C.EmptyVersion,
+            C.InvalidProof
+          )
+      ).to.be.revertedWith('Fail to prove channel state')
     })
   })
 })
