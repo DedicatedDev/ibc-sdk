@@ -170,11 +170,18 @@ type StopOpts = {
 }
 
 export async function stop(opts: StopOpts, log: winston.Logger) {
+  const removeAll = () => {
+    if (!opts.all) return
+    log.info('Removing the entire workspace!')
+    fs.rmSync(opts.workspace, { force: true, recursive: true })
+  }
+
   let runtime: ChainSetsRunObj
   try {
     runtime = loadWorkspace(opts.workspace)
   } catch {
     log.warn('Looks like you have already stopped the workspace?')
+    removeAll()
     return
   }
 
@@ -201,10 +208,7 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
 
   fs.rmSync(runtime.Run.WorkingDir, { force: true, recursive: true })
 
-  if (opts.all) {
-    log.info('Removing the entire workspace!')
-    fs.rmSync(opts.workspace, { force: true, recursive: true })
-  }
+  removeAll()
 }
 
 type ExecOpts = {
