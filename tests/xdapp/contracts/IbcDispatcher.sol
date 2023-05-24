@@ -34,10 +34,11 @@ interface IbcDispatcher {
     ) external;
 
     function connectIbcChannel(
-        string calldata channelId,
-        string calldata counterpartyChannelId,
-        string calldata counterPartyPort,
-        string calldata counterpartyVersion
+        address portAddress,
+        bytes32 channelId,
+        bytes32 counterpartyChannelId,
+        bytes32 counterpartyVersion,
+        Proof calldata proof
     ) external;
 
     function closeIbcChannel(string calldata channelId) external;

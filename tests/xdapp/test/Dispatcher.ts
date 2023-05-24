@@ -272,4 +272,23 @@ describe('IBC Core Smart Contract', function () {
       ).to.be.revertedWith('Fail to prove channel state')
     })
   })
+
+  describe('connectIbcChannel', function () {
+    it('ChanOpenAck', async function () {
+      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+
+      await dispatcher
+        .connect(accounts.relayer)
+        .openIbcChannel(
+          mars.address,
+          C.V1,
+          C.Unordered,
+          C.ConnHops1,
+          C.EmptyChannelId,
+          C.BscPortId,
+          C.EmptyVersion,
+          C.ValidProof
+        )
+    })
+  })
 })

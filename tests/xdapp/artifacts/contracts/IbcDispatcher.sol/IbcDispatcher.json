@@ -19,24 +19,41 @@
     {
       "inputs": [
         {
-          "internalType": "string",
+          "internalType": "address",
+          "name": "portAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
           "name": "channelId",
-          "type": "string"
+          "type": "bytes32"
         },
         {
-          "internalType": "string",
+          "internalType": "bytes32",
           "name": "counterpartyChannelId",
-          "type": "string"
+          "type": "bytes32"
         },
         {
-          "internalType": "string",
-          "name": "counterPartyPort",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
+          "internalType": "bytes32",
           "name": "counterpartyVersion",
-          "type": "string"
+          "type": "bytes32"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint64",
+              "name": "proofHeight",
+              "type": "uint64"
+            },
+            {
+              "internalType": "bytes",
+              "name": "proof",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct Proof",
+          "name": "proof",
+          "type": "tuple"
         }
       ],
       "name": "connectIbcChannel",

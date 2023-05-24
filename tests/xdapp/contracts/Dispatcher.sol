@@ -15,6 +15,15 @@ struct LightClient {
     bytes consensusState;
 }
 
+struct Channel {
+    bytes32 version;
+    ChannelOrder ordering;
+    string[] connectionHops;
+    bytes32 counterpartyChannelId;
+    string counterpartyPortId;
+    bytes32 counterpartyVersion;
+}
+
 /**
  * @title Dispatcher
  * @author Polymer Labs
@@ -39,11 +48,11 @@ contract Dispatcher is Ownable, IbcDispatcher {
     );
 
     event ConnectIbcChannel(
-        string channelId,
-        address indexed portId,
-        string counterPartyChannelId,
-        string counterPartyPortId,
-        string counterPartyVersion
+        address indexed portAddress,
+        bytes32 indexed channelId,
+        string counterpartyPortId,
+        bytes32 indexed counterpartyChannelId,
+        string[] connectionHops
     );
 
     event CloseIbcChannel(string channelId, address indexed portId);
@@ -80,6 +89,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
     bytes public latestConsensusState;
 
     uint64 channelCounter = 0;
+    mapping(address => mapping(bytes32 => Channel)) public portChannelMap;
 
     //
     // methods
@@ -146,14 +156,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
     }
 
     /**
-     * @notice Opens a new IBC channel on the Polymer chain.
-     * @dev Emits an OpenIbcChannel event.
-     * @param portAddress The address of the port that the channel is opened on. Actual port ID is prefixed with
-       CoreSC's portPrefix.
-     * @param connectionHops IBC connection IDs from the running chain's perspective
-     * @param counterpartyPortId full IBC portID of the counterparty
-     * @param ordering the order of the channel
-     * @param version version of the channel
+     * TODO: add doc
      */
     function openIbcChannel(
         address portAddress,
@@ -170,7 +173,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
                 latestConsensusState,
                 proof,
                 'channel/path/to/be/added/here',
-                bytes('expected channel bytes constructed from params')
+                bytes('expected channel bytes constructed from params. Channel.State = {Init_Pending, Try_Pending}')
             ),
             'Fail to prove channel state'
         );
@@ -185,6 +188,18 @@ contract Dispatcher is Ownable, IbcDispatcher {
             counterpartyPortId,
             counterpartyVersion
         );
+        // Register port and channel mapping
+        // check if portMap exists; create one if not exists
+
+        portChannelMap[portAddress][channelId] = Channel(
+            selectedVersion,
+            ordering,
+            connectionHops,
+            counterpartyChannelId,
+            counterpartyPortId,
+            counterpartyVersion
+        );
+
         emit OpenIbcChannel(
             portAddress,
             channelId,
@@ -198,41 +213,33 @@ contract Dispatcher is Ownable, IbcDispatcher {
     }
 
     /**
-     * @notice Connects an IBC channel with a counterparty IBC channel
-     * @dev Emits a `ConnectIbcChannel` event with the given parameters
-     * @param channelId The ID of the IBC channel
-     * @param counterPartyChannelId The ID of the counterparty IBC channel
-     * @param counterPartyPortId The ID of the counterparty IBC port
-     * @param counterPartyVersion The version of the counterparty IBC channel
+     * TODO: add doc
      */
     function connectIbcChannel(
-        string calldata channelId,
-        string calldata counterPartyChannelId,
-        string calldata counterPartyPortId,
-        string calldata counterPartyVersion
+        address portAddress,
+        bytes32 channelId,
+        bytes32 counterpartyChannelId,
+        bytes32 counterpartyVersion,
+        Proof calldata proof
     ) external {
-        emit ConnectIbcChannel(channelId, msg.sender, counterPartyChannelId, counterPartyPortId, counterPartyVersion);
-    }
-
-    /**
-     * @notice Callback function to handle a successful connection to an IBC channel
-     * @dev Verifies the given proof and calls the `onConnectIbcChannel` function on the given `receiver` contract
-     * @param receiver The IbcReceiver contract that should handle the connection event
-     * If the address doesn't satisfy the interface, the transaction will be reverted.
-     * @param channelId The ID of the connected IBC channel
-     * @param proof The proof data needed to verify the connection
-     * @param error Any error message associated with the connection, or an empty string if successful
-     * @dev Throws an error if the proof verification fails
-     */
-    function onConnectIbcChannel(
-        IbcReceiver receiver,
-        string calldata channelId,
-        Proof calldata proof,
-        string calldata error
-    ) external {
-        require(verify(proof), 'Proof verification failed');
-        // TODO: we need to provide a way to user SC to map original request to the callback
-        receiver.onConnectIbcChannel(channelId, error);
+        require(
+            verifier.verifyMembership(
+                latestConsensusState,
+                proof,
+                'channel/path/to/be/added/here',
+                bytes('expected channel bytes constructed from params. Channel.State = {Ack_Pending, Confirm_Pending}')
+            ),
+            'Fail to prove channel state'
+        );
+        Channel memory channel = portChannelMap[portAddress][channelId];
+        require(channel.counterpartyChannelId != counterpartyChannelId, 'Channel not assigned to portAddress');
+        emit ConnectIbcChannel(
+            portAddress,
+            channelId,
+            channel.counterpartyPortId,
+            counterpartyChannelId,
+            channel.connectionHops
+        );
     }
 
     /**
@@ -242,26 +249,6 @@ contract Dispatcher is Ownable, IbcDispatcher {
      */
     function closeIbcChannel(string calldata channelId) external {
         emit CloseIbcChannel(channelId, msg.sender);
-    }
-
-    /**
-     * @notice Callback function to handle the closing of an IBC channel
-     * @dev Verifies the given proof and calls the `onCloseIbcChannel` function on the given `receiver` contract
-     * @param receiver The IbcReceiver contract that should handle the channel closing event
-     * If the address doesn't satisfy the interface, the transaction will be reverted.
-     * @param channelId The ID of the closed IBC channel
-     * @param proof The proof data needed to verify the channel closing
-     * @param error Any error message associated with the channel closing, or an empty string if successful
-     * @dev Throws an error if the proof verification fails
-     */
-    function onCloseIbcChannel(
-        IbcReceiver receiver,
-        string calldata channelId,
-        Proof calldata proof,
-        string calldata error
-    ) external {
-        require(verify(proof), 'Proof verification failed');
-        receiver.onCloseIbcChannel(channelId, error);
     }
 
     //
