@@ -173,9 +173,19 @@ async function deployCosmosSmartContract(
   await $`docker cp ${scpath} ${container_id}:/tmp/sc.wasm`
   const container = new Container(container_id, deployer.Address, chain.Name)
 
-  const tx = await container.tx('store', '/tmp/sc.wasm', ...scargs)
+  // make sure we pass in an empty object at the very least
+  if (scargs.length === 0) scargs.push('{}')
+
+  const tx = await container.tx('store', '/tmp/sc.wasm')
   const store_code = container.flat(tx, 'store_code')
-  const instantiate_tx = await container.tx('instantiate', store_code.code_id, '{}', '--no-admin', '--label', 'demo')
+  const instantiate_tx = await container.tx(
+    'instantiate',
+    store_code.code_id,
+    ...scargs,
+    '--no-admin',
+    '--label',
+    'demo'
+  )
   const contract = container.flat(instantiate_tx, 'instantiate')
 
   return {
