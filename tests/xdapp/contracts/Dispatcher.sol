@@ -29,6 +29,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
 
     event OpenIbcChannel(
         address indexed portAddress,
+        bytes32 indexed channelId,
         bytes32 indexed counterpartyChannelId,
         string version,
         ChannelOrder ordering,
@@ -156,7 +157,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
         string calldata version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
-        bytes32 counterPartyChannelId,
+        bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
         string calldata counterpartyVersion
     ) external {
@@ -167,13 +168,14 @@ contract Dispatcher is Ownable, IbcDispatcher {
             version,
             ordering,
             connectionHops,
-            counterPartyChannelId,
+            counterpartyChannelId,
             counterpartyPortId,
             counterpartyVersion
         );
         emit OpenIbcChannel(
             portAddress,
-            counterPartyChannelId,
+            channelId,
+            counterpartyChannelId,
             version,
             ordering,
             connectionHops,

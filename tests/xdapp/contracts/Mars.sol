@@ -30,11 +30,11 @@ contract Mars is IbcReceiver, Ownable {
         string calldata version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
-        bytes32 counterPartyChannelId,
+        bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
         string calldata counterpartyVersion
     ) external {
-        // openChannels.push(channelId);
+        openChannels.push(channelId);
     }
 
     function onConnectIbcChannel(string calldata channelId, string calldata error) external {

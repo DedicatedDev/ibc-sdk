@@ -86,13 +86,14 @@ describe('Client contract', function () {
   })
 
   describe('openIbcChannel', function () {
-    it('should emit OpenIbcChannel event', async function () {
+    it('ChanOpenInit', async function () {
       const { dispatcher, mars } = await loadFixture(setupFixture)
 
-      const connHops = ['connection-0', 'connection-1']
+      const connHops = ['connection-0', 'connection-2']
       const counterpartyPortId = 'bsc.polyibc.9876543210'
       const order = 0
       const version = '1.0'
+      const newChannelId = ethers.utils.formatBytes32String('channel-0')
       const counterpartyChannelId = ethers.utils.formatBytes32String('')
 
       await expect(
@@ -107,7 +108,50 @@ describe('Client contract', function () {
         )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
-        .withArgs(mars.address, counterpartyChannelId, version, order, connHops, counterpartyPortId, version)
+        .withArgs(
+          mars.address,
+          newChannelId,
+          counterpartyChannelId,
+          version,
+          order,
+          connHops,
+          counterpartyPortId,
+          version
+        )
+    })
+
+    it('ChanOpenTry', async function () {
+      const { dispatcher, mars } = await loadFixture(setupFixture)
+
+      const connHops = ['connection-1', 'connection-3']
+      const counterpartyPortId = 'bsc.polyibc.9876543210'
+      const order = 0
+      const version = '1.0'
+      const newChannelId = ethers.utils.formatBytes32String('channel-0')
+      const counterpartyChannelId = ethers.utils.formatBytes32String('channel-123')
+
+      await expect(
+        dispatcher.openIbcChannel(
+          mars.address,
+          version,
+          order,
+          connHops,
+          counterpartyChannelId,
+          counterpartyPortId,
+          version
+        )
+      )
+        .to.emit(dispatcher, 'OpenIbcChannel')
+        .withArgs(
+          mars.address,
+          newChannelId,
+          counterpartyChannelId,
+          version,
+          order,
+          connHops,
+          counterpartyPortId,
+          version
+        )
     })
   })
 })

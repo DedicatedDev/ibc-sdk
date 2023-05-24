@@ -26,14 +26,14 @@ interface IbcDispatcher {
         string calldata version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
-        bytes32 counterPartyChannelId,
+        bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
         string calldata counterpartyVersion
     ) external;
 
     function connectIbcChannel(
         string calldata channelId,
-        string calldata counterPartyChannelId,
+        string calldata counterpartyChannelId,
         string calldata counterPartyPort,
         string calldata counterpartyVersion
     ) external;
