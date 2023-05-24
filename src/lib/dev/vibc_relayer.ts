@@ -84,8 +84,8 @@ export class VIBCRelayer {
       const dispatcher = chain.Contracts.find((c) => c.Name === 'Dispatcher')
       if (!dispatcher) throw new Error(`Missing dispatcher contract on chain ${chain.Name}`)
       relayerConfig.chains[chain.Name].dispatcher = {
-        address: dispatcher.Address,
-        abi: dispatcher.Abi
+        Address: dispatcher.Address,
+        Abi: dispatcher.Abi
       }
     }
 

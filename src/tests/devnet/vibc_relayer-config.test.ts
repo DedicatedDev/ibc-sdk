@@ -26,8 +26,8 @@ chains:
         rpc-url: http://bsc.org:1234
         account-prefix: unsetPrefix
         dispatcher:
-          address: '0x338fE7f3844408fe50EF618d0DBC3C74203326F0'
-          abi: '[]'
+          Address: '0x338fE7f3844408fe50EF618d0DBC3C74203326F0'
+          Abi: '[]'
         account:
           Address: '0x50c1389FfDf0fc0c27BAC88EcFD7046A5343c79A'
           PrivateKey: '0xbaeb0652f541c24abdf69216fec5136bda1a013dea71ab24bb3b477143efa9ef'
@@ -107,6 +107,11 @@ paths:
           {
             Name: 'Dispatcher',
             Address: '0x338fE7f3844408fe50EF618d0DBC3C74203326F0',
+            Abi: '[]'
+          },
+          {
+            Name: 'Mars',
+            Address: '0x338fE7f3844408fe50EF618d0DBC3C74203326F1',
             Abi: '[]'
           }
         ]
