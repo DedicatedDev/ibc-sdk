@@ -44,7 +44,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
   t.assert(runtime)
 
-  const eth1Chain: EvmChainSet = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-exec-0')
+  const eth1Chain: EvmChainSet = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-execution')
   t.assert(eth1Chain)
 
   const vibcRelayer = runtime.Relayers.find((r: RelayerRunObj) => r.Name === 'vibc-relayer')
@@ -54,7 +54,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const eth1Account = eth1Chain.Accounts[1]
   t.assert(eth1Account)
 
-  const wasmChain = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'wasm-0')
+  const wasmChain = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'wasm')
   t.assert(wasmChain)
 
   const wasmAccount = wasmChain.Accounts.find((a: CosmosAccount) => a.Name === 'relayer')
@@ -74,7 +74,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   // deploy evm contract
   const marsPath = path.join(t.context.workspace, 'vibc-core-smart-contracts', 'Mars.sol', 'Mars.json')
   t.assert(fs.existsSync(marsPath))
-  const out1 = await runCommand(t, 'deploy', 'eth-exec-0', eth1Account.Address, marsPath)
+  const out1 = await runCommand(t, 'deploy', 'eth-execution', eth1Account.Address, marsPath)
   t.assert(out1.exitCode === 0)
   const marsAddress = out1.stdout.trim()
 
