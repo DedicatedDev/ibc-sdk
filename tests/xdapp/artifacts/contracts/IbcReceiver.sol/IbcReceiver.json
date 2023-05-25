@@ -100,14 +100,19 @@
     {
       "inputs": [
         {
-          "internalType": "string",
+          "internalType": "bytes32",
           "name": "channelId",
-          "type": "string"
+          "type": "bytes32"
         },
         {
-          "internalType": "string",
-          "name": "error",
-          "type": "string"
+          "internalType": "bytes32",
+          "name": "counterpartyChannelId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "counterpartyVersion",
+          "type": "bytes32"
         }
       ],
       "name": "onConnectIbcChannel",

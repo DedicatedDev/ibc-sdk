@@ -59,7 +59,11 @@ interface IbcReceiver {
         bytes32 counterpartyVersion
     ) external returns (bytes32 selectedVersion);
 
-    function onConnectIbcChannel(string calldata channelId, string calldata error) external;
+    function onConnectIbcChannel(
+        bytes32 channelId,
+        bytes32 counterpartyChannelId,
+        bytes32 counterpartyVersion
+    ) external;
 
     function onCloseIbcChannel(string calldata channelId, string calldata error) external;
 }

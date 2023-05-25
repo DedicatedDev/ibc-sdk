@@ -36,6 +36,9 @@ interface IbcDispatcher {
     function connectIbcChannel(
         address portAddress,
         bytes32 channelId,
+        string[] calldata connectionHops,
+        ChannelOrder ordering,
+        string calldata counterpartyPortId,
         bytes32 counterpartyChannelId,
         bytes32 counterpartyVersion,
         Proof calldata proof

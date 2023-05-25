@@ -10,8 +10,7 @@ contract Mars is IbcReceiver, Ownable {
     IbcPacket[] public recvedPackets;
     IbcPacket[] public ackPackets;
     IbcPacket[] public timeoutPackets;
-    bytes32[] public openChannels;
-    string[] public connectedChannels;
+    bytes32[] public connectedChannels;
 
     bytes32[] supportedVersions = [bytes32('1.0'), bytes32('2.0')];
 
@@ -52,25 +51,30 @@ contract Mars is IbcReceiver, Ownable {
             }
         }
         require(foundVersion, 'Unsupported version');
-        openChannels.push(channelId);
 
         return selectedVersion;
     }
 
-    function onConnectIbcChannel(string calldata channelId, string calldata error) external {
+    function onConnectIbcChannel(
+        bytes32 channelId,
+        bytes32 counterpartyChannelId,
+        bytes32 counterpartyVersion
+    ) external {
+        // ensure negotiated version is supported
+        bool foundVersion = false;
+        for (uint i = 0; i < supportedVersions.length; i++) {
+            if (counterpartyVersion == supportedVersions[i]) {
+                foundVersion = true;
+                break;
+            }
+        }
+        require(foundVersion, 'Unsupported version');
         connectedChannels.push(channelId);
     }
 
     function onCloseIbcChannel(string calldata channelId, string calldata error) external {
-        for (uint i = 0; i < openChannels.length; i++) {
-            if (keccak256(abi.encodePacked(openChannels[i])) == keccak256(bytes(channelId))) {
-                delete openChannels[i];
-                break;
-            }
-        }
-
         for (uint i = 0; i < connectedChannels.length; i++) {
-            if (keccak256(bytes(connectedChannels[i])) == keccak256(bytes(channelId))) {
+            if (keccak256(abi.encodePacked(connectedChannels[i])) == keccak256(bytes(channelId))) {
                 delete connectedChannels[i];
                 break;
             }

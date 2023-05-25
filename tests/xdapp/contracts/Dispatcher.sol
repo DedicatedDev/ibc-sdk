@@ -19,9 +19,8 @@ struct Channel {
     bytes32 version;
     ChannelOrder ordering;
     string[] connectionHops;
-    bytes32 counterpartyChannelId;
     string counterpartyPortId;
-    bytes32 counterpartyVersion;
+    bytes32 counterpartyChannelId;
 }
 
 /**
@@ -188,17 +187,6 @@ contract Dispatcher is Ownable, IbcDispatcher {
             counterpartyPortId,
             counterpartyVersion
         );
-        // Register port and channel mapping
-        // check if portMap exists; create one if not exists
-
-        portChannelMap[portAddress][channelId] = Channel(
-            selectedVersion,
-            ordering,
-            connectionHops,
-            counterpartyChannelId,
-            counterpartyPortId,
-            counterpartyVersion
-        );
 
         emit OpenIbcChannel(
             portAddress,
@@ -218,6 +206,9 @@ contract Dispatcher is Ownable, IbcDispatcher {
     function connectIbcChannel(
         address portAddress,
         bytes32 channelId,
+        string[] calldata connectionHops,
+        ChannelOrder ordering,
+        string calldata counterpartyPortId,
         bytes32 counterpartyChannelId,
         bytes32 counterpartyVersion,
         Proof calldata proof
@@ -231,15 +222,20 @@ contract Dispatcher is Ownable, IbcDispatcher {
             ),
             'Fail to prove channel state'
         );
-        Channel memory channel = portChannelMap[portAddress][channelId];
-        require(channel.counterpartyChannelId != counterpartyChannelId, 'Channel not assigned to portAddress');
-        emit ConnectIbcChannel(
-            portAddress,
-            channelId,
-            channel.counterpartyPortId,
-            counterpartyChannelId,
-            channel.connectionHops
+
+        IbcReceiver receiver = IbcReceiver(portAddress);
+        receiver.onConnectIbcChannel(channelId, counterpartyChannelId, counterpartyVersion);
+
+        // Register port and channel mapping
+        // TODO: check duplicated channel registration?
+        portChannelMap[portAddress][channelId] = Channel(
+            counterpartyVersion,
+            ordering,
+            connectionHops,
+            counterpartyPortId,
+            counterpartyChannelId
         );
+        emit ConnectIbcChannel(portAddress, channelId, counterpartyPortId, counterpartyChannelId, connectionHops);
     }
 
     /**
