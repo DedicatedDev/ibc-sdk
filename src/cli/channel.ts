@@ -44,8 +44,8 @@ function flat(name: string, res: DeliverTxResponse) {
   return kv
 }
 
-async function waitOneBlock(client: Tendermint37Client) {
-  const end = (await client.block()).block.header.height + 1
+async function waitForBlocks(client: Tendermint37Client, blocks: number = 2) {
+  const end = (await client.block()).block.header.height + blocks
   do {
     await self.utils.sleep(1000)
   } while ((await client.block()).block.header.height < end)
@@ -101,7 +101,7 @@ export async function channelHandshake(
         params: Buffer.from(JSON.stringify({ finalized_only: false, delay_period: 2 }))
       }
     }
-    await waitOneBlock(srcQuery)
+    await waitForBlocks(srcQuery)
     const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     vLC = self.cosmos.client.polyibc.MsgCreateVibcClientResponseSchema.parse(flat('create_vibc_client', res))
   }
@@ -116,7 +116,7 @@ export async function channelHandshake(
         delayPeriod: '0'
       }
     }
-    await waitOneBlock(srcQuery)
+    await waitForBlocks(srcQuery)
     const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     vConnection = self.cosmos.client.polyibc.MsgCreateVibcConnectionResponseSchema.parse(
       flat('create_vibc_connection', res)
@@ -156,7 +156,7 @@ export async function channelHandshake(
         }
       }
     }
-    await waitOneBlock(dstQuery)
+    await waitForBlocks(dstQuery)
     const res = await dstClient.signAndBroadcast(dstAccount.Address, [msg], 'auto')
     openinit = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_init', res))
   }
@@ -192,7 +192,7 @@ export async function channelHandshake(
         virtualProof: proof()
       }
     }
-    await waitOneBlock(srcQuery)
+    await waitForBlocks(srcQuery)
     const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     opentry = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_try', res))
   }
@@ -218,7 +218,7 @@ export async function channelHandshake(
         signer: dstAccount.Address
       }
     }
-    await waitOneBlock(dstQuery)
+    await waitForBlocks(dstQuery)
     const res = await dstClient.signAndBroadcast(dstAccount.Address, [msg], 'auto')
     openack = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_ack', res))
   }
@@ -246,7 +246,7 @@ export async function channelHandshake(
         virtualProof: proof()
       }
     }
-    await waitOneBlock(srcQuery)
+    await waitForBlocks(srcQuery)
     const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     openconfirm = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_confirm', res))
   }
