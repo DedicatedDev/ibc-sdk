@@ -53,7 +53,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
         string[] connectionHops
     );
 
-    event CloseIbcChannel(string channelId, address indexed portId);
+    event CloseIbcChannel(address indexed portAddress, bytes32 indexed channelId);
 
     //
     // packet events
@@ -228,17 +228,28 @@ contract Dispatcher is Ownable, IbcDispatcher {
         );
     }
 
+    /**
+     * @notice Get the IBC channel with the specified port and channel ID
+     * @param portAddress EVM address of the IBC port
+     * @param channelId IBC channel ID from the port perspective
+     * @return A channel struct is always returned. If it doesn't exists, the channel struct is populated with default
+       values per EVM.
+     */
     function getChannel(address portAddress, bytes32 channelId) external view returns (Channel memory) {
         return portChannelMap[portAddress][channelId];
     }
 
     /**
-     * @notice Close the specified IBC channel
      * @dev Emits a `CloseIbcChannel` event with the given `channelId` and the address of the message sender
-     * @param channelId The ID of the IBC channel to be closed
+     * @notice Close the specified IBC channel by channel ID
+     * Must be called by the channel owner, ie. portChannelMap[msg.sender][channelId] must exist
      */
-    function closeIbcChannel(string calldata channelId) external {
-        emit CloseIbcChannel(channelId, msg.sender);
+    function closeIbcChannel(bytes32 channelId) external {
+        Channel memory channel = portChannelMap[msg.sender][channelId];
+        require(channel.counterpartyChannelId != bytes32(0), 'Channel not owned by msg.sender');
+        IbcReceiver reciever = IbcReceiver(msg.sender);
+        reciever.onCloseIbcChannel(channelId, channel.counterpartyPortId, channel.counterpartyChannelId);
+        emit CloseIbcChannel(msg.sender, channelId);
     }
 
     //

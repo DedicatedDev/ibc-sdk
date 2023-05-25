@@ -64,5 +64,9 @@ interface IbcReceiver {
         bytes32 counterpartyVersion
     ) external;
 
-    function onCloseIbcChannel(string calldata channelId, string calldata error) external;
+    function onCloseIbcChannel(
+        bytes32 channelId,
+        string calldata counterpartyPortId,
+        bytes32 counterpartyChannelId
+    ) external;
 }

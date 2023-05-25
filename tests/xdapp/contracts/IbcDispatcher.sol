@@ -55,7 +55,7 @@ interface IbcDispatcher {
         Proof calldata proof
     ) external;
 
-    function closeIbcChannel(string calldata channelId) external;
+    function closeIbcChannel(bytes32 channelId) external;
 
     function sendPacket(bytes32 channelId, bytes calldata payload, uint64 timeoutTimestamp) external;
 

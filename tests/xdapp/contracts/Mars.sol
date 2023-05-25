@@ -71,10 +71,17 @@ contract Mars is IbcReceiver, Ownable {
         connectedChannels.push(channelId);
     }
 
-    function onCloseIbcChannel(string calldata channelId, string calldata error) external {
+    function onCloseIbcChannel(
+        bytes32 channelId,
+        string calldata counterpartyPortId,
+        bytes32 counterpartyChannelId
+    ) external {
+        // logic to determin if the channel should be closed
+        bool channelFound = false;
         for (uint i = 0; i < connectedChannels.length; i++) {
-            if (keccak256(abi.encodePacked(connectedChannels[i])) == keccak256(bytes(channelId))) {
+            if (connectedChannels[i] == channelId) {
                 delete connectedChannels[i];
+                channelFound = true;
                 break;
             }
         }
