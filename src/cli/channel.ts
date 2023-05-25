@@ -80,7 +80,6 @@ export async function channelHandshake(
     )
     if (!clients.clientStates) throw new Error('No client states found')
     for (const state of clients.clientStates) {
-      log.info(`Found light client: ${state.clientState?.typeUrl}`)
       if (state.clientState?.typeUrl !== '/polyibc.lightclients.altair.ClientState') continue
       lc = state.clientId
       break
