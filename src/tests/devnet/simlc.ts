@@ -4,7 +4,7 @@ import { Random } from '@cosmjs/crypto'
 import { toBech32, toBase64, fromHex } from '@cosmjs/encoding'
 import { TextEncoder } from 'util'
 import { toAny } from '../../lib/cosmos/client'
-import { createSignerClient } from './test-utils'
+import { createSignerClient } from './test_utils'
 import winston from 'winston'
 
 export function randomAddress(prefix: string): string {
