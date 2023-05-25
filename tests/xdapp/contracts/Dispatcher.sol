@@ -258,7 +258,22 @@ contract Dispatcher is Ownable {
         emit CloseIbcChannel(msg.sender, channelId);
     }
 
-    function onCloseIbcChannel(address portAddress, bytes32 channelId) public {
+    /**
+     * This func is called by a 'relayer' after the IBC/VIBC hub chain has processed ChanCloseConfirm event.
+     * The dApp's onCloseIbcChannel callback is invoked.
+     * dApp should throw an error if the channel should not be closed.
+     */
+    function onCloseIbcChannel(address portAddress, bytes32 channelId, Proof calldata proof) external {
+        // verify VIBC/IBC hub chain has processed ChanCloseConfirm event
+        require(
+            verifier.verifyMembership(
+                latestConsensusState,
+                proof,
+                'channel/path/to/be/added/here',
+                bytes('expected channel bytes constructed from params. Channel.State = {Closed(_Pending?)}')
+            ),
+            'Fail to prove channel state'
+        );
         // ensure port owns channel
         Channel memory channel = portChannelMap[portAddress][channelId];
         require(channel.counterpartyChannelId != bytes32(0), 'Channel not owned by portAddress');

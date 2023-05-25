@@ -75,7 +75,7 @@ describe('IBC Core Smart Contract', function () {
     const mars = await Mars.connect(accounts.user1).deploy()
 
     // Set up Polymer light client on CoreSC
-    await dispatcher.createClient(C.ClientState, C.ConsensusStates[0])
+    await dispatcher.createClient(C.ClientState, C.ConsensusStates[0]).then((tx) => tx.wait())
 
     return { accounts, verifier, dispatcher, mars }
   }
@@ -107,6 +107,7 @@ describe('IBC Core Smart Contract', function () {
         channel.version,
         C.ValidProof
       )
+      .then((tx) => tx.wait())
     return { accounts, dispatcher, mars, channel }
   }
 
@@ -300,24 +301,35 @@ describe('IBC Core Smart Contract', function () {
         .withArgs(channel.portAddress, channel.channelId)
     })
 
-    // it('ChanCloseInit cannot succeed if caller contract does not own the channel', async function () {
-    //   const earth = await (await ethers.getContractFactory('Mars')).deploy()
-    //   const { dispatcher, channel } = await loadFixture(setupChannelFixture)
-    //   await expect(earth.triggerChannelClose(channel.channelId, dispatcher.address)).to.be.revertedWith('')
-    // })
+    it('ChanCloseInit: cannot succeed if caller contract does not own the channel', async function () {
+      const { dispatcher, channel } = await loadFixture(setupChannelFixture)
+      const earth = await (await ethers.getContractFactory('Mars')).deploy()
+      await expect(earth.triggerChannelClose(channel.channelId, dispatcher.address)).to.be.revertedWith(
+        'Channel not owned by msg.sender'
+      )
+    })
 
     it('ChanCloseConfirm', async function () {
       const { dispatcher, accounts, channel } = await loadFixture(setupChannelFixture)
-      await expect(dispatcher.connect(accounts.relayer).onCloseIbcChannel(channel.portAddress, channel.channelId))
+      await expect(
+        dispatcher.connect(accounts.relayer).onCloseIbcChannel(channel.portAddress, channel.channelId, C.ValidProof)
+      )
         .to.emit(dispatcher, 'CloseIbcChannel')
         .withArgs(channel.portAddress, channel.channelId)
     })
 
-    it('ChanCloseConfirm cannot succeed if port does not own the channel', async function () {
+    it('ChanCloseConfirm fails if port does not own the channel', async function () {
       const { dispatcher, accounts, channel } = await loadFixture(setupChannelFixture)
       await expect(
-        dispatcher.connect(accounts.relayer).onCloseIbcChannel(channel.portAddress, C.ChannelIds[1])
+        dispatcher.connect(accounts.relayer).onCloseIbcChannel(channel.portAddress, C.ChannelIds[1], C.ValidProof)
       ).to.be.revertedWith('Channel not owned by portAddress')
+    })
+
+    it('ChanCloseConfirm fails if channel proof invalid', async function () {
+      const { dispatcher, accounts, channel } = await loadFixture(setupChannelFixture)
+      await expect(
+        dispatcher.connect(accounts.relayer).onCloseIbcChannel(channel.portAddress, C.ChannelIds[0], C.InvalidProof)
+      ).to.be.revertedWith('Fail to prove channel state')
     })
   })
 })
