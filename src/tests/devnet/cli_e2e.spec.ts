@@ -37,7 +37,7 @@ async function getChannelsFrom(t: any, chain: string) {
 test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert((await runCommand(t, 'init')).exitCode === 0)
   t.assert(
-    (await runCommand(t, 'start', '-c', 'wasm-0:polymer-0', '-c', 'polymer-0:eth-exec-0', '-c', 'eth-exec-0:polymer-0'))
+    (await runCommand(t, 'start', '-c', 'wasm:polymer', '-c', 'polymer:eth-execution', '-c', 'eth-execution:polymer'))
       .exitCode === 0
   )
 
@@ -66,7 +66,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   // deploy wasm contract
   const wasm = path.resolve(__dirname, '..', '..', '..', 'src', 'tests', 'devnet', 'demo.wasm')
   t.assert(fs.existsSync(wasm))
-  const out = await runCommand(t, 'deploy', 'wasm-0', wasmAccount.Address, wasm)
+  const out = await runCommand(t, 'deploy', 'wasm', wasmAccount.Address, wasm)
   t.assert(out.exitCode === 0)
   const wasmAddress = out.stdout.trim()
   t.assert(wasmAddress.startsWith('wasm'))
@@ -79,15 +79,15 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const marsAddress = out1.stdout.trim()
 
   // check there's no channels after chains are started
-  t.deepEqual((await getChannelsFrom(t, 'polymer-0')).channels, [])
-  t.deepEqual((await getChannelsFrom(t, 'wasm-0')).channels, [])
+  t.deepEqual((await getChannelsFrom(t, 'polymer')).channels, [])
+  t.deepEqual((await getChannelsFrom(t, 'wasm')).channels, [])
 
-  const out2 = await runCommand(t, 'channel', 'eth-exec-0:' + marsAddress, 'wasm-0:' + wasmAddress)
+  const out2 = await runCommand(t, 'channel', 'eth-execution:' + marsAddress, 'wasm:' + wasmAddress)
   t.assert(out2.exitCode === 0)
 
   // check the channels have been correctly created
-  const polyChannel = await getChannelsFrom(t, 'polymer-0')
-  const wasmChannel = await getChannelsFrom(t, 'wasm-0')
+  const polyChannel = await getChannelsFrom(t, 'polymer')
+  const wasmChannel = await getChannelsFrom(t, 'wasm')
 
   t.assert(polyChannel.channels.length === 1)
   t.assert(wasmChannel.channels.length === 1)
@@ -196,7 +196,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
     }
   })
 
-  const cmds = ['wasm-0', 'wasmd', 'tx', 'wasm', 'execute', c.wasmAddress, msg]
+  const cmds = ['wasm', 'wasmd', 'tx', 'wasm', 'execute', c.wasmAddress, msg]
   cmds.push(...['--', '--gas', 'auto', '--gas-adjustment', '1.2', '--output', 'json'])
   cmds.push(...['--yes', '--from', c.wasmAccount.Address, '--keyring-backend', 'test'])
   cmds.push(...['--chain-id', c.wasmChain.Name])

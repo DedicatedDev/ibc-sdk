@@ -9,7 +9,7 @@ export const configTemplate = `#
 
 ChainSets:
     # Can be any unique identifier. Internally is also used as the chain id.
-  - Name: "eth-exec-0"
+  - Name: "eth-execution"
 
     # These are the chain type supported by the SDK.
     # Can be one of: bsc, ethereum, ethereum2, cosmos or polymer
@@ -44,9 +44,9 @@ ChainSets:
       # The accounts will be funded with these many tokens
       Balance: 1000
 
-  - Name: "eth-consensus-0"
+  - Name: "eth-consensus"
     Type: "ethereum2"
-    DependsOn: "eth-exec-0"
+    DependsOn: "eth-execution"
     Images:
       - Label: "${images.prysm_main.label}"
         Repository: "${images.prysm_main.repo}"
@@ -61,7 +61,7 @@ ChainSets:
         Tag: "${images.prysm_validator.tag}"
         Bin: "/app/cmd/validator/validator.runfiles/prysm/cmd/validator/validator_/validator"
 
-  - Name: "polymer-0"
+  - Name: "polymer"
     Type: "polymer"
     Moniker: "polymer"
     Prefix: "polymer"
@@ -85,7 +85,7 @@ ChainSets:
       Name: validatorRunner
       Staked: "100000000stake"
 
-  - Name: "wasm-0"
+  - Name: "wasm"
     Type: "cosmos"
     Moniker: "wasm"
     Prefix: "wasm"

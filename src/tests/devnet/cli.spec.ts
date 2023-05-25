@@ -71,7 +71,7 @@ test.serial('the start command starts stack', async (t) => {
   t.assert((await runInit(t)).exitCode === 0)
 
   const out =
-    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer-0:eth-exec-0' --connection 'eth-exec-0:polymer-0'`
+    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution' --connection 'eth-execution:polymer'`
   t.assert(out.exitCode === 0)
 
   const runtime = runningChainSetsSchema.parse(
@@ -80,7 +80,7 @@ test.serial('the start command starts stack', async (t) => {
   t.assert(runtime.Relayers.length === 2)
   t.assert(runtime.Relayers.find((r) => r.Name === 'vibc-relayer'))
   t.assert(runtime.Relayers.find((r) => r.Name === 'eth-relayer'))
-  t.assert(runtime.ChainSets.find((c) => c.Name === 'eth-exec-0')!.Contracts.length > 0)
+  t.assert(runtime.ChainSets.find((c) => c.Name === 'eth-execution')!.Contracts.length > 0)
 
   await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
@@ -177,14 +177,14 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
   const allContents = fs.readFileSync(configPath, 'utf-8')
   const config = fs.createWriteStream(configPath)
   allContents.split(/\r?\n/).forEach((line) => {
-    if (line.match(/- Name: "polymer-0"/)) config.write(juno)
+    if (line.match(/- Name: "polymer"/)) config.write(juno)
 
     config.write(line + '\n')
   })
   config.close()
 
   const out =
-    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer-0:juno' --connection 'polymer-0:eth-exec-0' --connection 'eth-exec-0:polymer-0'`
+    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:juno' --connection 'polymer:eth-execution' --connection 'eth-execution:polymer'`
   t.assert(out.exitCode === 0)
 
   const runtime = runningChainSetsSchema.parse(
@@ -194,8 +194,8 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
   t.assert(runtime.Relayers.length === 3)
   t.assert(runtime.Relayers.find((r) => r.Name === 'vibc-relayer'))
   t.assert(runtime.Relayers.find((r) => r.Name === 'eth-relayer'))
-  t.assert(runtime.Relayers.find((r) => r.Name === 'ibc-relayer-polymer-0-juno'))
-  t.assert(runtime.ChainSets.find((c) => c.Name === 'eth-exec-0')!.Contracts.length > 0)
+  t.assert(runtime.Relayers.find((r) => r.Name === 'ibc-relayer-polymer-juno'))
+  t.assert(runtime.ChainSets.find((c) => c.Name === 'eth-execution')!.Contracts.length > 0)
 
   await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
@@ -220,7 +220,7 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
 test.serial('the stop command resets the workspace', async (t) => {
   t.assert((await runInit(t)).exitCode === 0)
 
-  let out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer-0:eth-exec-0'`
+  let out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution'`
   t.assert(out.exitCode === 0)
 
   // after this, the workspace will be ready to be start again.
@@ -232,7 +232,7 @@ test.serial('the stop command resets the workspace', async (t) => {
   t.assert(fs.existsSync(path.join(t.context.workspace, 'vibc-core-smart-contracts')))
 
   // run start on the stopped workspace again
-  out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer-0:eth-exec-0'`
+  out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution'`
   t.assert(out.exitCode === 0)
   await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
