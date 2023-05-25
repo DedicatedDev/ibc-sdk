@@ -19,7 +19,7 @@
     {
       "inputs": [
         {
-          "internalType": "address",
+          "internalType": "contract IbcReceiver",
           "name": "portAddress",
           "type": "address"
         },
@@ -378,7 +378,7 @@
     {
       "inputs": [
         {
-          "internalType": "address",
+          "internalType": "contract IbcReceiver",
           "name": "portAddress",
           "type": "address"
         },

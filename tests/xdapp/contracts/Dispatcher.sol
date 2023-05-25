@@ -93,8 +93,8 @@ contract Dispatcher is Ownable, IbcDispatcher {
     // methods
     //
 
-    constructor(address _verifier) {
-        verifier = ZKMintVerifier(_verifier);
+    constructor(ZKMintVerifier _verifier) {
+        verifier = _verifier;
         isClientCreated = false;
     }
 
@@ -157,7 +157,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * TODO: add doc
      */
     function openIbcChannel(
-        address portAddress,
+        IbcReceiver portAddress,
         bytes32 version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
@@ -175,8 +175,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
             ),
             'Fail to prove channel state'
         );
-        IbcReceiver receiver = IbcReceiver(portAddress);
-        bytes32 selectedVersion = receiver.onOpenIbcChannel(
+        bytes32 selectedVersion = portAddress.onOpenIbcChannel(
             version,
             ordering,
             connectionHops,
@@ -186,7 +185,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
         );
 
         emit OpenIbcChannel(
-            portAddress,
+            address(portAddress),
             counterpartyChannelId,
             selectedVersion,
             ordering,
@@ -200,7 +199,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
      * TODO: add doc
      */
     function connectIbcChannel(
-        address portAddress,
+        IbcReceiver portAddress,
         bytes32 channelId,
         string[] calldata connectionHops,
         ChannelOrder ordering,
@@ -219,19 +218,24 @@ contract Dispatcher is Ownable, IbcDispatcher {
             'Fail to prove channel state'
         );
 
-        IbcReceiver receiver = IbcReceiver(portAddress);
-        receiver.onConnectIbcChannel(channelId, counterpartyChannelId, counterpartyVersion);
+        portAddress.onConnectIbcChannel(channelId, counterpartyChannelId, counterpartyVersion);
 
         // Register port and channel mapping
         // TODO: check duplicated channel registration?
-        portChannelMap[portAddress][channelId] = Channel(
+        portChannelMap[address(portAddress)][channelId] = Channel(
             counterpartyVersion,
             ordering,
             connectionHops,
             counterpartyPortId,
             counterpartyChannelId
         );
-        emit ConnectIbcChannel(portAddress, channelId, counterpartyPortId, counterpartyChannelId, connectionHops);
+        emit ConnectIbcChannel(
+            address(portAddress),
+            channelId,
+            counterpartyPortId,
+            counterpartyChannelId,
+            connectionHops
+        );
     }
 
     function getChannel(address portAddress, bytes32 channelId) external view returns (Channel memory) {
