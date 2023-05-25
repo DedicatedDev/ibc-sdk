@@ -50,7 +50,6 @@ interface IbcReceiver {
     //
 
     function onOpenIbcChannel(
-        bytes32 channelId,
         bytes32 version,
         ChannelOrder ordering,
         string[] calldata connectionHops,

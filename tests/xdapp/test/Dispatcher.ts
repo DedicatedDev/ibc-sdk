@@ -139,42 +139,7 @@ describe('IBC Core Smart Contract', function () {
           )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
-        .withArgs(
-          mars.address,
-          C.ChannelIds[0],
-          C.EmptyChannelId,
-          C.V1,
-          C.Unordered,
-          C.ConnHops1,
-          C.BscPortId,
-          C.EmptyVersion
-        )
-      // Channel ID should increment
-      await expect(
-        dispatcher
-          .connect(accounts.relayer)
-          .openIbcChannel(
-            mars.address,
-            C.V1,
-            C.Unordered,
-            C.ConnHops1,
-            C.EmptyChannelId,
-            C.BscPortId,
-            C.EmptyVersion,
-            C.ValidProof
-          )
-      )
-        .to.emit(dispatcher, 'OpenIbcChannel')
-        .withArgs(
-          mars.address,
-          C.ChannelIds[1],
-          C.EmptyChannelId,
-          C.V1,
-          C.Unordered,
-          C.ConnHops1,
-          C.BscPortId,
-          C.EmptyVersion
-        )
+        .withArgs(mars.address, C.EmptyChannelId, C.V1, C.Unordered, C.ConnHops1, C.BscPortId, C.EmptyVersion)
     })
 
     it('ChanOpenTry', async function () {
@@ -195,7 +160,7 @@ describe('IBC Core Smart Contract', function () {
           )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
-        .withArgs(mars.address, C.ChannelIds[0], C.RemoteChannelIds[0], C.V2, C.Ordered, C.ConnHops2, C.BscPortId, C.V2)
+        .withArgs(mars.address, C.RemoteChannelIds[0], C.V2, C.Ordered, C.ConnHops2, C.BscPortId, C.V2)
     })
 
     it('unsupported version', async function () {

@@ -37,7 +37,6 @@ contract Dispatcher is Ownable, IbcDispatcher {
 
     event OpenIbcChannel(
         address indexed portAddress,
-        bytes32 indexed channelId,
         bytes32 indexed counterpartyChannelId,
         bytes32 version,
         ChannelOrder ordering,
@@ -177,9 +176,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
             'Fail to prove channel state'
         );
         IbcReceiver receiver = IbcReceiver(portAddress);
-        bytes32 channelId = bytes32(concatStrings('channel-', Strings.toString(channelCounter++)));
         bytes32 selectedVersion = receiver.onOpenIbcChannel(
-            channelId,
             version,
             ordering,
             connectionHops,
@@ -190,7 +187,6 @@ contract Dispatcher is Ownable, IbcDispatcher {
 
         emit OpenIbcChannel(
             portAddress,
-            channelId,
             counterpartyChannelId,
             selectedVersion,
             ordering,
