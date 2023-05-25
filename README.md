@@ -7,9 +7,11 @@ A NodeJS package that facilitates cross-chain dapp (xdapp) development using IBC
 Obtain an GitHub token to pull relevant containers and run:
 
 ```bash
-echo "//npm.pkg.github.com/:_authToken=TOKEN" >> ~/.npmrc
-npm install
+echo "@polymerdao:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=TOKEN" >> ~/.npmrc
+npm install -g @polymerdao/ibc-sdk
 ```
+
+To install from source replace the install command with just `npm install` and run it from the workspace root.
 
 ## What does this package do?
 
