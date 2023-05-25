@@ -85,6 +85,15 @@ contract Mars is IbcReceiver, Ownable {
                 break;
             }
         }
+        require(channelFound, 'Channel not found');
+    }
+
+    /**
+     * This func triggers channel closure from the dApp.
+     * Func args can be arbitary, as long as dispatcher.closeIbcChannel is invoked propperly.
+     */
+    function triggerChannelClose(bytes32 channelId, IbcDispatcher dispatcher) external onlyOwner {
+        dispatcher.closeIbcChannel(channelId);
     }
 
     function greet(address dispatcher, string calldata message, bytes32 channelId) external {

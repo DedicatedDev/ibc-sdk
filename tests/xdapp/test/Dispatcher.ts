@@ -293,7 +293,18 @@ describe('IBC Core Smart Contract', function () {
   })
 
   describe('closeIbcChannel', function () {
-    it('ChanCloseInit', async function () {})
+    it('ChanCloseInit', async function () {
+      const { dispatcher, mars, accounts, channel } = await loadFixture(setupChannelFixture)
+      await expect(mars.connect(accounts.user1).triggerChannelClose(channel.channelId, dispatcher.address))
+        .to.emit(dispatcher, 'CloseIbcChannel')
+        .withArgs(channel.portAddress, channel.channelId)
+    })
+
+    // it('ChanCloseInit cannot succeed if caller contract does not own the channel', async function () {
+    //   const earth = await (await ethers.getContractFactory('Mars')).deploy()
+    //   const { dispatcher, channel } = await loadFixture(setupChannelFixture)
+    //   await expect(earth.triggerChannelClose(channel.channelId, dispatcher.address)).to.be.revertedWith('')
+    // })
 
     it('ChanCloseConfirm', async function () {
       const { dispatcher, accounts, channel } = await loadFixture(setupChannelFixture)

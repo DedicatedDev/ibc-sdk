@@ -258,7 +258,7 @@ contract Dispatcher is Ownable {
         emit CloseIbcChannel(msg.sender, channelId);
     }
 
-    function onCloseIbcChannel(address portAddress, bytes32 channelId) external {
+    function onCloseIbcChannel(address portAddress, bytes32 channelId) public {
         // ensure port owns channel
         Channel memory channel = portChannelMap[portAddress][channelId];
         require(channel.counterpartyChannelId != bytes32(0), 'Channel not owned by portAddress');
