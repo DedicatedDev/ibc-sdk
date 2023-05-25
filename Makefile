@@ -25,7 +25,7 @@ start: build-ibctl
 stop: build-ibctl
 	./bin/ibctl stop -l verbose
 
-clean: stop
+clean: clean-docker
 	rm -rf bin dist node_modules ~/.ibc-sdk
 
 build-vibc-core-contracts:
@@ -35,7 +35,7 @@ build-vibc-core-contracts:
 		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
 		src/cli/contracts.template.ts
 
-test-all:
+test-all: build-ibctl
 	npx ava
 
 clean-docker:
