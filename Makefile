@@ -7,16 +7,16 @@ build-ibctl: build
 	npm --prefix . run build-binary
 
 test-e2e: build-ibctl
-	npx ava src/tests/devnet/cli-e2e.test.ts
+	npx ava src/tests/devnet/cli-e2e.spec.ts
 
 test-cli: build-ibctl
-	npx ava src/tests/devnet/cli.test.ts
+	npx ava src/tests/devnet/cli.spec.ts
 
 test-vibc-relayer-config: build
-	npx ava src/tests/devnet/vibc_relayer-config.test.ts
+	npx ava src/tests/devnet/vibc_relayer-config.spec.ts
 
 test-evm-deploy: build
-	npx ava src/tests/devnet/evm-deploy.test.ts
+	npx ava src/tests/devnet/evm-deploy.spec.ts
 
 start: build-ibctl
 	./bin/ibctl init -l verbose

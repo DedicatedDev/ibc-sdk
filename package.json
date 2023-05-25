@@ -74,7 +74,6 @@
     "workerThreads": false,
     "timeout": "600s",
     "files": [
-      "src/**/*.test.ts",
       "src/**/*.spec.ts"
     ],
     "typescript": {
