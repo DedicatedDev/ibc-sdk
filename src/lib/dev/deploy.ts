@@ -59,6 +59,15 @@ export async function deployVIBCCoreContractsOnChainSets(
   return runtime
 }
 
+function newContractFactory(contract: any, signer: ethers.Wallet) {
+  if (!contract.abi) throw new Error('Cannot deploy contract: missing abi field')
+
+  const bytecode = contract.bytecode ?? contract.data.bytecode.object
+  if (!bytecode) throw new Error('Cannot deploy contract: missing bytecode field')
+
+  return new ethers.ContractFactory(contract.abi, bytecode, signer)
+}
+
 async function deployEvmSmartContract(
   chain: EvmChainSet,
   account: string,
@@ -73,7 +82,7 @@ async function deployEvmSmartContract(
   const signer = new ethers.Wallet(deployer.PrivateKey!, provider)
 
   const contract = JSON.parse(fs.readFileSync(scpath, 'utf-8'))
-  const factory = new ethers.ContractFactory(contract.abi, contract.bytecode, signer)
+  const factory = newContractFactory(contract, signer)
   const deploy = await factory.deploy(...scargs)
   const receipt = await deploy.deployTransaction.wait()
 
