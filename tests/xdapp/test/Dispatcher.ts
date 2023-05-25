@@ -15,6 +15,7 @@ describe('IBC Core Smart Contract', function () {
     EmptyVersion: toBytes32(''),
     V1: toBytes32('1.0'),
     V2: toBytes32('2.0'),
+    InvalidVersion: toBytes32('invalid-version'),
     Unordered: 0,
     Ordered: 1,
     InvalidProof: { proofHeight: 42, proof: ethers.utils.toUtf8Bytes('') },
@@ -172,7 +173,7 @@ describe('IBC Core Smart Contract', function () {
           .connect(accounts.relayer)
           .openIbcChannel(
             mars.address,
-            toBytes32('unknown-version'),
+            C.InvalidVersion,
             C.Unordered,
             C.ConnHops1,
             C.EmptyChannelId,
@@ -193,7 +194,7 @@ describe('IBC Core Smart Contract', function () {
             C.ConnHops2,
             C.RemoteChannelIds[0],
             C.BscPortId,
-            toBytes32('unknown-version'),
+            C.InvalidVersion,
             C.ValidProof
           )
       ).to.be.revertedWith('Unsupported version')
@@ -239,21 +240,59 @@ describe('IBC Core Smart Contract', function () {
   })
 
   describe('connectIbcChannel', function () {
-    it('ChanOpenAck', async function () {
+    it('ChanOpenAck/Confirm', async function () {
       const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
 
-      await dispatcher
-        .connect(accounts.relayer)
-        .openIbcChannel(
-          mars.address,
-          C.V1,
-          C.Unordered,
-          C.ConnHops1,
-          C.EmptyChannelId,
-          C.BscPortId,
-          C.EmptyVersion,
-          C.ValidProof
-        )
+      await expect(
+        dispatcher
+          .connect(accounts.relayer)
+          .connectIbcChannel(
+            mars.address,
+            C.ChannelIds[0],
+            C.ConnHops1,
+            C.Ordered,
+            C.BscPortId,
+            C.RemoteChannelIds[0],
+            C.V1,
+            C.ValidProof
+          )
+      )
+        .to.emit(dispatcher, 'ConnectIbcChannel')
+        .withArgs(mars.address, C.ChannelIds[0], C.BscPortId, C.RemoteChannelIds[0], C.ConnHops1)
+
+      it('invalid proof', async function () {
+        await expect(
+          dispatcher
+            .connect(accounts.relayer)
+            .connectIbcChannel(
+              mars.address,
+              C.ChannelIds[0],
+              C.ConnHops1,
+              C.Ordered,
+              C.BscPortId,
+              C.RemoteChannelIds[0],
+              C.V1,
+              C.InvalidProof
+            )
+        ).to.be.revertedWith('Fail to prove channel state')
+      })
+
+      it('unsupported version', async function () {
+        await expect(
+          dispatcher
+            .connect(accounts.relayer)
+            .connectIbcChannel(
+              mars.address,
+              C.ChannelIds[0],
+              C.ConnHops1,
+              C.Ordered,
+              C.BscPortId,
+              C.RemoteChannelIds[0],
+              C.InvalidVersion,
+              C.ValidProof
+            )
+        ).to.be.revertedWith('Unsupported version')
+      })
     })
   })
 })
