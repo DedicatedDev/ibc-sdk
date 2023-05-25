@@ -163,18 +163,8 @@ contract Dispatcher is Ownable, IbcDispatcher {
         string[] calldata connectionHops,
         bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        bytes32 counterpartyVersion,
-        Proof calldata proof
+        bytes32 counterpartyVersion
     ) external {
-        require(
-            verifier.verifyMembership(
-                latestConsensusState,
-                proof,
-                'channel/path/to/be/added/here',
-                bytes('expected channel bytes constructed from params. Channel.State = {Init_Pending, Try_Pending}')
-            ),
-            'Fail to prove channel state'
-        );
         bytes32 selectedVersion = portAddress.onOpenIbcChannel(
             version,
             ordering,

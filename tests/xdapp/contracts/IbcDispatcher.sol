@@ -22,6 +22,13 @@ struct Proof {
  * @notice IBC dispatcher interface is the Polymer Core Smart Contract that implements the core IBC protocol.
  */
 interface IbcDispatcher {
+    /**
+     * This func is called by a 'relayer' on behalf of a dApp. The dApp should be implements IbcReceiver.
+     * The dApp should implement the onOpenIbcChannel method to handle one of the first two channel handshake methods,
+     * ie. ChanOpenInit or ChanOpenTry.
+     * If callback succeeds, the dApp should return the selected version, and an emitted event will be relayed to the
+     * IBC/VIBC hub chain.
+     */
     function openIbcChannel(
         IbcReceiver portAddress,
         bytes32 version,
@@ -29,10 +36,14 @@ interface IbcDispatcher {
         string[] calldata connectionHops,
         bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        bytes32 counterpartyVersion,
-        Proof calldata proof
+        bytes32 counterpartyVersion
     ) external;
 
+    /**
+     * This func is called by a 'relayer' after the IBC/VIBC hub chain has processed the onOpenIbcChannel event.
+     * The dApp should implement the onConnectIbcChannel method to handle the last two channel handshake methods, ie.
+     * ChanOpenAck or ChanOpenConfirm.
+     */
     function connectIbcChannel(
         IbcReceiver portAddress,
         bytes32 channelId,

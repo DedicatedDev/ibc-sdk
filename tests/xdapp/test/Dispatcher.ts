@@ -128,16 +128,7 @@ describe('IBC Core Smart Contract', function () {
       await expect(
         dispatcher
           .connect(accounts.relayer)
-          .openIbcChannel(
-            mars.address,
-            C.V1,
-            C.Unordered,
-            C.ConnHops1,
-            C.EmptyChannelId,
-            C.BscPortId,
-            C.EmptyVersion,
-            C.ValidProof
-          )
+          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.EmptyChannelId, C.BscPortId, C.EmptyVersion)
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
         .withArgs(mars.address, C.EmptyChannelId, C.V1, C.Unordered, C.ConnHops1, C.BscPortId, C.EmptyVersion)
@@ -156,8 +147,7 @@ describe('IBC Core Smart Contract', function () {
             C.ConnHops2,
             C.RemoteChannelIds[0],
             C.BscPortId,
-            C.V2,
-            C.ValidProof
+            C.V2
           )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
@@ -178,8 +168,7 @@ describe('IBC Core Smart Contract', function () {
             C.ConnHops1,
             C.EmptyChannelId,
             C.BscPortId,
-            C.EmptyVersion,
-            C.ValidProof
+            C.EmptyVersion
           )
       ).to.be.revertedWith('Unsupported version')
 
@@ -194,8 +183,7 @@ describe('IBC Core Smart Contract', function () {
             C.ConnHops2,
             C.RemoteChannelIds[0],
             C.BscPortId,
-            C.InvalidVersion,
-            C.ValidProof
+            C.InvalidVersion
           )
       ).to.be.revertedWith('Unsupported version')
     })
@@ -206,99 +194,71 @@ describe('IBC Core Smart Contract', function () {
       await expect(
         dispatcher
           .connect(accounts.relayer)
-          .openIbcChannel(
-            mars.address,
-            C.V1,
-            C.Unordered,
-            C.ConnHops1,
-            C.RemoteChannelIds[0],
-            'portX',
-            C.EmptyVersion,
-            C.ValidProof
-          )
+          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.RemoteChannelIds[0], 'portX', C.EmptyVersion)
       ).to.be.revertedWith('Invalid counterpartyPortId')
     })
 
-    it('proof error', async function () {
-      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+    describe('connectIbcChannel', function () {
+      it('ChanOpenAck/Confirm', async function () {
+        const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
 
-      await expect(
-        dispatcher
-          .connect(accounts.relayer)
-          .openIbcChannel(
-            mars.address,
-            C.V1,
-            C.Unordered,
-            C.ConnHops1,
-            C.RemoteChannelIds[0],
-            C.BscPortId,
-            C.EmptyVersion,
-            C.InvalidProof
-          )
-      ).to.be.revertedWith('Fail to prove channel state')
-    })
-  })
+        await expect(
+          dispatcher
+            .connect(accounts.relayer)
+            .connectIbcChannel(
+              mars.address,
+              C.ChannelIds[0],
+              C.ConnHops1,
+              C.Ordered,
+              C.BscPortId,
+              C.RemoteChannelIds[0],
+              C.V1,
+              C.ValidProof
+            )
+        )
+          .to.emit(dispatcher, 'ConnectIbcChannel')
+          .withArgs(mars.address, C.ChannelIds[0], C.BscPortId, C.RemoteChannelIds[0], C.ConnHops1)
 
-  describe('connectIbcChannel', function () {
-    it('ChanOpenAck/Confirm', async function () {
-      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+        // confirm channel is owned by the port address
+        const channel = await dispatcher.getChannel(mars.address, C.ChannelIds[0])
+        expect(channel).deep.equal([C.V1, C.Ordered, C.ConnHops1, C.BscPortId, C.RemoteChannelIds[0]])
+      })
 
-      await expect(
-        dispatcher
-          .connect(accounts.relayer)
-          .connectIbcChannel(
-            mars.address,
-            C.ChannelIds[0],
-            C.ConnHops1,
-            C.Ordered,
-            C.BscPortId,
-            C.RemoteChannelIds[0],
-            C.V1,
-            C.ValidProof
-          )
-      )
-        .to.emit(dispatcher, 'ConnectIbcChannel')
-        .withArgs(mars.address, C.ChannelIds[0], C.BscPortId, C.RemoteChannelIds[0], C.ConnHops1)
+      it('invalid proof', async function () {
+        const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+        await expect(
+          dispatcher
+            .connect(accounts.relayer)
+            .connectIbcChannel(
+              mars.address,
+              C.ChannelIds[0],
+              C.ConnHops1,
+              C.Ordered,
+              C.BscPortId,
+              C.RemoteChannelIds[0],
+              C.V1,
+              C.InvalidProof
+            )
+        ).to.be.revertedWith('Fail to prove channel state')
+      })
 
-      // confirm channel is owned by the port address
-      const channel = await dispatcher.getChannel(mars.address, C.ChannelIds[0])
-      expect(channel).deep.equal([C.V1, C.Ordered, C.ConnHops1, C.BscPortId, C.RemoteChannelIds[0]])
-    })
-
-    it('invalid proof', async function () {
-      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
-      await expect(
-        dispatcher
-          .connect(accounts.relayer)
-          .connectIbcChannel(
-            mars.address,
-            C.ChannelIds[0],
-            C.ConnHops1,
-            C.Ordered,
-            C.BscPortId,
-            C.RemoteChannelIds[0],
-            C.V1,
-            C.InvalidProof
-          )
-      ).to.be.revertedWith('Fail to prove channel state')
-    })
-
-    it('unsupported version', async function () {
-      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
-      await expect(
-        dispatcher
-          .connect(accounts.relayer)
-          .connectIbcChannel(
-            mars.address,
-            C.ChannelIds[0],
-            C.ConnHops1,
-            C.Ordered,
-            C.BscPortId,
-            C.RemoteChannelIds[0],
-            C.InvalidVersion,
-            C.ValidProof
-          )
-      ).to.be.revertedWith('Unsupported version')
+      it('unsupported version', async function () {
+        const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+        await expect(
+          dispatcher
+            .connect(accounts.relayer)
+            .connectIbcChannel(
+              mars.address,
+              C.ChannelIds[0],
+              C.ConnHops1,
+              C.Ordered,
+              C.BscPortId,
+              C.RemoteChannelIds[0],
+              C.InvalidVersion,
+              C.ValidProof
+            )
+        ).to.be.revertedWith('Unsupported version')
+      })
     })
   })
 })
