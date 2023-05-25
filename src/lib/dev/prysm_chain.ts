@@ -181,7 +181,9 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       '--interop-start-index=0',
       '--force-clear-db',
       `--chain-config-file=${this.containerConfigFilePath}`,
-      `--config-file=${this.containerConfigFilePath}`
+      `--config-file=${this.containerConfigFilePath}`,
+      '--suggested-fee-recipient=0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934',
+      '--enable-polymer-devnet-mode'
     ]
     const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>validator.d.stdout 2> validator.d.stderr`]
     utils.fs.writeFileSync(this.hostDirPath('validator.d.cmd'), cmds.join(' '))
@@ -211,7 +213,8 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
       'generate-genesis',
       '--num-validators=36',
       `--output-ssz=${utils.path.join(this.containerPrysmDataDir, 'genesis.ssz')}`,
-      `--chain-config-file=${this.containerConfigFilePath}`
+      `--chain-config-file=${this.containerConfigFilePath}`,
+      '--suggested-fee-recipient=0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934'
     ]
 
     const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>genesis.d.stdout 2>genesis.d.stderr`]
