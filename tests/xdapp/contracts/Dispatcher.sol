@@ -234,6 +234,10 @@ contract Dispatcher is Ownable, IbcDispatcher {
         emit ConnectIbcChannel(portAddress, channelId, counterpartyPortId, counterpartyChannelId, connectionHops);
     }
 
+    function getChannel(address portAddress, bytes32 channelId) external view returns (Channel memory) {
+        return portChannelMap[portAddress][channelId];
+    }
+
     /**
      * @notice Close the specified IBC channel
      * @dev Emits a `CloseIbcChannel` event with the given `channelId` and the address of the message sender

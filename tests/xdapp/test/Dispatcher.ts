@@ -260,39 +260,45 @@ describe('IBC Core Smart Contract', function () {
         .to.emit(dispatcher, 'ConnectIbcChannel')
         .withArgs(mars.address, C.ChannelIds[0], C.BscPortId, C.RemoteChannelIds[0], C.ConnHops1)
 
-      it('invalid proof', async function () {
-        await expect(
-          dispatcher
-            .connect(accounts.relayer)
-            .connectIbcChannel(
-              mars.address,
-              C.ChannelIds[0],
-              C.ConnHops1,
-              C.Ordered,
-              C.BscPortId,
-              C.RemoteChannelIds[0],
-              C.V1,
-              C.InvalidProof
-            )
-        ).to.be.revertedWith('Fail to prove channel state')
-      })
+      // confirm channel is owned by the port address
+      const channel = await dispatcher.getChannel(mars.address, C.ChannelIds[0])
+      expect(channel).deep.equal([C.V1, C.Ordered, C.ConnHops1, C.BscPortId, C.RemoteChannelIds[0]])
+    })
 
-      it('unsupported version', async function () {
-        await expect(
-          dispatcher
-            .connect(accounts.relayer)
-            .connectIbcChannel(
-              mars.address,
-              C.ChannelIds[0],
-              C.ConnHops1,
-              C.Ordered,
-              C.BscPortId,
-              C.RemoteChannelIds[0],
-              C.InvalidVersion,
-              C.ValidProof
-            )
-        ).to.be.revertedWith('Unsupported version')
-      })
+    it('invalid proof', async function () {
+      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+      await expect(
+        dispatcher
+          .connect(accounts.relayer)
+          .connectIbcChannel(
+            mars.address,
+            C.ChannelIds[0],
+            C.ConnHops1,
+            C.Ordered,
+            C.BscPortId,
+            C.RemoteChannelIds[0],
+            C.V1,
+            C.InvalidProof
+          )
+      ).to.be.revertedWith('Fail to prove channel state')
+    })
+
+    it('unsupported version', async function () {
+      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+      await expect(
+        dispatcher
+          .connect(accounts.relayer)
+          .connectIbcChannel(
+            mars.address,
+            C.ChannelIds[0],
+            C.ConnHops1,
+            C.Ordered,
+            C.BscPortId,
+            C.RemoteChannelIds[0],
+            C.InvalidVersion,
+            C.ValidProof
+          )
+      ).to.be.revertedWith('Unsupported version')
     })
   })
 })
