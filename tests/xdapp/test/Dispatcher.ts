@@ -80,6 +80,36 @@ describe('IBC Core Smart Contract', function () {
     return { accounts, verifier, dispatcher, mars }
   }
 
+  /**
+   * @description
+   * Set up clients and establish a channel
+   */
+  async function setupChannelFixture() {
+    const { accounts, dispatcher, mars } = await loadFixture(setupFixture)
+    const channel = {
+      portAddress: mars.address,
+      channelId: C.ChannelIds[0],
+      version: C.V1,
+      ordering: C.Unordered,
+      connectionHops: C.ConnHops1,
+      counterpartyPortId: C.BscPortId,
+      counterpartyChannelId: C.RemoteChannelIds[0]
+    }
+    await dispatcher
+      .connect(accounts.relayer)
+      .connectIbcChannel(
+        channel.portAddress,
+        channel.channelId,
+        channel.connectionHops,
+        channel.ordering,
+        channel.counterpartyPortId,
+        channel.counterpartyChannelId,
+        channel.version,
+        C.ValidProof
+      )
+    return { accounts, dispatcher, mars, channel }
+  }
+
   describe('createClient', function () {
     it('only owner can create a new client', async function () {
       const { accounts, dispatcher } = await loadFixture(deployIbcCoreFixture)
@@ -259,6 +289,24 @@ describe('IBC Core Smart Contract', function () {
             )
         ).to.be.revertedWith('Unsupported version')
       })
+    })
+  })
+
+  describe('closeIbcChannel', function () {
+    it('ChanCloseInit', async function () {})
+
+    it('ChanCloseConfirm', async function () {
+      const { dispatcher, accounts, channel } = await loadFixture(setupChannelFixture)
+      await expect(dispatcher.connect(accounts.relayer).onCloseIbcChannel(channel.portAddress, channel.channelId))
+        .to.emit(dispatcher, 'CloseIbcChannel')
+        .withArgs(channel.portAddress, channel.channelId)
+    })
+
+    it('ChanCloseConfirm cannot succeed if port does not own the channel', async function () {
+      const { dispatcher, accounts, channel } = await loadFixture(setupChannelFixture)
+      await expect(
+        dispatcher.connect(accounts.relayer).onCloseIbcChannel(channel.portAddress, C.ChannelIds[1])
+      ).to.be.revertedWith('Channel not owned by portAddress')
     })
   })
 })

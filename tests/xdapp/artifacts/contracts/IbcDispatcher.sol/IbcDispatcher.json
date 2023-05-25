@@ -20,66 +20,6 @@
       "inputs": [
         {
           "internalType": "contract IbcReceiver",
-          "name": "portAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "string[]",
-          "name": "connectionHops",
-          "type": "string[]"
-        },
-        {
-          "internalType": "enum ChannelOrder",
-          "name": "ordering",
-          "type": "uint8"
-        },
-        {
-          "internalType": "string",
-          "name": "counterpartyPortId",
-          "type": "string"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "counterpartyChannelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "counterpartyVersion",
-          "type": "bytes32"
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint64",
-              "name": "proofHeight",
-              "type": "uint64"
-            },
-            {
-              "internalType": "bytes",
-              "name": "proof",
-              "type": "bytes"
-            }
-          ],
-          "internalType": "struct Proof",
-          "name": "proof",
-          "type": "tuple"
-        }
-      ],
-      "name": "connectIbcChannel",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "contract IbcReceiver",
           "name": "receiver",
           "type": "address"
         },
@@ -371,49 +311,6 @@
         }
       ],
       "name": "onTimeoutPacket",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "contract IbcReceiver",
-          "name": "portAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "version",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "enum ChannelOrder",
-          "name": "ordering",
-          "type": "uint8"
-        },
-        {
-          "internalType": "string[]",
-          "name": "connectionHops",
-          "type": "string[]"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "counterpartyChannelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "string",
-          "name": "counterpartyPortId",
-          "type": "string"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "counterpartyVersion",
-          "type": "bytes32"
-        }
-      ],
-      "name": "openIbcChannel",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

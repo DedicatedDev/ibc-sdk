@@ -30,7 +30,7 @@ struct Channel {
  *     Contract callers call this contract to send IBC-like msg,
  *     which can be relayed to a rollup module on the Polymerase chain
  */
-contract Dispatcher is Ownable, IbcDispatcher {
+contract Dispatcher is Ownable {
     //
     // channel events
     //
@@ -154,7 +154,11 @@ contract Dispatcher is Ownable, IbcDispatcher {
     }
 
     /**
-     * TODO: add doc
+     * This func is called by a 'relayer' on behalf of a dApp. The dApp should be implements IbcReceiver.
+     * The dApp should implement the onOpenIbcChannel method to handle one of the first two channel handshake methods,
+     * ie. ChanOpenInit or ChanOpenTry.
+     * If callback succeeds, the dApp should return the selected version, and an emitted event will be relayed to the
+     * IBC/VIBC hub chain.
      */
     function openIbcChannel(
         IbcReceiver portAddress,
@@ -186,7 +190,9 @@ contract Dispatcher is Ownable, IbcDispatcher {
     }
 
     /**
-     * TODO: add doc
+     * This func is called by a 'relayer' after the IBC/VIBC hub chain has processed the onOpenIbcChannel event.
+     * The dApp should implement the onConnectIbcChannel method to handle the last two channel handshake methods, ie.
+     * ChanOpenAck or ChanOpenConfirm.
      */
     function connectIbcChannel(
         IbcReceiver portAddress,
@@ -250,6 +256,18 @@ contract Dispatcher is Ownable, IbcDispatcher {
         IbcReceiver reciever = IbcReceiver(msg.sender);
         reciever.onCloseIbcChannel(channelId, channel.counterpartyPortId, channel.counterpartyChannelId);
         emit CloseIbcChannel(msg.sender, channelId);
+    }
+
+    function onCloseIbcChannel(address portAddress, bytes32 channelId) external {
+        // ensure port owns channel
+        Channel memory channel = portChannelMap[portAddress][channelId];
+        require(channel.counterpartyChannelId != bytes32(0), 'Channel not owned by portAddress');
+
+        // confirm with dApp by calling its callback
+        IbcReceiver reciever = IbcReceiver(portAddress);
+        reciever.onCloseIbcChannel(channelId, channel.counterpartyPortId, channel.counterpartyChannelId);
+        delete portChannelMap[portAddress][channelId];
+        emit CloseIbcChannel(portAddress, channelId);
     }
 
     //
