@@ -177,7 +177,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       `--beacon-rpc-provider=${prysmContainer.Nodes[0].RpcContainer.split('//')[1]}`,
       `--datadir=${this.containerValidatorDataDir}`,
       '--accept-terms-of-use',
-      '--interop-num-validators=64',
+      '--interop-num-validators=36',
       '--interop-start-index=0',
       '--force-clear-db',
       `--chain-config-file=${this.containerConfigFilePath}`,
@@ -209,7 +209,7 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
       imageByLabel(this.config.Images, ImageLabelTypes.Genesis).Bin!,
       'testnet',
       'generate-genesis',
-      '--num-validators=64',
+      '--num-validators=36',
       `--output-ssz=${utils.path.join(this.containerPrysmDataDir, 'genesis.ssz')}`,
       `--chain-config-file=${this.containerConfigFilePath}`
     ]
