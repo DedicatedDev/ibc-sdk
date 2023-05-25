@@ -80,6 +80,7 @@ export async function channelHandshake(
     )
 
     for (const state of clients.clientStates) {
+      log.info(`Found light client: ${state.clientState?.typeUrl}`)
       if (state.clientState?.typeUrl !== '/polyibc.lightclients.altair.ClientState') continue
       lc = state.clientId
       break
@@ -91,7 +92,7 @@ export async function channelHandshake(
   log.info(`Found ETH2 light client: ${lc}`)
 
   log.info('Creating virtual light client')
-  let vLC: any = undefined
+  let vLC: any
   {
     const msg: self.cosmos.client.polyibc.MsgCreateVibcClientEncodeObject = {
       typeUrl: '/polyibc.core.MsgCreateVibcClient',
@@ -106,7 +107,7 @@ export async function channelHandshake(
     vLC = self.cosmos.client.polyibc.MsgCreateVibcClientResponseSchema.parse(flat('create_vibc_client', res))
   }
 
-  let vConnection: any = undefined
+  let vConnection: any
   {
     const msg: self.cosmos.client.polyibc.MsgCreateVibcConnectionEncodeObject = {
       typeUrl: '/polyibc.core.MsgCreateVibcConnection',

@@ -1,7 +1,12 @@
 name: Test
 
 on:
-  pull_request
+  pull_request:
+    branches:
+      - main
+  push:
+    branches-ignore:
+      - main
 
 jobs:
   test:
@@ -26,5 +31,7 @@ jobs:
       if: ${{ always() }}
       run: |
         date
+        whoami
         docker ps -a
+        ls -lR /tmp/ibctl-tests-* || true
         tail /tmp/ibctl-tests-*/run/*/* || true
