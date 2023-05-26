@@ -104,8 +104,8 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
 
     // Commands based on https://github.com/rauljordan/eth-pos-devnet/blob/master/docker-compose.yml
     await this.startChainDaemon(dependencyRuntime)
-    await this.isChainReady()
     await this.startValidatorDaemon()
+    await this.isChainReady()
   }
 
   protected override checkAccounts() {
@@ -163,7 +163,9 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       '--accept-terms-of-use',
       `--jwt-secret=${utils.path.join(this.containerPrysmDataDir, 'jwt.hex')}`,
       '--rpc-host=0.0.0.0',
-      '--grpc-gateway-host=0.0.0.0'
+      '--grpc-gateway-host=0.0.0.0',
+      '--suggested-fee-recipient=0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934',
+      '--enable-polymer-devnet-mode'
     ]
     const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>${this.entrypointStdout} 2>${this.entrypointStderr}`]
     utils.fs.writeFileSync(this.hostDirPath('chain.d.cmd'), cmds.join(' '))
@@ -185,7 +187,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       '--suggested-fee-recipient=0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934',
       '--enable-polymer-devnet-mode'
     ]
-    const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>validator.d.stdout 2> validator.d.stderr`]
+    const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>validator.d.stdout 2>validator.d.stderr`]
     utils.fs.writeFileSync(this.hostDirPath('validator.d.cmd'), cmds.join(' '))
     await this.getContainer(ImageLabelTypes.Validator).exec(cmds, true, true)
   }
@@ -216,8 +218,7 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
       'generate-genesis',
       '--num-validators=36',
       `--output-ssz=${utils.path.join(this.containerPrysmDataDir, 'genesis.ssz')}`,
-      `--chain-config-file=${this.containerConfigFilePath}`,
-      '--suggested-fee-recipient=0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934'
+      `--chain-config-file=${this.containerConfigFilePath}`
     ]
 
     const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>genesis.d.stdout 2>genesis.d.stderr`]
