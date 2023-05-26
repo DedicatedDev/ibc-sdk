@@ -60,7 +60,7 @@ export class EthRelayer {
       ibcCoreAbi: dispatcher.Abi ?? '',
       rpcAddressUrl: poly.Nodes[0].RpcContainer,
       routerHostUrl: poly.Nodes[0].RpcContainer.replace(/:[0-9]+$/, ':9090'),
-      accountName: 'relayer',
+      accountName: 'alice',
       polymerHomeDir: path.join(runObj.Run.WorkingDir, poly.Name),
       localDevNet: true,
       ethcontainer: eth1.Nodes[0].ContainerId
