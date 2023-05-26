@@ -83,7 +83,8 @@ contract Dispatcher is Ownable {
     //
 
     ZKMintVerifier verifier;
-    bool isClientCreated;
+    address escrow;
+    bool isClientCreated = false;
     bytes public latestConsensusState;
 
     uint64 channelCounter = 0;
@@ -93,9 +94,10 @@ contract Dispatcher is Ownable {
     // methods
     //
 
-    constructor(ZKMintVerifier _verifier) {
+    constructor(ZKMintVerifier _verifier, address _escrow) {
         verifier = _verifier;
-        isClientCreated = false;
+        escrow = _escrow;
+        require(escrow != address(0), 'Escrow cannot be zero address');
     }
 
     //

@@ -26,53 +26,48 @@ describe('IBC Core Smart Contract', function () {
     BscPortId: toBytes32('bsc.polyibc.9876543210')
   }
 
-  /**
-   * @description Deploy IBC Core SC and verifier contract
-   */
-  async function deployIbcCoreFixture() {
-    // Get the ContractFactory and Signers here.
+  // Get all contract factories for testing
+  const getContractFactories = async () => {
     const Dispatcher = await ethers.getContractFactory('Dispatcher')
     const Verifier = await ethers.getContractFactory('Verifier')
+    const Mars = await ethers.getContractFactory('Mars')
+    return { Dispatcher, Verifier, Mars }
+  }
 
+  const getSignerAccounts = async () => {
     const signers = await ethers.getSigners()
     const accounts = {
       owner: signers[0],
       user1: signers[1],
       user2: signers[2],
       relayer: signers[3],
-      otherUsers: signers.slice(4)
+      escrow: signers[4],
+      otherUsers: signers.slice(5)
     }
+    return accounts
+  }
 
+  /**
+   * @description Deploy IBC Core SC and verifier contract
+   */
+  async function deployIbcCoreFixture() {
+    const factories = await getContractFactories()
+    const accounts = await getSignerAccounts()
     // Deploy Verifier and CoreSC contracts by owner
-    const verifier = await Verifier.deploy()
-    const dispatcher = await Dispatcher.deploy(verifier.address)
+    const verifier = await factories.Verifier.deploy()
+    const dispatcher = await factories.Dispatcher.deploy(verifier.address, accounts.escrow.address)
 
-    return { accounts, verifier, dispatcher }
+    return { accounts, verifier, dispatcher, factories }
   }
 
   /**
    * @description Deploy IBC Core SC and verifier contract, create Polymer client and deploy a dApp Mars contract as an IBC-enabled contract
    */
-  async function setupFixture() {
-    // Get the ContractFactory and Signers here.
-    const Dispatcher = await ethers.getContractFactory('Dispatcher')
-    const Verifier = await ethers.getContractFactory('Verifier')
-    const Mars = await ethers.getContractFactory('Mars')
-
-    const signers = await ethers.getSigners()
-    const accounts = {
-      owner: signers[0],
-      user1: signers[1],
-      user2: signers[2],
-      relayer: signers[3],
-      otherUsers: signers.slice(4)
-    }
-    // Deploy Verifier and CoreSC contracts by owner
-    const verifier = await Verifier.deploy()
-    const dispatcher = await Dispatcher.deploy(verifier.address)
+  async function setupCoreClientFixture() {
+    const { accounts, verifier, dispatcher, factories } = await loadFixture(deployIbcCoreFixture)
 
     // Deploy Mars contract by user1
-    const mars = await Mars.connect(accounts.user1).deploy()
+    const mars = await factories.Mars.connect(accounts.user1).deploy()
 
     // Set up Polymer light client on CoreSC
     await dispatcher.createClient(C.ClientState, C.ConsensusStates[0]).then((tx) => tx.wait())
@@ -85,7 +80,7 @@ describe('IBC Core Smart Contract', function () {
    * Set up clients and establish a channel
    */
   async function setupChannelFixture() {
-    const { accounts, dispatcher, mars } = await loadFixture(setupFixture)
+    const { accounts, dispatcher, mars } = await loadFixture(setupCoreClientFixture)
     const channel = {
       portAddress: mars.address,
       channelId: C.ChannelIds[0],
@@ -121,14 +116,14 @@ describe('IBC Core Smart Contract', function () {
     })
 
     it('should create a new client', async function () {
-      const { dispatcher } = await loadFixture(setupFixture)
+      const { dispatcher } = await loadFixture(setupCoreClientFixture)
       const latestConsensusState = await dispatcher.latestConsensusState()
 
       expect(latestConsensusState).to.equal(C.ConsensusStates[0])
     })
 
     it('cannot create call creatClient twice', async function () {
-      const { dispatcher } = await loadFixture(setupFixture)
+      const { dispatcher } = await loadFixture(setupCoreClientFixture)
       await expect(dispatcher.createClient(C.ClientState, C.ConsensusStates[1])).to.be.revertedWith(
         'Client already created'
       )
@@ -137,7 +132,7 @@ describe('IBC Core Smart Contract', function () {
 
   describe('updateClient', function () {
     it('should update the consensus state of an existing client', async function () {
-      const { dispatcher } = await loadFixture(setupFixture)
+      const { dispatcher } = await loadFixture(setupCoreClientFixture)
 
       await dispatcher.updateClient(C.ConsensusStates[1])
       const latestConsensusState = await dispatcher.latestConsensusState()
@@ -146,7 +141,7 @@ describe('IBC Core Smart Contract', function () {
     })
 
     it('cannot update client with invalid consensusState', async function () {
-      const { dispatcher } = await loadFixture(setupFixture)
+      const { dispatcher } = await loadFixture(setupCoreClientFixture)
       const invalidConsState = ethers.utils.toUtf8Bytes('short')
       await expect(dispatcher.updateClient(invalidConsState)).to.be.revertedWith('Consensus state verification failed')
     })
@@ -154,7 +149,7 @@ describe('IBC Core Smart Contract', function () {
 
   describe('openIbcChannel', function () {
     it('ChanOpenInit', async function () {
-      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+      const { dispatcher, mars, accounts } = await loadFixture(setupCoreClientFixture)
 
       await expect(
         dispatcher
@@ -166,7 +161,7 @@ describe('IBC Core Smart Contract', function () {
     })
 
     it('ChanOpenTry', async function () {
-      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+      const { dispatcher, mars, accounts } = await loadFixture(setupCoreClientFixture)
 
       await expect(
         dispatcher
@@ -186,7 +181,7 @@ describe('IBC Core Smart Contract', function () {
     })
 
     it('unsupported version', async function () {
-      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+      const { dispatcher, mars, accounts } = await loadFixture(setupCoreClientFixture)
 
       // invalid version in ChanOpenInit
       await expect(
@@ -220,7 +215,7 @@ describe('IBC Core Smart Contract', function () {
     })
 
     it('onOpenIbcChannel callback error', async function () {
-      const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+      const { dispatcher, mars, accounts } = await loadFixture(setupCoreClientFixture)
 
       await expect(
         dispatcher
@@ -231,7 +226,7 @@ describe('IBC Core Smart Contract', function () {
 
     describe('connectIbcChannel', function () {
       it('ChanOpenAck/Confirm', async function () {
-        const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+        const { dispatcher, mars, accounts } = await loadFixture(setupCoreClientFixture)
 
         await expect(
           dispatcher
@@ -256,7 +251,7 @@ describe('IBC Core Smart Contract', function () {
       })
 
       it('invalid proof', async function () {
-        const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+        const { dispatcher, mars, accounts } = await loadFixture(setupCoreClientFixture)
         await expect(
           dispatcher
             .connect(accounts.relayer)
@@ -274,7 +269,7 @@ describe('IBC Core Smart Contract', function () {
       })
 
       it('unsupported version', async function () {
-        const { dispatcher, mars, accounts } = await loadFixture(setupFixture)
+        const { dispatcher, mars, accounts } = await loadFixture(setupCoreClientFixture)
         await expect(
           dispatcher
             .connect(accounts.relayer)
