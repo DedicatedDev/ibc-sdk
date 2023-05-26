@@ -33,7 +33,7 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
       arrowGlacierBlock: 0,
       grayGlacierBlock: 0,
       clique: {
-        period: 3,
+        period: 6,
         epoch: 30000
       },
       terminalTotalDifficulty: 5
