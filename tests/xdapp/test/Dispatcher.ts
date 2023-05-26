@@ -343,7 +343,6 @@ describe('IBC Core Smart Contract', function () {
 
       const escrowBalance = () => accounts.escrow.getBalance().then((b) => b.toBigInt())
       const startingEscrowBalance = await escrowBalance()
-      console.log(`packet fee: ${packet.fee} wei`)
       await expect(
         mars
           .connect(accounts.user1)
@@ -360,23 +359,41 @@ describe('IBC Core Smart Contract', function () {
       // confirm Escrow balance changed
       const escrowIncrease = (await escrowBalance()) - startingEscrowBalance
       expect(escrowIncrease).to.equal(packet.fee.toBigInt())
-      console.log(
-        `escrow balance increased by ${ethers.utils.formatEther(escrowIncrease)} ethers @ ${accounts.escrow.address}`
-      )
     })
 
     it('fails if tx value < packet fee', async function () {
-      const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
-      const packet = packets[0]
+      const {
+        dispatcher,
+        mars,
+        accounts,
+        channel,
+        packets: [packet]
+      } = await loadFixture(setupChannelFixture)
 
       await expect(
         mars
           .connect(accounts.user1)
           .greet(dispatcher.address, packet.msg, channel.channelId, packet.timeout, packet.fee, {
-            from: accounts.user1.address,
             value: packet.fee.sub(1)
           })
       ).to.be.reverted
+    })
+
+    it('fails if channel not owned by send dApp', async function () {
+      const {
+        dispatcher,
+        mars,
+        accounts,
+        packets: [packet]
+      } = await loadFixture(setupChannelFixture)
+
+      await expect(
+        mars
+          .connect(accounts.user1)
+          .greet(dispatcher.address, packet.msg, C.RemoteChannelIds[0], packet.timeout, packet.fee, {
+            value: packet.fee
+          })
+      ).to.be.revertedWith('Channel not owned by sender')
     })
   })
   // end of tests

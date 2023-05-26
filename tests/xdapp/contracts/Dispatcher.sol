@@ -310,7 +310,7 @@ contract Dispatcher is IbcDispatcher, Ownable {
     ) external payable {
         // ensure port owns channel
         Channel memory channel = portChannelMap[msg.sender][channelId];
-        require(channel.counterpartyChannelId != bytes32(0), 'Channel not owned by portAddress');
+        require(channel.counterpartyChannelId != bytes32(0), 'Channel not owned by sender');
         // escrow packet fee
         // ignore returned data from `call`
         // (bool sent, bytes memory _data) = escrow.call{value: fee}('');
