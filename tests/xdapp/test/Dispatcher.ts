@@ -4,6 +4,7 @@ import { ethers } from 'hardhat'
 import { expect } from 'chai'
 
 const toBytes32 = ethers.utils.formatBytes32String
+const toBytes = ethers.utils.toUtf8Bytes
 
 describe('IBC Core Smart Contract', function () {
   // Constants for testing
@@ -103,7 +104,14 @@ describe('IBC Core Smart Contract', function () {
         C.ValidProof
       )
       .then((tx) => tx.wait())
-    return { accounts, dispatcher, mars, channel }
+    const packets = [
+      {
+        msg: 'hello ibc',
+        timeout: ethers.BigNumber.from(123456789),
+        fee: ethers.utils.parseEther('0.123')
+      }
+    ]
+    return { accounts, dispatcher, mars, channel, packets }
   }
 
   describe('createClient', function () {
@@ -327,4 +335,49 @@ describe('IBC Core Smart Contract', function () {
       ).to.be.revertedWith('Fail to prove channel state')
     })
   })
+
+  describe('sendPacket', function () {
+    it('succeeds', async function () {
+      const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
+      const packet = packets[0]
+
+      const escrowBalance = () => accounts.escrow.getBalance().then((b) => b.toBigInt())
+      const startingEscrowBalance = await escrowBalance()
+      console.log(`packet fee: ${packet.fee} wei`)
+      await expect(
+        mars
+          .connect(accounts.user1)
+          .greet(dispatcher.address, packet.msg, channel.channelId, packet.timeout, packet.fee, {
+            from: accounts.user1.address,
+            // only fee is escrowed, if msg.value > fee. The overage is lost to miner.
+            // So as a dApp dev, you should always set msg.value to the exact packet fee.
+            value: packet.fee
+          })
+      )
+        .to.emit(dispatcher, 'SendPacket')
+        .withArgs(channel.portAddress, channel.channelId, toBytes(packet.msg), packet.timeout, packet.fee)
+
+      // confirm Escrow balance changed
+      const escrowIncrease = (await escrowBalance()) - startingEscrowBalance
+      expect(escrowIncrease).to.equal(packet.fee.toBigInt())
+      console.log(
+        `escrow balance increased by ${ethers.utils.formatEther(escrowIncrease)} ethers @ ${accounts.escrow.address}`
+      )
+    })
+
+    it('fails if tx value < packet fee', async function () {
+      const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
+      const packet = packets[0]
+
+      await expect(
+        mars
+          .connect(accounts.user1)
+          .greet(dispatcher.address, packet.msg, channel.channelId, packet.timeout, packet.fee, {
+            from: accounts.user1.address,
+            value: packet.fee.sub(1)
+          })
+      ).to.be.reverted
+    })
+  })
+  // end of tests
 })

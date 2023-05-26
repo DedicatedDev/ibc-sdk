@@ -24,7 +24,12 @@ struct Proof {
 interface IbcDispatcher {
     function closeIbcChannel(bytes32 channelId) external;
 
-    function sendPacket(bytes32 channelId, bytes calldata payload, uint64 timeoutTimestamp) external;
+    function sendPacket(
+        bytes32 channelId,
+        bytes calldata payload,
+        uint64 timeoutTimestamp,
+        uint256 fee
+    ) external payable;
 
     function onRecvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external;
 

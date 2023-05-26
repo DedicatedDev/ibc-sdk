@@ -331,11 +331,16 @@
           "internalType": "uint64",
           "name": "timeoutBlockTimestamp",
           "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "fee",
+          "type": "uint256"
         }
       ],
       "name": "sendIbcPacket",
       "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "payable",
       "type": "function"
     }
   ],

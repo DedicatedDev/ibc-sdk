@@ -96,7 +96,13 @@ contract Mars is IbcReceiver, Ownable {
         dispatcher.closeIbcChannel(channelId);
     }
 
-    function greet(address dispatcher, string calldata message, bytes32 channelId) external {
-        IbcDispatcher(dispatcher).sendPacket(channelId, bytes(message), 0);
+    function greet(
+        IbcDispatcher dispatcher,
+        string calldata message,
+        bytes32 channelId,
+        uint64 timeoutTimestamp,
+        uint256 fee
+    ) external payable {
+        dispatcher.sendPacket{value: fee}(channelId, bytes(message), timeoutTimestamp, fee);
     }
 }

@@ -30,7 +30,7 @@ struct Channel {
  *     Contract callers call this contract to send IBC-like msg,
  *     which can be relayed to a rollup module on the Polymerase chain
  */
-contract Dispatcher is Ownable {
+contract Dispatcher is IbcDispatcher, Ownable {
     //
     // channel events
     //
@@ -66,7 +66,8 @@ contract Dispatcher is Ownable {
         // timeoutTimestamp is in UNIX nano seconds; packet will be rejected if
         // delivered after this timestamp on the receiving chain.
         // Timeout semantics is compliant to IBC spec and ibc-go implementation
-        uint64 timeoutTimestamp
+        uint64 timeoutTimestamp,
+        uint256 fee
     );
 
     event OnRecvPacket(
@@ -83,7 +84,7 @@ contract Dispatcher is Ownable {
     //
 
     ZKMintVerifier verifier;
-    address escrow;
+    address payable escrow;
     bool isClientCreated = false;
     bytes public latestConsensusState;
 
@@ -94,7 +95,7 @@ contract Dispatcher is Ownable {
     // methods
     //
 
-    constructor(ZKMintVerifier _verifier, address _escrow) {
+    constructor(ZKMintVerifier _verifier, address payable _escrow) {
         verifier = _verifier;
         escrow = _escrow;
         require(escrow != address(0), 'Escrow cannot be zero address');
@@ -298,9 +299,25 @@ contract Dispatcher is Ownable {
      * @param channelId The ID of the channel on which to send the packet.
      * @param packet The packet data to send.
      * @param timeoutTimestamp The timestamp in nanoseconds after which the packet times out if it has not been received.
+     * @param fee The fee serves as the packet incentive for relayers. It's escrowed on the running chain and will be
+       claimed by relayer later once the packet is delivered and ack'ed.
      */
-    function sendPacket(bytes32 channelId, bytes calldata packet, uint64 timeoutTimestamp) external {
-        emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp);
+    function sendPacket(
+        bytes32 channelId,
+        bytes calldata packet,
+        uint64 timeoutTimestamp,
+        uint256 fee
+    ) external payable {
+        // ensure port owns channel
+        Channel memory channel = portChannelMap[msg.sender][channelId];
+        require(channel.counterpartyChannelId != bytes32(0), 'Channel not owned by portAddress');
+        // escrow packet fee
+        // ignore returned data from `call`
+        // (bool sent, bytes memory _data) = escrow.call{value: fee}('');
+        (bool sent, ) = escrow.call{value: fee}('');
+        require(sent, 'Failed to escrow packet fee');
+
+        emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp, fee);
     }
 
     /**
