@@ -60,9 +60,10 @@ contract Dispatcher is IbcDispatcher, Ownable {
     //
 
     event SendPacket(
-        address indexed portId,
-        bytes32 indexed channelId,
+        address indexed sourcePortAddress,
+        bytes32 indexed sourceChannelId,
         bytes packet,
+        uint64 sequence,
         // timeoutTimestamp is in UNIX nano seconds; packet will be rejected if
         // delivered after this timestamp on the receiving chain.
         // Timeout semantics is compliant to IBC spec and ibc-go implementation
@@ -90,6 +91,7 @@ contract Dispatcher is IbcDispatcher, Ownable {
 
     uint64 channelCounter = 0;
     mapping(address => mapping(bytes32 => Channel)) public portChannelMap;
+    mapping(address => mapping(bytes32 => uint64)) portChannelSequenceMap;
 
     //
     // methods
@@ -316,8 +318,11 @@ contract Dispatcher is IbcDispatcher, Ownable {
         // (bool sent, bytes memory _data) = escrow.call{value: fee}('');
         (bool sent, ) = escrow.call{value: fee}('');
         require(sent, 'Failed to escrow packet fee');
+        // packet sequence
+        uint64 sequence = portChannelSequenceMap[msg.sender][channelId];
+        portChannelSequenceMap[msg.sender][channelId] = sequence + 1;
 
-        emit SendPacket(msg.sender, channelId, packet, timeoutTimestamp, fee);
+        emit SendPacket(msg.sender, channelId, packet, sequence, timeoutTimestamp, fee);
     }
 
     /**

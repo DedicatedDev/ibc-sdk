@@ -107,6 +107,7 @@ describe('IBC Core Smart Contract', function () {
     const packets = [
       {
         msg: 'hello ibc',
+        sequence: 0,
         timeout: ethers.BigNumber.from(123456789),
         fee: ethers.utils.parseEther('0.123')
       }
@@ -339,26 +340,31 @@ describe('IBC Core Smart Contract', function () {
   describe('sendPacket', function () {
     it('succeeds', async function () {
       const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
-      const packet = packets[0]
-
+      const packet = Object.assign({}, packets[0]) // make a copy
       const escrowBalance = () => accounts.escrow.getBalance().then((b) => b.toBigInt())
-      const startingEscrowBalance = await escrowBalance()
-      await expect(
-        mars
-          .connect(accounts.user1)
-          .greet(dispatcher.address, packet.msg, channel.channelId, packet.timeout, packet.fee, {
-            from: accounts.user1.address,
+      const msg = `packet.msg-${packet.sequence}`
+
+      const assertSendPacket = async (packet: (typeof packets)[0]) => {
+        const starttingEscrowBalance = await escrowBalance()
+        await expect(
+          mars.connect(accounts.user1).greet(dispatcher.address, msg, channel.channelId, packet.timeout, packet.fee, {
             // only fee is escrowed, if msg.value > fee. The overage is lost to miner.
             // So as a dApp dev, you should always set msg.value to the exact packet fee.
             value: packet.fee
           })
-      )
-        .to.emit(dispatcher, 'SendPacket')
-        .withArgs(channel.portAddress, channel.channelId, toBytes(packet.msg), packet.timeout, packet.fee)
+        )
+          .to.emit(dispatcher, 'SendPacket')
+          .withArgs(channel.portAddress, channel.channelId, toBytes(msg), packet.sequence, packet.timeout, packet.fee)
+        // confirm Escrow balance changed
+        const escrowIncrease = (await escrowBalance()) - starttingEscrowBalance
+        expect(escrowIncrease).to.equal(packet.fee.toBigInt())
+      }
 
-      // confirm Escrow balance changed
-      const escrowIncrease = (await escrowBalance()) - startingEscrowBalance
-      expect(escrowIncrease).to.equal(packet.fee.toBigInt())
+      for (let i = 0; i < 3; i++) {
+        packet.sequence = i
+        packet.fee = ethers.utils.parseEther('0.123').mul(i + 1)
+        await assertSendPacket(packet)
+      }
     })
 
     it('fails if tx value < packet fee', async function () {
