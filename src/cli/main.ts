@@ -29,11 +29,16 @@ function newLogger(level: string) {
   })
 }
 
+const nameDescription =
+  'The name can be of the format `name:label` like the one in the `show` output. ' +
+  'A partial match is enough to select the chain: i.e. use "poly" to match a container called "polymer-0:main". ' +
+  'Only one match is allowed per command.'
+
 const connectionOption = new Option(
   '-c, --connection <path...>',
-  'Polyrelayer paths in the form of "src-chain-id:dst-chain-id"'
+  'A path must be in the form of "src-chain-id:dst-chain-id". This tells ibctl how to configure the relayers between the src and dst chains'
 )
-  .default([], 'Combination of chains of different type')
+  .default([], 'No connection between chains')
   .argParser((current, previous: string[]) => {
     if (!current.match(/^[\w-]+:[\w-]+$/)) {
       throw new InvalidArgumentError('Connection path must be of the form of "src-chain-id:dst-chain-id"')
@@ -54,13 +59,13 @@ const useZkMintOption = new Option('--use-zk-mint', 'Use ZK minting').default(fa
 
 program
   .command('init')
-  .description('Initializes the local stack')
+  .description('Initializes the workspace')
   .allowExcessArguments(false)
   .action(async (opts) => await commands.init({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
 
 program
   .command('start')
-  .description('Start the local stack as defined in <workspace>/<config-file>')
+  .description('Start the local stack as defined in <workspace>/config.yaml')
   .addOption(connectionOption)
   .addOption(useZkMintOption)
   .allowExcessArguments(false)
@@ -74,7 +79,7 @@ program
 
 program
   .command('stop')
-  .description('Stop the stack defined in the working directory')
+  .description('Stop the stack defined in the workspace')
   .allowExcessArguments(false)
   .option('-a, --all', 'Remove the entire workspace, including the configuration file')
   .action(async (opts) => await commands.stop({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
@@ -101,15 +106,11 @@ program
 
 program
   .command('exec')
-  .description(
-    'Runs a command on the container, selected by name and label following the format `name:label`. ' +
-      'The name and label can partially match: i.e. use "poly" to match a container called "polymer-0:main". ' +
-      'Only one match is allowed per command.'
-  )
+  .description('Runs a command on the container, selected by its name.' + nameDescription)
   .argument('<args...>')
   .allowExcessArguments(false)
   .action(async (opts) => {
-    if (opts.length === 0) throw new Error('Name and label (name:label) is required')
+    if (opts.length === 0) throw new Error('Name (name:label) is required')
     await commands.exec({ ...program.opts(), name: opts.shift(), args: opts }, newLogger(program.opts().logLevel))
   })
 
@@ -118,7 +119,7 @@ program
   .description(
     'Deploys a smart contract on the selected chain. If the SC constructor needs arguments, list them in order'
   )
-  .arguments('<chain> <account> <smart-contract-path> [args...]')
+  .arguments('<chain-name> <account> <smart-contract-path> [args...]')
   .allowExcessArguments(false)
   .action(async (chain, account, scpath, scargs) => {
     await commands.deploy({ ...program.opts(), chain, account, scpath, scargs }, newLogger(program.opts().logLevel))
@@ -129,7 +130,7 @@ program
   .description(
     'Fetches the logs from any component of the stack. It mimics the `docker logs` functionality with similar options.'
   )
-  .argument('<name>')
+  .argument('<chain-name>', nameDescription)
   .addOption(
     new Option(
       '--since <since>',
@@ -191,7 +192,7 @@ program
   .description(
     'Queries the IBC channels on the selected Cosmos chain. The chain name can be in the form of `name:label`.'
   )
-  .argument('<name>')
+  .argument('<chain-name>')
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
@@ -203,7 +204,7 @@ program
   .description(
     'Queries the IBC connections on the selected Cosmos chain. The chain name can be in the form of `name:label`.'
   )
-  .argument('<name>')
+  .argument('<chain-name>')
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
@@ -215,7 +216,7 @@ program
   .description(
     'Queries the IBC clients on the selected Cosmos chain. The chain name can be in the form of `name:label`.'
   )
-  .argument('<name>')
+  .argument('<chain-name>')
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
@@ -225,7 +226,7 @@ program
 program
   .command('tx')
   .description('Queries a transaction on the selected chain. The chain name can be in the form of `name:label`.')
-  .argument('<name>')
+  .argument('<chain-name>')
   .argument('<tx-hash>')
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
@@ -238,7 +239,7 @@ program
   .description(
     'Queries the auto-generated accounts on the selected chain. The chain name can be in the form of `name:label`.'
   )
-  .argument('<name>')
+  .argument('<chain-name>')
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
