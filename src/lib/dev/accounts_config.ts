@@ -55,14 +55,14 @@ export const CosmosAccountSchema = z.object({
   Mnemonic: z.string().nullish()
 })
 
+export const EvmAccountSchema = z.object({
+  Address: z.string(),
+  PrivateKey: z.string().nullish(),
+  Balance: bigNumberish.nullish()
+})
+
 export const AccountsSchema = (() => {
-  const evm = z.array(
-    z.object({
-      Address: z.string(),
-      PrivateKey: z.string().nullish(),
-      Balance: bigNumberish.nullish()
-    })
-  )
+  const evm = z.array(EvmAccountSchema)
   const cosmos = z.array(CosmosAccountSchema)
   const all = z.union([evm, cosmos])
   return Object.freeze({ evm, cosmos, all })
@@ -71,6 +71,7 @@ export const AccountsSchema = (() => {
 // eslint-disable-next-line no-redeclare
 export type Accounts = z.infer<typeof AccountsSchema.all>
 export type EvmAccounts = z.infer<typeof AccountsSchema.evm>
+export type EvmAccount = z.infer<typeof EvmAccountSchema>
 export type CosmosAccounts = z.infer<typeof AccountsSchema.cosmos>
 export type CosmosAccount = z.infer<typeof CosmosAccountSchema>
 
