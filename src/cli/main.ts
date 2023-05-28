@@ -152,16 +152,6 @@ program
     await commands.logs({ ...program.opts(), name: name, ...opts }, newLogger(program.opts().logLevel))
   })
 
-program
-  .command('create-light-client')
-  .description('Creates a new Light Client on the destination chain')
-  .allowExcessArguments(false)
-  .option('-p, --path <path>', 'The path used to create the light client')
-  .addOption(new Option('-t, --lc-type <light-client-type>', 'Light Client type').choices(['parlia']))
-  .action(
-    async (opts) => await commands.createLightClient({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel))
-  )
-
 function parseEndpointInfo(value: string): EndpointInfo {
   const args = value.split(':')
   if (args.length !== 3) {

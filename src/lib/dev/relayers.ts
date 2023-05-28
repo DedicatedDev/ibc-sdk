@@ -1,5 +1,5 @@
 import winston from 'winston'
-import { ChainSetsRunObj, isCosmosChain, isEvmChain, RelayerRunObj } from './schemas'
+import { ChainSetsRunObj, isCosmosChain, isEvmChain } from './schemas'
 import { CosmosAccount, CosmosAccounts } from './accounts_config.js'
 import { VIBCRelayer } from './vibc_relayer'
 import * as self from '../../lib/index.js'
@@ -145,15 +145,4 @@ export async function runRelayers(
   await Promise.all(promises)
 
   return runtime
-}
-
-export async function createLightClient(runtime: RelayerRunObj, path: string, lcType: string, log: winston.Logger) {
-  const [src, dst] = path.split(':')
-  if (!runtime.Configuration.chains[src]) throw new Error(`Invalid source path end: unknown chain ${src}`)
-  if (!runtime.Configuration.chains[dst]) throw new Error(`Invalid destination path end: unknown chain ${dst}`)
-
-  const vibcRelayer = await VIBCRelayer.reuse(runtime, log)
-  const out = await vibcRelayer.createLightClient(src, dst, lcType)
-  if (out.exitCode !== 0) throw new Error(`Could not create light client: ${out.stderr}`)
-  log.info(`Light Client created: ${out.stdout.trim()}`)
 }

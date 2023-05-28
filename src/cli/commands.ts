@@ -224,19 +224,6 @@ export async function exec(opts: ExecOpts, log: winston.Logger) {
   printOutput(await container.exec(opts.args))
 }
 
-type CreateLightClientOpts = {
-  workspace: string
-  path: string
-  lcType: string
-}
-
-export async function createLightClient(opts: CreateLightClientOpts, log: winston.Logger) {
-  const runtime = loadWorkspace(opts.workspace)
-  const relayer = runtime.Relayers.find((r) => r.Name === 'vibc-relayer')
-  if (!relayer) throw new Error('Could not find vibc-relayer runtime object!')
-  await self.dev.createLightClient(relayer, opts.path, opts.lcType, log).then(...thenClause)
-}
-
 type DeployOpts = {
   workspace: string
   chain: string

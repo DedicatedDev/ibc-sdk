@@ -124,10 +124,4 @@ export class VIBCRelayer {
       Configuration: JSON.parse(config.stdout)
     }
   }
-
-  async createLightClient(srcChainId: string, dstChainId: string, lcType: string): Promise<ProcessOutput> {
-    const path = `${srcChainId}-${dstChainId}`
-    this.logger.info(`Creating light client type '${lcType}' on path '${path}'`)
-    return await this.exec([this.binary, 'create-light-client', '--path', path, '--lc-type', lcType])
-  }
 }
