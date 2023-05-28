@@ -277,6 +277,7 @@ export async function channel(opts: ChannelOpts, log: winston.Logger) {
         `Got: ${endpointA.Type}:${endpointB.Type}`
     )
 
+  const origEndpointA = endpointA.Name
   // replace the ethereum chain with polymer
   endpointA = endpointA.Type === 'ethereum' ? poly : endpointA
   endpointB = endpointB.Type === 'ethereum' ? poly : endpointB
@@ -286,6 +287,7 @@ export async function channel(opts: ChannelOpts, log: winston.Logger) {
 
   await channelHandshake(
     runtime,
+    origEndpointA,
     endpointA as self.dev.schemas.CosmosChainSet,
     opts.endpointA.account,
     endpointB as self.dev.schemas.CosmosChainSet,

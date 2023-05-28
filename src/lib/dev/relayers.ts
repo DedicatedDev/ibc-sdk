@@ -52,19 +52,14 @@ async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: string[], lo
 }
 
 async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: string[][], log: winston.Logger) {
-  log.info(`starting vibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
+  log.info(`setting up vibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
+
   const relayer = await VIBCRelayer.create(runtime.Run.WorkingDir, log)
-  const relayerConfig = relayer.config(runtime, paths)
-  let out = await relayer.setup(relayerConfig)
-  if (out.exitCode !== 0) throw new Error(`Could not setup the vibc-relayer: ${out.stderr}`)
-
-  out = await relayer.run()
-  if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
-
+  await relayer.setup(runtime, paths)
   runtime.Relayers.push(await relayer.runtime())
   self.dev.saveChainSetsRuntime(runtime)
 
-  log.info('vibc-relayer started')
+  log.info('vibc-relayer set up')
 }
 
 async function setupEthRelayer(runtime: ChainSetsRunObj, paths: string[], log: winston.Logger) {

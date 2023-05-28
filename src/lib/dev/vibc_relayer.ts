@@ -2,7 +2,8 @@ import { images, newContainer, containerConfig, Container, containerFromId } fro
 import * as utils from '../utils/index.js'
 import winston from 'winston'
 import { ProcessOutput } from 'zx-cjs'
-import { ChainSetsRunObj, CosmosChainSet, isCosmosChain, isEvmChain, RelayerRunObj } from './schemas'
+import { ChainSetsRunObj, isCosmosChain, isEvmChain, RelayerRunObj } from './schemas'
+import { CosmosAccount, EvmAccount } from './accounts_config'
 
 export class VIBCRelayer {
   container: Container
@@ -46,80 +47,73 @@ export class VIBCRelayer {
     )
   }
 
-  async setup(config: any): Promise<ProcessOutput> {
-    this.logger.info(`Setting up relayer with config: ${JSON.stringify(config)}`)
-    return await this.exec([this.binary, 'setup', '-c', JSON.stringify(config)])
-  }
+  async setup(runtime: ChainSetsRunObj, paths: string[][]) {
+    for (const p of paths) if (p.length !== 2) throw new Error(`Invalid path. Expected: ['src','dst'], got: ${p}`)
 
-  /// TODO add schema for returning value
-  public config(runObj: ChainSetsRunObj, paths: string[][]): any {
-    for (const path of paths) {
-      if (path.length !== 2) throw new Error(`Invalid path. Expected: ['src','dst'], goat: ${path}`)
-    }
-
-    const relayerConfig = {
-      global: { 'polling-idle-time': 10000 },
-      chains: {},
-      paths: {}
-    }
-
-    for (const chain of runObj.ChainSets) {
-      // Only care about chains that are part of any path
-      if (!paths.some((p) => p.some((s) => s === chain.Name))) continue
-
-      if (!isEvmChain(chain.Type) && !isCosmosChain(chain.Type)) continue
-
-      relayerConfig.chains[chain.Name] = {
-        'rpc-url': chain.Nodes[0].RpcContainer,
-        'chain-type': isEvmChain(chain.Type) ? 'evm' : 'cosmos',
-        'account-prefix': 'unsetPrefix',
-        account: chain.Accounts![0]
+    for (const chain of runtime.ChainSets) {
+      const args = {
+        '--name': chain.Name,
+        '--rpc-url': chain.Nodes[0].RpcContainer,
+        '--gas-price': '0.0stake'
       }
 
       if (isCosmosChain(chain.Type)) {
-        relayerConfig.chains[chain.Name]['account-prefix'] = (chain as CosmosChainSet).Prefix
+        const account = chain.Accounts![0] as CosmosAccount
+        args['--account'] = account.Address
+        args['--key'] = account.Mnemonic
+        args['--type'] = 'cosmos'
+      } else if (isEvmChain(chain.Type)) {
+        const account = chain.Accounts![0] as EvmAccount
+        const dispatcher = chain.Contracts.find((c) => c.Name === 'Dispatcher')
+        if (!dispatcher) throw new Error(`Missing dispatcher contract on chain ${chain.Name}`)
+        args['--account'] = account.Address
+        args['--key'] = account.PrivateKey
+        args['--type'] = 'evm'
+        args['--contract-addr'] = dispatcher.Address
+        args['--contract-abi'] = dispatcher.Abi
+      } else {
         continue
       }
 
-      const dispatcher = chain.Contracts.find((c) => c.Name === 'Dispatcher')
-      if (!dispatcher) throw new Error(`Missing dispatcher contract on chain ${chain.Name}`)
-      relayerConfig.chains[chain.Name].dispatcher = {
-        Address: dispatcher.Address,
-        Abi: dispatcher.Abi
-      }
+      this.logger.verbose(`adding chain ${chain.Name} to vibc-relayer`)
+      await this.exec([this.binary, 'chains', 'add', ...Object.entries(args).flat()]).catch((e) => {
+        this.logger.error(e)
+        throw new Error(e)
+      })
+
+      await this.exec([this.binary, 'config', 'set', 'global.polling-idle-time', '10000']).catch((e) => {
+        this.logger.error(e)
+        throw new Error(e)
+      })
     }
 
     for (const path of paths) {
       const [src, dst] = path
-      relayerConfig.paths[src + '-' + dst] = {
-        src: {
-          'chain-id': src,
-          // TODO: update me with real client id
-          'client-id': 'client-id-src'
-        },
-        dst: {
-          'chain-id': dst,
-          // TODO: update me with real client id
-          'client-id': 'client-id-dst'
-        },
-        'src-channel-filter': null
-      }
+      const name = `${src}-${dst}`
+      this.logger.verbose(`adding path ${name} to vibc-relayer`)
+      await this.exec([this.binary, 'paths', 'add', src, dst, name]).catch((e) => {
+        this.logger.error(e)
+        throw new Error(e)
+      })
     }
-    return relayerConfig
   }
 
-  async run(): Promise<ProcessOutput> {
-    return await this.exec(['sh', '-c', `${this.binary} run 1>/proc/1/fd/1 2>/proc/1/fd/2`], true, true)
+  async update(srcChain: string, dstChain: string, srcChannel: string, dstChannel: string) {
+    const args = [`${srcChain}-${dstChain}`, '--src-channel', srcChannel, '--dst-channel', dstChannel]
+    await this.exec([this.binary, 'paths', 'update', ...args]).catch((e) => {
+      this.logger.error(e)
+      throw new Error(e)
+    })
   }
 
-  async restart(): Promise<ProcessOutput> {
-    await this.exec(['killall', 'node'])
-    await this.exec(['rm', '/data/eventlog.log'])
-    return await this.run()
+  async start(): Promise<ProcessOutput> {
+    const start = this.exec(['sh', '-c', `${this.binary} start 1>/proc/1/fd/1 2>/proc/1/fd/2`], true, true)
+    this.logger.info('vibc-relayer started')
+    return start
   }
 
   async getConfig(): Promise<ProcessOutput> {
-    return await this.exec(['cat', '/data/config.json'])
+    return await this.exec([this.binary, 'config', 'show'])
   }
 
   async runtime(): Promise<RelayerRunObj> {
@@ -127,7 +121,6 @@ export class VIBCRelayer {
     return {
       Name: 'vibc-relayer',
       ContainerId: this.container.containerId,
-      // TODO: parse using the actual schema
       Configuration: JSON.parse(config.stdout)
     }
   }

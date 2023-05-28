@@ -7,6 +7,7 @@ import { DeliverTxResponse, SigningStargateClient } from '@cosmjs/stargate'
 import { TextEncoder } from 'util'
 import Long from 'long'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
+import { VIBCRelayer } from 'src/lib/dev/vibc_relayer'
 
 async function createSignerClient(
   sender: CosmosAccount,
@@ -53,6 +54,7 @@ async function waitForBlocks(client: Tendermint37Client, blocks: number = 2) {
 
 export async function channelHandshake(
   runtime: ChainSetsRunObj,
+  origSrc: string,
   src: self.dev.schemas.CosmosChainSet,
   srcAddress: string,
   dst: self.dev.schemas.CosmosChainSet,
@@ -250,6 +252,16 @@ export async function channelHandshake(
     const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     openconfirm = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_confirm', res))
   }
+
+  const vibcruntime = runtime.Relayers.find((r) => r.Name == 'vibc-relayer')
+  if (vibcruntime) {
+    const relayer = await VIBCRelayer.reuse(vibcruntime, log)
+    // this is counter intuitive but the original source was replaced by polymer
+    // so we want to setup the path between polymer and the original source.
+    await relayer.update(src.Name, origSrc, openack.channel_id, openconfirm.channel_id)
+    await relayer.start()
+  }
+
   log.info(`ChanOpenConfirm on ${src.Name}: done`)
   log.info(`channel id on ${src.Name}: ${openack.channel_id}`)
   log.info(`channel id on ${dst.Name}: ${openconfirm.channel_id}`)
