@@ -114,6 +114,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   await testMessagesFromWasmToEth(t, config)
   await testMessagesFromEthToWasm(t, config)
 
+  await runCommand(t, 'show')
   await runCommand(t, 'logs', 'polymer', '-n', '5')
   await runCommand(t, 'logs', 'wasm', '-n', '5')
   await runCommand(t, 'logs', 'eth-exec', '-n', '5')
