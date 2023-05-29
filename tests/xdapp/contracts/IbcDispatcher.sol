@@ -16,6 +16,13 @@ struct Proof {
     bytes proof;
 }
 
+struct AckPacket {
+    // success indidates the dApp-level logic. Even when a dApp fails to process a packet per its dApp logic, the
+    // delivery of packet and ack packet are still considered successful.
+    bool success;
+    bytes data;
+}
+
 /**
  * @title IbcDispatcher
  * @author Polymer Labs

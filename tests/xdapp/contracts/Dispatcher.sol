@@ -84,7 +84,7 @@ contract Dispatcher is IbcDispatcher, Ownable {
     event Acknowledgement(
         address indexed sourcePortAddress,
         bytes32 indexed sourceChannelId,
-        bytes acknowledgement,
+        AckPacket AckPacket,
         uint64 sequence
     );
 
@@ -385,14 +385,14 @@ contract Dispatcher is IbcDispatcher, Ownable {
      * @param receiver The IbcReceiver contract that should handle the packet acknowledgement event
      * If the address doesn't satisfy the interface, the transaction will be reverted.
      * @param packet The IbcPacket data for the acknowledged packet
-     * @param acknowledgement The acknowledgement receipt for the packet
+     * @param ackPacket The acknowledgement receipt for the packet
      * @param proof The proof data needed to verify the packet acknowledgement
      * @dev Throws an error if the proof verification fails
      */
     function acknowledgement(
         IbcReceiver receiver,
         IbcPacket calldata packet,
-        bytes calldata acknowledgement,
+        AckPacket calldata ackPacket,
         Proof calldata proof
     ) external {
         require(verify(proof), 'Proof verification failed');
@@ -400,7 +400,7 @@ contract Dispatcher is IbcDispatcher, Ownable {
         require(hasCommitment, 'Packet commitment not found');
         receiver.onAcknowledgementPacket(packet);
         delete packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
-        emit Acknowledgement(address(receiver), packet.src.channelId, acknowledgement, packet.sequence);
+        emit Acknowledgement(address(receiver), packet.src.channelId, ackPacket, packet.sequence);
     }
 
     /**

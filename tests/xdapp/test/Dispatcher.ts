@@ -431,13 +431,16 @@ describe('IBC Core Smart Contract', function () {
       const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
       const packet = Object.assign({}, packets[0]) // make a copy
 
-      const getPacket = function (packet: (typeof C.Packets)[0], sequence: number) {
+      const getPacket = (packet: (typeof C.Packets)[0], sequence: number) => {
         return {
           ...packet,
           msg: `packet.msg-${sequence}`,
           sequence: sequence,
           fee: ethers.utils.parseEther('0.123').mul(sequence + 1)
         }
+      }
+      const getAck = (packet: (typeof C.Packets)[0], ackSuccess: boolean) => {
+        return { success: ackSuccess, data: toBytes(`$ack-${packet.sequence}-${packet.msg}`) }
       }
 
       const assertSendPacket = async (packet: (typeof C.Packets)[0]) => {
@@ -462,13 +465,16 @@ describe('IBC Core Smart Contract', function () {
       }
 
       for (let i = 0; i < 3; i++) {
-        // packet.sequence = i
-        // packet.fee = ethers.utils.parseEther('0.123').mul(i + 1)
         await assertSendPacket(getPacket(packet, i))
       }
 
       // unordered channel can ack packets in any order
-      const assertAck = async (packet: (typeof C.Packets)[0], sequence: number, error?: string) => {
+      const assertAck = async (
+        packet: (typeof C.Packets)[0],
+        sequence: number,
+        ack: ReturnType<typeof getAck>,
+        error?: string
+      ) => {
         const txAck = dispatcher.connect(accounts.relayer).acknowledgement(
           mars.address,
           {
@@ -478,21 +484,28 @@ describe('IBC Core Smart Contract', function () {
             data: toBytes(packet.msg),
             timeout: { block: 0, timestamp: packet.timeout }
           },
-          toBytes('ack'),
+          ack,
           C.ValidProof
         )
         if (!error) {
           await expect(txAck)
             .to.emit(dispatcher, 'Acknowledgement')
-            .withArgs(channel.portAddress, channel.channelId, toBytes('ack'), packet.sequence)
+            .withArgs(
+              channel.portAddress,
+              channel.channelId,
+              [ack.success, ethers.utils.hexlify(ack.data)],
+              packet.sequence
+            )
         } else {
           await expect(txAck).to.be.revertedWith(error)
         }
       }
 
-      await assertAck(getPacket(packet, 2), 2)
-      await assertAck(getPacket(packet, 2), 2, 'Packet commitment not found')
-      await assertAck(getPacket(packet, 100), 100, 'Packet commitment not found')
+      await assertAck(getPacket(packet, 2), 2, getAck(getPacket(packet, 2), true))
+      await assertAck(getPacket(packet, 1), 1, getAck(getPacket(packet, 1), false))
+      // processed ackPacket cannot be acked again!
+      await assertAck(getPacket(packet, 2), 2, getAck(getPacket(packet, 2), true), 'Packet commitment not found')
+      await assertAck(getPacket(packet, 100), 100, getAck(getPacket(packet, 100), false), 'Packet commitment not found')
     })
   })
   // end of tests
