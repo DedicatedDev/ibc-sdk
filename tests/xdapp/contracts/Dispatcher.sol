@@ -10,7 +10,9 @@ import './IbcDispatcher.sol';
 import './IbcReceiver.sol';
 import './IbcVerifier.sol';
 
-struct LightClient {
+// InitClient is used to create a new Polymer client on an EVM chain
+// TODO: replace bytes with explictly typed fields for gas cost saving
+struct InitClient {
     bytes clientState;
     bytes consensusState;
 }
@@ -108,14 +110,13 @@ contract Dispatcher is IbcDispatcher, Ownable {
     //
 
     /**
-     * @dev Creates a new client with the given `clientState`, and `consensusState`.
-     * @param clientState The initial client state.
-     * @param consensusState The initial consensus state.
+     * @dev Creates a new Polymer client.
+     * @param initClient The initial client state and consensus state.
      */
-    function createClient(bytes calldata clientState, bytes calldata consensusState) external onlyOwner {
+    function createClient(InitClient calldata initClient) external onlyOwner {
         require(!isClientCreated, 'Client already created');
         isClientCreated = true;
-        latestConsensusState = consensusState;
+        latestConsensusState = initClient.consensusState;
     }
 
     /**

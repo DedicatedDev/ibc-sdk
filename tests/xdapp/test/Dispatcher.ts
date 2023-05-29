@@ -11,6 +11,7 @@ describe('IBC Core Smart Contract', function () {
   const C = {
     ClientState: toBytes32('clientState'),
     ConsensusStates: ['consState1', 'consState2', 'consState3'].map(toBytes32),
+    InitClient: { clientState: toBytes32('clientState'), consensusState: toBytes32('consState1') },
     ConnHops1: ['connection-0', 'connection-2'],
     ConnHops2: ['connection-1', 'connection-3'],
     EmptyVersion: toBytes32(''),
@@ -71,7 +72,7 @@ describe('IBC Core Smart Contract', function () {
     const mars = await factories.Mars.connect(accounts.user1).deploy()
 
     // Set up Polymer light client on CoreSC
-    await dispatcher.createClient(C.ClientState, C.ConsensusStates[0]).then((tx) => tx.wait())
+    await dispatcher.createClient(C.InitClient).then((tx) => tx.wait())
 
     return { accounts, verifier, dispatcher, mars }
   }
@@ -119,9 +120,9 @@ describe('IBC Core Smart Contract', function () {
     it('only owner can create a new client', async function () {
       const { accounts, dispatcher } = await loadFixture(deployIbcCoreFixture)
 
-      await expect(
-        dispatcher.connect(accounts.user1).createClient(C.ClientState, C.ConsensusStates[0])
-      ).to.be.revertedWith('Ownable: caller is not the owner')
+      await expect(dispatcher.connect(accounts.user1).createClient(C.InitClient)).to.be.revertedWith(
+        'Ownable: caller is not the owner'
+      )
     })
 
     it('should create a new client', async function () {
@@ -133,9 +134,7 @@ describe('IBC Core Smart Contract', function () {
 
     it('cannot create call creatClient twice', async function () {
       const { dispatcher } = await loadFixture(setupCoreClientFixture)
-      await expect(dispatcher.createClient(C.ClientState, C.ConsensusStates[1])).to.be.revertedWith(
-        'Client already created'
-      )
+      await expect(dispatcher.createClient(C.InitClient)).to.be.revertedWith('Client already created')
     })
   })
 
