@@ -27,7 +27,15 @@ describe('IBC Core Smart Contract', function () {
     ChannelIds: ['channel-0', 'channel-1'].map(toBytes32),
     RemoteChannelIds: ['channel-100', 'channel-101'].map(toBytes32),
     EmptyChannelId: toBytes32(''),
-    BscPortId: toBytes32('bsc.polyibc.9876543210')
+    BscPortId: toBytes32('bsc.polyibc.9876543210'),
+    Packets: [
+      {
+        msg: 'hello ibc',
+        sequence: 0,
+        timeout: ethers.BigNumber.from(123456789),
+        fee: ethers.utils.parseEther('0.123')
+      }
+    ]
   }
 
   // Get all contract factories for testing
@@ -107,15 +115,7 @@ describe('IBC Core Smart Contract', function () {
         C.ValidProof
       )
       .then((tx) => tx.wait())
-    const packets = [
-      {
-        msg: 'hello ibc',
-        sequence: 0,
-        timeout: ethers.BigNumber.from(123456789),
-        fee: ethers.utils.parseEther('0.123')
-      }
-    ]
-    return { accounts, dispatcher, mars, channel, packets }
+    return { accounts, dispatcher, mars, channel, packets: C.Packets }
   }
 
   describe('createClient', function () {
@@ -365,9 +365,9 @@ describe('IBC Core Smart Contract', function () {
       const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
       const packet = Object.assign({}, packets[0]) // make a copy
       const escrowBalance = () => accounts.escrow.getBalance().then((b) => b.toBigInt())
-      const msg = `packet.msg-${packet.sequence}`
 
-      const assertSendPacket = async (packet: (typeof packets)[0]) => {
+      const assertSendPacket = async (packet: (typeof C.Packets)[0]) => {
+        const msg = `packet.msg-${packet.sequence}`
         const starttingEscrowBalance = await escrowBalance()
         await expect(
           mars.connect(accounts.user1).greet(dispatcher.address, msg, channel.channelId, packet.timeout, packet.fee, {
@@ -423,6 +423,71 @@ describe('IBC Core Smart Contract', function () {
             value: packet.fee
           })
       ).to.be.revertedWith('Channel not owned by sender')
+    })
+  })
+
+  describe('acknowledge', function () {
+    it('succeeds if there is packet commitment', async function () {
+      const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
+      const packet = Object.assign({}, packets[0]) // make a copy
+
+      const getPacket = function (packet: (typeof C.Packets)[0], sequence: number) {
+        return {
+          ...packet,
+          msg: `packet.msg-${sequence}`,
+          sequence: sequence,
+          fee: ethers.utils.parseEther('0.123').mul(sequence + 1)
+        }
+      }
+
+      const assertSendPacket = async (packet: (typeof C.Packets)[0]) => {
+        await expect(
+          mars
+            .connect(accounts.user1)
+            .greet(dispatcher.address, packet.msg, channel.channelId, packet.timeout, packet.fee, {
+              // only fee is escrowed, if msg.value > fee. The overage is lost to miner.
+              // So as a dApp dev, you should always set msg.value to the exact packet fee.
+              value: packet.fee
+            })
+        )
+          .to.emit(dispatcher, 'SendPacket')
+          .withArgs(
+            channel.portAddress,
+            channel.channelId,
+            toBytes(packet.msg),
+            packet.sequence,
+            packet.timeout,
+            packet.fee
+          )
+      }
+
+      for (let i = 0; i < 3; i++) {
+        // packet.sequence = i
+        // packet.fee = ethers.utils.parseEther('0.123').mul(i + 1)
+        await assertSendPacket(getPacket(packet, i))
+      }
+
+      // unordered channel can ack packets in any order
+      const assertAck = async (packet: (typeof C.Packets)[0], sequence: number) => {
+        await expect(
+          dispatcher.connect(accounts.relayer).onAcknowledgementPacket(
+            mars.address,
+            {
+              src: { portId: `eth.polyibc.${mars.address}`, channelId: channel.channelId },
+              dest: { portId: C.BscPortId, channelId: C.RemoteChannelIds[0] },
+              sequence: sequence,
+              data: toBytes(packet.msg),
+              timeout: { block: 0, timestamp: packet.timeout }
+            },
+            toBytes('ack'),
+            C.ValidProof
+          )
+        )
+          .to.emit(dispatcher, 'Acknowledgement')
+          .withArgs(channel.portAddress, channel.channelId, toBytes('ack'), packet.sequence)
+      }
+
+      await assertAck(getPacket(packet, 1), 1)
     })
   })
   // end of tests

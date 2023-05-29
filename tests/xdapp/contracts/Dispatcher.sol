@@ -81,6 +81,13 @@ contract Dispatcher is IbcDispatcher, Ownable {
         uint256 fee
     );
 
+    event Acknowledgement(
+        address indexed sourcePortAddress,
+        bytes32 indexed sourceChannelId,
+        bytes acknowledgement,
+        uint64 sequence
+    );
+
     event OnRecvPacket(
         bytes32 indexed srcChannelId,
         string srcPortId,
@@ -101,7 +108,10 @@ contract Dispatcher is IbcDispatcher, Ownable {
 
     uint64 channelCounter = 0;
     mapping(address => mapping(bytes32 => Channel)) public portChannelMap;
-    mapping(address => mapping(bytes32 => uint64)) portChannelSequenceMap;
+    mapping(address => mapping(bytes32 => uint64)) sendPacketSequence;
+    // only stores a bit to mark packet has not been ack'ed or timed out yet; actual IBC packet verification is done on
+    // Polymer chain
+    mapping(address => mapping(bytes32 => mapping(uint64 => bool))) packetCommitment;
 
     //
     // methods
@@ -337,8 +347,10 @@ contract Dispatcher is IbcDispatcher, Ownable {
         (bool sent, ) = escrow.call{value: fee}('');
         require(sent, 'Failed to escrow packet fee');
         // packet sequence
-        uint64 sequence = portChannelSequenceMap[msg.sender][channelId];
-        portChannelSequenceMap[msg.sender][channelId] = sequence + 1;
+        uint64 sequence = sendPacketSequence[msg.sender][channelId];
+        sendPacketSequence[msg.sender][channelId] = sequence + 1;
+        // packet commitment
+        packetCommitment[msg.sender][channelId][sequence] = true;
 
         emit SendPacket(msg.sender, channelId, packet, sequence, timeoutTimestamp, fee);
     }
@@ -385,6 +397,7 @@ contract Dispatcher is IbcDispatcher, Ownable {
     ) external {
         require(verify(proof), 'Proof verification failed');
         receiver.onAcknowledgementPacket(packet);
+        emit Acknowledgement(address(receiver), packet.src.channelId, acknowledgement, packet.sequence);
     }
 
     /**
