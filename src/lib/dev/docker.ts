@@ -240,7 +240,6 @@ export class Container {
     // there's probably a more efficient way of doing it but it is not critical.
     // the trick here is that we need to remove this weird sequence that causes havoc in the output.
     const cleaner = (stream: Writable, data: any) => {
-      // eslint-disable-next-line no-control-regex
       stream.write(data.toString('utf-8').replace(/\u001b\u005b\u0036\u006e/g, ''))
     }
 
@@ -248,23 +247,6 @@ export class Container {
     logs.stdout.on('data', (chunk: any) => cleaner(config.stdout, chunk))
     logs.stderr.on('data', (chunk: any) => cleaner(config.stderr, chunk))
     return logs
-  }
-
-  async stop() {
-    const args = ['docker', 'container', 'stop', this.containerId]
-    this.logger.verbose(`stopping container: ${args.map($.quote).join(' ')}`)
-    await $`${args}`
-  }
-
-  async remove() {
-    const args = ['docker', 'container', 'rm', this.containerId]
-    this.logger.verbose(`stopping container: ${args.map($.quote).join(' ')}`)
-    await $`${args}`
-  }
-
-  async stopAndRemove() {
-    await this.stop()
-    await this.remove()
   }
 }
 

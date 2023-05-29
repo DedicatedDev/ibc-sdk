@@ -91,10 +91,6 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
     return container
   }
 
-  protected deleteContainer(label: ImageLabelTypes): boolean {
-    return this.containers.delete(label)
-  }
-
   protected async isReusingContainer(): Promise<boolean> {
     // if any container is not reused, then none are
     for (const container of this.containers.values()) {

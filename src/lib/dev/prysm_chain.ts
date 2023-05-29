@@ -1,6 +1,6 @@
-import { $, Logger, utils, zx } from './deps.js'
-import { ChainConfig, imageByLabel, ImageLabelTypes, NoneChainConfig } from './schemas.js'
-import { EndPoint, NodeAccounts, RunningChain, RunningChainBase } from './running_chain.js'
+import { $, utils, Logger, zx } from './deps.js'
+import { NoneChainConfig, ChainConfig, imageByLabel, ImageLabelTypes } from './schemas.js'
+import { EndPoint, RunningChain, RunningChainBase, NodeAccounts } from './running_chain.js'
 import { newContainer } from './docker.js'
 import { RunningGethChain } from './geth_chain'
 
@@ -216,10 +216,7 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
 
     const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>genesis.d.stdout 2>genesis.d.stderr`]
     utils.fs.writeFileSync(this.hostDirPath('genesis.d.cmd'), cmds.join(' '))
-    const genesisContainer = this.getContainer(ImageLabelTypes.Genesis)
-    await genesisContainer.exec(cmds)
-    await genesisContainer.stopAndRemove()
-    this.deleteContainer(ImageLabelTypes.Genesis)
+    await this.getContainer(ImageLabelTypes.Genesis).exec(cmds)
   }
 
   private get dataDir(): string {
