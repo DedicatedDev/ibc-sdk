@@ -5,14 +5,14 @@ import './IbcVerifier.sol';
 import './IbcReceiver.sol';
 
 contract Verifier is ZKMintVerifier {
-    function verifyConsensusState(
+    function verifyUpdateClientMsg(
         bytes calldata lastConsensusState,
-        bytes calldata newConsensusState
+        UpdateClientMsg calldata updateClientMsg
     ) external pure override returns (bool) {
         // TODO: replace with real Polymer header/consensus verification logic
         // For now, a dummy verification is implemented that requries newer states is not smaller than the last state
-        require(newConsensusState.length > 0, 'Invalid Polymer consensus state');
-        return newConsensusState.length >= lastConsensusState.length;
+        require(updateClientMsg.consensusState.length > 0, 'Invalid Polymer consensus state');
+        return updateClientMsg.consensusState.length >= lastConsensusState.length;
     }
 
     function verifyMembership(

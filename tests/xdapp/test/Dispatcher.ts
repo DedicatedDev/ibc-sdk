@@ -11,7 +11,8 @@ describe('IBC Core Smart Contract', function () {
   const C = {
     ClientState: toBytes32('clientState'),
     ConsensusStates: ['consState1', 'consState2', 'consState3'].map(toBytes32),
-    InitClient: { clientState: toBytes32('clientState'), consensusState: toBytes32('consState1') },
+    InitClientMsg: { clientState: toBytes32('clientState'), consensusState: toBytes32('consState1') },
+    UpdateClientMsg: { consensusState: toBytes32('consState2'), height: 2, zkProof: toBytes32('zkProof') },
     ConnHops1: ['connection-0', 'connection-2'],
     ConnHops2: ['connection-1', 'connection-3'],
     EmptyVersion: toBytes32(''),
@@ -72,7 +73,7 @@ describe('IBC Core Smart Contract', function () {
     const mars = await factories.Mars.connect(accounts.user1).deploy()
 
     // Set up Polymer light client on CoreSC
-    await dispatcher.createClient(C.InitClient).then((tx) => tx.wait())
+    await dispatcher.createClient(C.InitClientMsg).then((tx) => tx.wait())
 
     return { accounts, verifier, dispatcher, mars }
   }
@@ -120,7 +121,7 @@ describe('IBC Core Smart Contract', function () {
     it('only owner can create a new client', async function () {
       const { accounts, dispatcher } = await loadFixture(deployIbcCoreFixture)
 
-      await expect(dispatcher.connect(accounts.user1).createClient(C.InitClient)).to.be.revertedWith(
+      await expect(dispatcher.connect(accounts.user1).createClient(C.InitClientMsg)).to.be.revertedWith(
         'Ownable: caller is not the owner'
       )
     })
@@ -134,7 +135,7 @@ describe('IBC Core Smart Contract', function () {
 
     it('cannot create call creatClient twice', async function () {
       const { dispatcher } = await loadFixture(setupCoreClientFixture)
-      await expect(dispatcher.createClient(C.InitClient)).to.be.revertedWith('Client already created')
+      await expect(dispatcher.createClient(C.InitClientMsg)).to.be.revertedWith('Client already created')
     })
   })
 
@@ -142,16 +143,19 @@ describe('IBC Core Smart Contract', function () {
     it('should update the consensus state of an existing client', async function () {
       const { dispatcher } = await loadFixture(setupCoreClientFixture)
 
-      await dispatcher.updateClient(C.ConsensusStates[1])
+      await dispatcher.updateClient(C.UpdateClientMsg)
       const latestConsensusState = await dispatcher.latestConsensusState()
 
-      expect(latestConsensusState).to.equal(C.ConsensusStates[1])
+      expect(latestConsensusState).to.equal(C.UpdateClientMsg.consensusState)
     })
 
     it('cannot update client with invalid consensusState', async function () {
       const { dispatcher } = await loadFixture(setupCoreClientFixture)
       const invalidConsState = ethers.utils.toUtf8Bytes('short')
-      await expect(dispatcher.updateClient(invalidConsState)).to.be.revertedWith('Consensus state verification failed')
+      const invalidUpdateClientMsg = { ...C.UpdateClientMsg, consensusState: invalidConsState }
+      await expect(dispatcher.updateClient(invalidUpdateClientMsg)).to.be.revertedWith(
+        'UpdateClientMsg proof verification failed'
+      )
     })
   })
 

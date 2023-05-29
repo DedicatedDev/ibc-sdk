@@ -10,9 +10,9 @@ import './IbcDispatcher.sol';
 import './IbcReceiver.sol';
 import './IbcVerifier.sol';
 
-// InitClient is used to create a new Polymer client on an EVM chain
+// InitClientMsg is used to create a new Polymer client on an EVM chain
 // TODO: replace bytes with explictly typed fields for gas cost saving
-struct InitClient {
+struct InitClientMsg {
     bytes clientState;
     bytes consensusState;
 }
@@ -111,30 +111,29 @@ contract Dispatcher is IbcDispatcher, Ownable {
 
     /**
      * @dev Creates a new Polymer client.
-     * @param initClient The initial client state and consensus state.
+     * @param initClientMsg The initial client state and consensus state.
      */
-    function createClient(InitClient calldata initClient) external onlyOwner {
+    function createClient(InitClientMsg calldata initClientMsg) external onlyOwner {
         require(!isClientCreated, 'Client already created');
         isClientCreated = true;
-        latestConsensusState = initClient.consensusState;
+        latestConsensusState = initClientMsg.consensusState;
     }
 
     /**
-     * @dev Updates the consensus state for an existing client with the specified ID.
+     * @dev Updates the Polymer client.
      *
      * Requirements:
-     * - The client with the given ID must already exist.
-     * - The consensus state must pass verification.
+     * - The consensus state must pass zkProof verification.
      *
-     * @param consensusState The new consensus state for the client.
+     * @param updateClientMsg The new consensus state for the client.
      */
-    function updateClient(bytes calldata consensusState) external {
+    function updateClient(UpdateClientMsg calldata updateClientMsg) external {
         require(isClientCreated, 'Client not created');
         require(
-            verifier.verifyConsensusState(latestConsensusState, consensusState),
-            'Consensus state verification failed'
+            verifier.verifyUpdateClientMsg(latestConsensusState, updateClientMsg),
+            'UpdateClientMsg proof verification failed'
         );
-        latestConsensusState = consensusState;
+        latestConsensusState = updateClientMsg.consensusState;
     }
 
     /**
