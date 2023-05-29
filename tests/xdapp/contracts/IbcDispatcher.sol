@@ -33,12 +33,5 @@ interface IbcDispatcher {
 
     function onRecvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external;
 
-    function onAcknowledgementPacket(
-        IbcReceiver receiver,
-        IbcPacket calldata packet,
-        bytes calldata acknowledgement,
-        Proof calldata proof
-    ) external;
-
     function onTimeoutPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external;
 }

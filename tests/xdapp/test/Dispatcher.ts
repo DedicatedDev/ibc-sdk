@@ -468,26 +468,31 @@ describe('IBC Core Smart Contract', function () {
       }
 
       // unordered channel can ack packets in any order
-      const assertAck = async (packet: (typeof C.Packets)[0], sequence: number) => {
-        await expect(
-          dispatcher.connect(accounts.relayer).onAcknowledgementPacket(
-            mars.address,
-            {
-              src: { portId: `eth.polyibc.${mars.address}`, channelId: channel.channelId },
-              dest: { portId: C.BscPortId, channelId: C.RemoteChannelIds[0] },
-              sequence: sequence,
-              data: toBytes(packet.msg),
-              timeout: { block: 0, timestamp: packet.timeout }
-            },
-            toBytes('ack'),
-            C.ValidProof
-          )
+      const assertAck = async (packet: (typeof C.Packets)[0], sequence: number, error?: string) => {
+        const txAck = dispatcher.connect(accounts.relayer).acknowledgement(
+          mars.address,
+          {
+            src: { portId: `eth.polyibc.${mars.address}`, channelId: channel.channelId },
+            dest: { portId: C.BscPortId, channelId: C.RemoteChannelIds[0] },
+            sequence: sequence,
+            data: toBytes(packet.msg),
+            timeout: { block: 0, timestamp: packet.timeout }
+          },
+          toBytes('ack'),
+          C.ValidProof
         )
-          .to.emit(dispatcher, 'Acknowledgement')
-          .withArgs(channel.portAddress, channel.channelId, toBytes('ack'), packet.sequence)
+        if (!error) {
+          await expect(txAck)
+            .to.emit(dispatcher, 'Acknowledgement')
+            .withArgs(channel.portAddress, channel.channelId, toBytes('ack'), packet.sequence)
+        } else {
+          await expect(txAck).to.be.revertedWith(error)
+        }
       }
 
-      await assertAck(getPacket(packet, 1), 1)
+      await assertAck(getPacket(packet, 2), 2)
+      await assertAck(getPacket(packet, 2), 2, 'Packet commitment not found')
+      await assertAck(getPacket(packet, 100), 100, 'Packet commitment not found')
     })
   })
   // end of tests

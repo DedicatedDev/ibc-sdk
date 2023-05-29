@@ -389,14 +389,17 @@ contract Dispatcher is IbcDispatcher, Ownable {
      * @param proof The proof data needed to verify the packet acknowledgement
      * @dev Throws an error if the proof verification fails
      */
-    function onAcknowledgementPacket(
+    function acknowledgement(
         IbcReceiver receiver,
         IbcPacket calldata packet,
         bytes calldata acknowledgement,
         Proof calldata proof
     ) external {
         require(verify(proof), 'Proof verification failed');
+        bool hasCommitment = packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
+        require(hasCommitment, 'Packet commitment not found');
         receiver.onAcknowledgementPacket(packet);
+        delete packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
         emit Acknowledgement(address(receiver), packet.src.channelId, acknowledgement, packet.sequence);
     }
 
