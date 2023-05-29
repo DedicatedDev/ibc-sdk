@@ -395,11 +395,23 @@ contract Dispatcher is IbcDispatcher, Ownable {
         AckPacket calldata ackPacket,
         Proof calldata proof
     ) external {
-        require(verify(proof), 'Proof verification failed');
+        // prove ack packet is on Polymer chain
+        require(
+            verifier.verifyMembership(
+                latestConsensusState,
+                proof,
+                'ack/path/to/be/added/here',
+                'expected ack receipt hash on Polymer chain'
+            ),
+            'Fail to prove ack'
+        );
+        // verify packet has been committed and not yet ack'ed
         bool hasCommitment = packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
         require(hasCommitment, 'Packet commitment not found');
         receiver.onAcknowledgementPacket(packet);
+        // delete packet commitment to avoid double ack
         delete packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
+
         emit Acknowledgement(address(receiver), packet.src.channelId, ackPacket, packet.sequence);
     }
 
