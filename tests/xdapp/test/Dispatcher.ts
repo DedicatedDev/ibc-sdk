@@ -13,6 +13,7 @@ describe('IBC Core Smart Contract', function () {
     ConsensusStates: ['consState1', 'consState2', 'consState3'].map(toBytes32),
     InitClientMsg: { clientState: toBytes32('clientState'), consensusState: toBytes32('consState1') },
     UpdateClientMsg: { consensusState: toBytes32('consState2'), height: 2, zkProof: toBytes32('zkProof') },
+    UpgradeClientMsg: { clientState: toBytes32('clientState'), consensusState: toBytes32('consState100') },
     ConnHops1: ['connection-0', 'connection-2'],
     ConnHops2: ['connection-1', 'connection-3'],
     EmptyVersion: toBytes32(''),
@@ -155,6 +156,25 @@ describe('IBC Core Smart Contract', function () {
       const invalidUpdateClientMsg = { ...C.UpdateClientMsg, consensusState: invalidConsState }
       await expect(dispatcher.updateClient(invalidUpdateClientMsg)).to.be.revertedWith(
         'UpdateClientMsg proof verification failed'
+      )
+    })
+  })
+
+  describe('upgradeClient', function () {
+    it('should upgrade the client', async function () {
+      const { dispatcher } = await loadFixture(setupCoreClientFixture)
+
+      await dispatcher.upgradeClient(C.UpgradeClientMsg)
+      const latestConsensusState = await dispatcher.latestConsensusState()
+
+      expect(latestConsensusState).to.equal(C.UpgradeClientMsg.consensusState)
+    })
+
+    it('cannot upgrade by non-owner', async function () {
+      const { dispatcher, accounts } = await loadFixture(setupCoreClientFixture)
+
+      await expect(dispatcher.connect(accounts.user1).upgradeClient(C.UpgradeClientMsg)).to.be.revertedWith(
+        'Ownable: caller is not the owner'
       )
     })
   })

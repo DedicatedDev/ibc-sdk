@@ -17,6 +17,14 @@ struct InitClientMsg {
     bytes consensusState;
 }
 
+// UpgradeClientMsg is used to upgrade an existing Polymer client on an EVM chain.
+// It should only be run by CoreSC maintainer with a social consensus.
+// TODO: replace bytes with explictly typed fields for gas cost saving
+struct UpgradeClientMsg {
+    bytes clientState;
+    bytes consensusState;
+}
+
 struct Channel {
     bytes32 version;
     ChannelOrder ordering;
@@ -134,6 +142,16 @@ contract Dispatcher is IbcDispatcher, Ownable {
             'UpdateClientMsg proof verification failed'
         );
         latestConsensusState = updateClientMsg.consensusState;
+    }
+
+    /**
+     * @dev Upgrades the Polymer client.
+     * It can only be run by CoreSC maintainer with a social consensus.
+     * @param upgradeClientMsg The new client state and consensus state.
+     */
+    function upgradeClient(UpgradeClientMsg calldata upgradeClientMsg) external onlyOwner {
+        require(isClientCreated, 'Client not created');
+        latestConsensusState = upgradeClientMsg.consensusState;
     }
 
     /**
