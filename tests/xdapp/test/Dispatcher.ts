@@ -448,8 +448,6 @@ describe('IBC Core Smart Contract', function () {
           mars
             .connect(accounts.user1)
             .greet(dispatcher.address, packet.msg, channel.channelId, packet.timeout, packet.fee, {
-              // only fee is escrowed, if msg.value > fee. The overage is lost to miner.
-              // So as a dApp dev, you should always set msg.value to the exact packet fee.
               value: packet.fee
             })
         )
@@ -473,19 +471,28 @@ describe('IBC Core Smart Contract', function () {
         packet: (typeof C.Packets)[0],
         sequence: number,
         ack: ReturnType<typeof getAck>,
-        error?: string
+        error?: string,
+        overrideArgs?: { srcPortId?: string; proof?: typeof C.ValidProof }
       ) => {
+        const txArgs = overrideArgs || {
+          srcPortId: `eth.polyibc.${ethers.utils.hexlify(mars.address).slice(2)}`,
+          proof: C.ValidProof
+        }
+
         const txAck = dispatcher.connect(accounts.relayer).acknowledgement(
           mars.address,
           {
-            src: { portId: `eth.polyibc.${mars.address}`, channelId: channel.channelId },
+            src: {
+              portId: txArgs.srcPortId!,
+              channelId: channel.channelId
+            },
             dest: { portId: C.BscPortId, channelId: C.RemoteChannelIds[0] },
             sequence: sequence,
             data: toBytes(packet.msg),
             timeout: { block: 0, timestamp: packet.timeout }
           },
           ack,
-          C.ValidProof
+          txArgs.proof!
         )
         if (!error) {
           await expect(txAck)
@@ -506,6 +513,20 @@ describe('IBC Core Smart Contract', function () {
       // processed ackPacket cannot be acked again!
       await assertAck(getPacket(packet, 2), 2, getAck(getPacket(packet, 2), true), 'Packet commitment not found')
       await assertAck(getPacket(packet, 100), 100, getAck(getPacket(packet, 100), false), 'Packet commitment not found')
+      await assertAck(
+        getPacket(packet, 3),
+        3,
+        getAck(getPacket(packet, 3), true),
+        'Receiver is not the original packet sender',
+        {
+          srcPortId: `eth.polyibc.${ethers.utils.hexlify(accounts.otherUsers[0].address).slice(2)}`,
+          proof: C.ValidProof
+        }
+      )
+      await assertAck(getPacket(packet, 3), 3, getAck(getPacket(packet, 3), true), 'Fail to prove ack', {
+        proof: C.InvalidProof,
+        srcPortId: `eth.polyibc.${ethers.utils.hexlify(mars.address).slice(2)}`
+      })
     })
   })
   // end of tests

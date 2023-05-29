@@ -105,8 +105,10 @@ contract Dispatcher is IbcDispatcher, Ownable {
     address payable escrow;
     bool isClientCreated = false;
     bytes public latestConsensusState;
+    // IBC_PortID = portPrefix + address
+    string portPrefix = 'eth.polyibc.';
+    uint64 portPrefixLen = 12;
 
-    uint64 channelCounter = 0;
     mapping(address => mapping(bytes32 => Channel)) public portChannelMap;
     mapping(address => mapping(bytes32 => uint64)) sendPacketSequence;
     // only stores a bit to mark packet has not been ack'ed or timed out yet; actual IBC packet verification is done on
@@ -121,6 +123,46 @@ contract Dispatcher is IbcDispatcher, Ownable {
         verifier = _verifier;
         escrow = _escrow;
         require(escrow != address(0), 'Escrow cannot be zero address');
+    }
+
+    //
+    // Utility functions
+    //
+
+    /**
+     * Convert a non-0x-prefixed hex string to an address
+     * @param hexStr hex string to convert to address. Note that the hex string must not include a 0x prefix.
+     * hexStr is case-insensitive.
+     */
+    function hexStrToAddress(string memory hexStr) public pure returns (address) {
+        require(bytes(hexStr).length == 40, 'Invalid hex string length');
+
+        bytes memory strBytes = bytes(hexStr);
+        bytes memory addrBytes = new bytes(20);
+
+        for (uint256 i = 0; i < 20; i++) {
+            uint8 high = uint8(strBytes[i * 2]);
+            uint8 low = uint8(strBytes[1 + i * 2]);
+            uint8 digit = (high - (high >= 97 ? 87 : 48)) * 16 + (low - (low >= 97 ? 87 : 48));
+            addrBytes[i] = bytes1(digit);
+        }
+
+        address addr;
+        assembly {
+            addr := mload(add(addrBytes, 20))
+        }
+
+        return addr;
+    }
+
+    // toPortId returns the full IBC port ID for a given address
+    function portIdAddressMatch(address addr, string calldata portId) public view returns (bool) {
+        string memory portSuffix = portId[portPrefixLen:];
+        return hexStrToAddress(portSuffix) == addr;
+        // return
+        //     keccak256(abi.encodePacked(portId[0:portPrefixLen])) == keccak256(abi.encodePacked(portPrefix)) &&
+        //     bytes20(bytes(portId[portPrefixLen:])) == bytes20(addr);
+        // return abi.encodePacked(portPrefix, Strings.toHexString(uint160(addr), 20));
     }
 
     //
@@ -395,6 +437,8 @@ contract Dispatcher is IbcDispatcher, Ownable {
         AckPacket calldata ackPacket,
         Proof calldata proof
     ) external {
+        // verify `receiver` is the original packet sender
+        require(portIdAddressMatch(address(receiver), packet.src.portId), 'Receiver is not the original packet sender');
         // prove ack packet is on Polymer chain
         require(
             verifier.verifyMembership(
