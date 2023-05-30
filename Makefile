@@ -39,7 +39,7 @@ test-all: build-ibctl
 	npx ava
 
 clean-docker:
-	docker ps -a --format json | grep 'org.polymerlabs.runner=ibc-sdk' | jq .ID | xargs docker rm -f
+	docker ps -a --format json | grep 'org.polymerlabs.runner=ibc-sdk' | jq .ID | xargs docker rm -f || true
 
 .PHONY: test test-e2e test-cli test-vibc-relayer-config test-evm-deploy
 .PHONY: clean package-contracts
