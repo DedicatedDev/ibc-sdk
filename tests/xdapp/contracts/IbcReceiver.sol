@@ -39,7 +39,7 @@ interface IbcReceiver {
     // Packet handling methods
     //
 
-    function onRecvPacket(IbcPacket calldata packet) external;
+    function onRecvPacket(IbcPacket calldata packet) external returns (AckPacket memory ackPacket);
 
     function onAcknowledgementPacket(IbcPacket calldata packet) external;
 

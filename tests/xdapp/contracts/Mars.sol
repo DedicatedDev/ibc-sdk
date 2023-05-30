@@ -14,8 +14,9 @@ contract Mars is IbcReceiver, Ownable {
 
     bytes32[] supportedVersions = [bytes32('1.0'), bytes32('2.0')];
 
-    function onRecvPacket(IbcPacket calldata packet) external {
+    function onRecvPacket(IbcPacket calldata packet) external returns (AckPacket memory ackPacket) {
         recvedPackets.push(packet);
+        return AckPacket(true, abi.encodePacked('ack-', packet.data));
     }
 
     function onAcknowledgementPacket(IbcPacket calldata packet) external {

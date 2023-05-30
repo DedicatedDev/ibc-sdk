@@ -90,13 +90,19 @@ contract Dispatcher is IbcDispatcher, Ownable {
 
     event Timeout(address indexed sourcePortAddress, bytes32 indexed sourceChannelId, uint64 indexed sequence);
 
-    event OnRecvPacket(
-        bytes32 indexed srcChannelId,
-        string srcPortId,
+    event RecvPacket(
+        address indexed destPortAddress,
         bytes32 indexed destChannelId,
-        string destPortId,
-        bytes data,
+        string srcPortId,
+        bytes32 indexed srcChannelId,
         uint64 sequence
+    );
+
+    event WriteAckPacket(
+        address indexed writerPortAddress,
+        bytes32 indexed writerChannelId,
+        uint64 sequence,
+        AckPacket ackPacket
     );
 
     //
@@ -112,10 +118,17 @@ contract Dispatcher is IbcDispatcher, Ownable {
     uint64 portPrefixLen = 12;
 
     mapping(address => mapping(bytes32 => Channel)) public portChannelMap;
-    mapping(address => mapping(bytes32 => uint64)) sendPacketSequence;
+    mapping(address => mapping(bytes32 => uint64)) nextSendPacketSequence;
     // only stores a bit to mark packet has not been ack'ed or timed out yet; actual IBC packet verification is done on
-    // Polymer chain
-    mapping(address => mapping(bytes32 => mapping(uint64 => bool))) packetCommitment;
+    // Polymer chain.
+    // Keep track of sent packets
+    mapping(address => mapping(bytes32 => mapping(uint64 => bool))) sendPacketCommitment;
+    // keep track of received packets to prevent replay attack
+    mapping(address => mapping(bytes32 => mapping(uint64 => bool))) recvPacketReceipt;
+    // keep track of received packets' sequences to ensure channel ordering is enforced for ordered channels
+    mapping(address => mapping(bytes32 => uint64)) nextRecvPacketSequence;
+    // keep track of outbound ack packets to prevent replay attack
+    mapping(address => mapping(bytes32 => mapping(uint64 => bool))) ackPacketCommitment;
 
     //
     // methods
@@ -391,36 +404,12 @@ contract Dispatcher is IbcDispatcher, Ownable {
         (bool sent, ) = escrow.call{value: fee}('');
         require(sent, 'Failed to escrow packet fee');
         // packet sequence
-        uint64 sequence = sendPacketSequence[msg.sender][channelId];
-        sendPacketSequence[msg.sender][channelId] = sequence + 1;
+        uint64 sequence = nextSendPacketSequence[msg.sender][channelId];
+        nextSendPacketSequence[msg.sender][channelId] = sequence + 1;
         // packet commitment
-        packetCommitment[msg.sender][channelId][sequence] = true;
+        sendPacketCommitment[msg.sender][channelId][sequence] = true;
 
         emit SendPacket(msg.sender, channelId, packet, sequence, timeoutTimestamp, fee);
-    }
-
-    /**
-     * @notice Callback function to handle the receipt of an IBC packet
-     * @dev Verifies the given proof and calls the `onRecvPacket` function on the given `receiver` contract
-     * @param receiver The IbcReceiver contract that should handle the packet receipt event
-     * If the address doesn't satisfy the interface, the transaction will be reverted.
-     * @param packet The IbcPacket data for the received packet
-     * @param proof The proof data needed to verify the packet receipt
-     * @dev Throws an error if the proof verification fails
-     * @dev Emits an `OnRecvPacket` event with the details of the received packet
-     */
-    function onRecvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external {
-        require(verify(proof), 'Proof verification failed');
-        // TODO: comment this out for now since we won't need it for the demo
-        //  receiver.onRecvPacket(packet);
-        emit OnRecvPacket(
-            packet.src.channelId,
-            packet.src.portId,
-            packet.dest.channelId,
-            packet.dest.portId,
-            packet.data,
-            packet.sequence
-        );
     }
 
     /**
@@ -453,13 +442,13 @@ contract Dispatcher is IbcDispatcher, Ownable {
             'Fail to prove ack'
         );
         // verify packet has been committed and not yet ack'ed or timed out
-        bool hasCommitment = packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
+        bool hasCommitment = sendPacketCommitment[address(receiver)][packet.src.channelId][packet.sequence];
         require(hasCommitment, 'Packet commitment not found');
 
         receiver.onAcknowledgementPacket(packet);
 
         // delete packet commitment to avoid double ack
-        delete packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
+        delete sendPacketCommitment[address(receiver)][packet.src.channelId][packet.sequence];
 
         emit Acknowledgement(address(receiver), packet.src.channelId, ackPacket, packet.sequence);
     }
@@ -482,14 +471,80 @@ contract Dispatcher is IbcDispatcher, Ownable {
             'Fail to prove timeout'
         );
         // verify packet has been committed and not yet ack'ed or timed out
-        bool hasCommitment = packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
+        bool hasCommitment = sendPacketCommitment[address(receiver)][packet.src.channelId][packet.sequence];
         require(hasCommitment, 'Packet commitment not found');
 
         receiver.onTimeoutPacket(packet);
 
         // delete packet commitment to avoid double timeout
-        delete packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
+        delete sendPacketCommitment[address(receiver)][packet.src.channelId][packet.sequence];
 
         emit Timeout(address(receiver), packet.src.channelId, packet.sequence);
     }
+
+    /**
+     * @notice Receive an IBC packet and then pass it to the IBC-dApp for processing if verification succeeds.
+     * @dev Verifies the given proof and calls the `onRecvPacket` function on the given `receiver` contract
+     * @param receiver The IbcReceiver contract that should handle the packet receipt event
+     * If the address doesn't satisfy the interface, the transaction will be reverted.
+     * @param packet The IbcPacket data for the received packet
+     * @param proof The proof data needed to verify the packet receipt
+     * @dev Emit an `RecvPacket` event with the details of the received packet;
+     * Also emit a WriteAckPacket event, which can be relayed to Polymer chain by relayers
+     */
+    function recvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external {
+        // verify `receiver` is the intended packet destination
+        require(
+            portIdAddressMatch(address(receiver), packet.dest.portId),
+            'Receiver is not the intended packet destination'
+        );
+        // prove packet is received on Polymer chain
+        require(
+            verifier.verifyMembership(
+                latestConsensusState,
+                proof,
+                'packet/commitment/path',
+                'expected virtual packet commitment hash on Polymer chain'
+            ),
+            'Fail to prove packet commitment'
+        );
+        // verify packet has not been received yet
+        bool hasReceipt = recvPacketReceipt[address(receiver)][packet.dest.channelId][packet.sequence];
+        require(!hasReceipt, 'Packet receipt already exists');
+
+        // enforce recv'ed packet sequences always increment by 1 for ordered channels
+        Channel memory channel = portChannelMap[address(receiver)][packet.dest.channelId];
+        if (channel.ordering == ChannelOrder.ORDERED) {
+            require(
+                packet.sequence == nextRecvPacketSequence[address(receiver)][packet.dest.channelId],
+                'Unexpected packet sequence'
+            );
+            nextRecvPacketSequence[address(receiver)][packet.dest.channelId] = packet.sequence + 1;
+        }
+
+        AckPacket memory ack = receiver.onRecvPacket(packet);
+        bool hasAckPacketCommitment = ackPacketCommitment[address(receiver)][packet.dest.channelId][packet.sequence];
+        // check is not necessary for sync-acks
+        require(!hasAckPacketCommitment, 'Ack packet commitment already exists');
+        ackPacketCommitment[address(receiver)][packet.dest.channelId][packet.sequence] = true;
+
+        // emit RecvPacket(
+        //     address(receiver),
+        //     packet.dest.channelId,
+        //     packet.src.portId,
+        //     packet.src.channelId,
+        //     packet.sequence
+        // );
+        emit WriteAckPacket(address(receiver), packet.dest.channelId, packet.sequence, ack);
+    }
+
+    // TODO: add async writeAckPacket
+    // // this can be invoked sync or async by the IBC-dApp
+    // function writeAckPacket(IbcPacket calldata packet, AckPacket calldata ackPacket) external {
+    //     // verify `receiver` is the original packet sender
+    //     require(
+    //         portIdAddressMatch(address(msg.sender), packet.src.portId),
+    //         'Receiver is not the original packet sender'
+    //     );
+    // }
 }

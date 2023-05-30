@@ -37,6 +37,4 @@ interface IbcDispatcher {
         uint64 timeoutTimestamp,
         uint256 fee
     ) external payable;
-
-    function onRecvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external;
 }
