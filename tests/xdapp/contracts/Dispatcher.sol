@@ -105,6 +105,8 @@ contract Dispatcher is IbcDispatcher, Ownable {
         AckPacket ackPacket
     );
 
+    event WriteTimeoutPacket(address indexed writerPortAddress, bytes32 indexed writerChannelId, uint64 sequence);
+
     //
     // fields
     //
@@ -547,4 +549,22 @@ contract Dispatcher is IbcDispatcher, Ownable {
     //         'Receiver is not the original packet sender'
     //     );
     // }
+
+    /**
+     * Generate a timeout packet for the given packet
+     */
+    function writeTimeoutPacket(address receiver, IbcPacket calldata packet) external {
+        // verify `receiver` is the original packet sender
+        require(portIdAddressMatch(receiver, packet.src.portId), 'Receiver is not the intended packet destination');
+        // verify packet does not have a receipt
+        bool hasReceipt = recvPacketReceipt[receiver][packet.dest.channelId][packet.sequence];
+        require(!hasReceipt, 'Packet receipt already exists');
+        // verify packet has timed out
+        require(
+            block.timestamp >= packet.timeout.timestamp && block.number >= packet.timeout.blockHeight,
+            'Packet not timed out yet'
+        );
+
+        emit WriteTimeoutPacket(receiver, packet.dest.channelId, packet.sequence);
+    }
 }

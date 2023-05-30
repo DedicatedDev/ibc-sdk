@@ -12,7 +12,7 @@ struct IbcEndpoint {
 /// In IBC each package must set at least one type of timeout:
 /// the timestamp or the block height.
 struct IbcTimeout {
-    uint64 block;
+    uint64 blockHeight;
     uint64 timestamp;
 }
 
