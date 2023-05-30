@@ -79,6 +79,18 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
       '--chain-id',
       this.config.Name
     ])
+    const script = `
+    set -e;
+    config="$( find "$HOME" -name config.toml -print0 )";
+    if [ -z "$config" ]; then exit 0; fi;
+    sed -i '/^timeout_propose /s/[0-9]\\+[a-z]\\+/200ms/'   "$config";
+    sed -i '/^timeout_prevote /s/[0-9]\\+[a-z]\\+/200ms/'   "$config";
+    sed -i '/^timeout_precommit /s/[0-9]\\+[a-z]\\+/200ms/' "$config";
+    sed -i '/^timeout_commit /s/[0-9]\\+[a-z]\\+/1s/'       "$config";
+    `
+    await this.getContainer(ImageLabelTypes.Main)
+      .exec(['sh', '-c', script])
+      .catch(() => this.logger.warn(`Could not change blocktime on ${this.config.Name} chain`))
   }
 
   private async addNewAccount(account: CosmosAccount) {
