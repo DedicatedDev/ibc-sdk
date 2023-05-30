@@ -55,7 +55,7 @@
               "components": [
                 {
                   "internalType": "uint64",
-                  "name": "block",
+                  "name": "blockHeight",
                   "type": "uint64"
                 },
                 {
@@ -221,7 +221,7 @@
               "components": [
                 {
                   "internalType": "uint64",
-                  "name": "block",
+                  "name": "blockHeight",
                   "type": "uint64"
                 },
                 {
@@ -315,7 +315,7 @@
               "components": [
                 {
                   "internalType": "uint64",
-                  "name": "block",
+                  "name": "blockHeight",
                   "type": "uint64"
                 },
                 {

@@ -498,7 +498,7 @@ describe('IBC Core Smart Contract', function () {
             dest: { portId: C.BscPortId, channelId: C.RemoteChannelIds[0] },
             sequence: sequence,
             data: toBytes(packet.msg),
-            timeout: { block: 0, timestamp: packet.timeout }
+            timeout: { blockHeight: 0, timestamp: packet.timeout }
           },
           ack,
           invalidProof ? C.InvalidProof : C.ValidProof
@@ -562,7 +562,7 @@ describe('IBC Core Smart Contract', function () {
             dest: { portId: C.BscPortId, channelId: C.RemoteChannelIds[0] },
             sequence: sequence,
             data: toBytes(packet.msg),
-            timeout: { block: 0, timestamp: packet.timeout }
+            timeout: { blockHeight: 0, timestamp: packet.timeout }
           },
           invalidProof ? C.InvalidProof : C.ValidProof
         )

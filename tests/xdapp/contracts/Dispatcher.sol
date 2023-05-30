@@ -176,10 +176,6 @@ contract Dispatcher is IbcDispatcher, Ownable {
     function portIdAddressMatch(address addr, string calldata portId) public view returns (bool) {
         string memory portSuffix = portId[portPrefixLen:];
         return hexStrToAddress(portSuffix) == addr;
-        // return
-        //     keccak256(abi.encodePacked(portId[0:portPrefixLen])) == keccak256(abi.encodePacked(portPrefix)) &&
-        //     bytes20(bytes(portId[portPrefixLen:])) == bytes20(addr);
-        // return abi.encodePacked(portPrefix, Strings.toHexString(uint160(addr), 20));
     }
 
     //
@@ -530,13 +526,13 @@ contract Dispatcher is IbcDispatcher, Ownable {
         require(!hasAckPacketCommitment, 'Ack packet commitment already exists');
         ackPacketCommitment[address(receiver)][packet.dest.channelId][packet.sequence] = true;
 
-        // emit RecvPacket(
-        //     address(receiver),
-        //     packet.dest.channelId,
-        //     packet.src.portId,
-        //     packet.src.channelId,
-        //     packet.sequence
-        // );
+        emit RecvPacket(
+            address(receiver),
+            packet.dest.channelId,
+            packet.src.portId,
+            packet.src.channelId,
+            packet.sequence
+        );
         emit WriteAckPacket(address(receiver), packet.dest.channelId, packet.sequence, ack);
     }
 
@@ -559,9 +555,10 @@ contract Dispatcher is IbcDispatcher, Ownable {
         // verify packet does not have a receipt
         bool hasReceipt = recvPacketReceipt[receiver][packet.dest.channelId][packet.sequence];
         require(!hasReceipt, 'Packet receipt already exists');
-        // verify packet has timed out
+        // verify packet has timed out; zero-value in packet.timeout means no timeout set
         require(
-            block.timestamp >= packet.timeout.timestamp && block.number >= packet.timeout.blockHeight,
+            (packet.timeout.timestamp == 0 || block.timestamp >= packet.timeout.timestamp) &&
+                (packet.timeout.blockHeight == 0 || block.number >= packet.timeout.blockHeight),
             'Packet not timed out yet'
         );
 
