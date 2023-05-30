@@ -39,6 +39,4 @@ interface IbcDispatcher {
     ) external payable;
 
     function onRecvPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external;
-
-    function onTimeoutPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external;
 }

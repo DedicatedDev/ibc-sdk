@@ -88,6 +88,8 @@ contract Dispatcher is IbcDispatcher, Ownable {
         uint64 sequence
     );
 
+    event Timeout(address indexed sourcePortAddress, bytes32 indexed sourceChannelId, uint64 indexed sequence);
+
     event OnRecvPacket(
         bytes32 indexed srcChannelId,
         string srcPortId,
@@ -422,14 +424,15 @@ contract Dispatcher is IbcDispatcher, Ownable {
     }
 
     /**
-     * @notice Callback function to handle the acknowledgement of an IBC packet by the counterparty client
-     * @dev Verifies the given proof and calls the `onAcknowledgementPacket` function on the given `receiver` contract
+     * @notice Handle the acknowledgement of an IBC packet by the counterparty 
+     * @dev Verifies the given proof and calls the `onAcknowledgementPacket` function on the given `receiver` contract,
+       ie. the IBC dApp.
+       Prerequisite: the original packet is committed and not ack'ed or timed out yet.
      * @param receiver The IbcReceiver contract that should handle the packet acknowledgement event
      * If the address doesn't satisfy the interface, the transaction will be reverted.
      * @param packet The IbcPacket data for the acknowledged packet
      * @param ackPacket The acknowledgement receipt for the packet
-     * @param proof The proof data needed to verify the packet acknowledgement
-     * @dev Throws an error if the proof verification fails
+     * @param proof The membership proof to verify the packet acknowledgement committed on Polymer chain
      */
     function acknowledgement(
         IbcReceiver receiver,
@@ -444,15 +447,17 @@ contract Dispatcher is IbcDispatcher, Ownable {
             verifier.verifyMembership(
                 latestConsensusState,
                 proof,
-                'ack/path/to/be/added/here',
+                'ack/packet/path',
                 'expected ack receipt hash on Polymer chain'
             ),
             'Fail to prove ack'
         );
-        // verify packet has been committed and not yet ack'ed
+        // verify packet has been committed and not yet ack'ed or timed out
         bool hasCommitment = packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
         require(hasCommitment, 'Packet commitment not found');
+
         receiver.onAcknowledgementPacket(packet);
+
         // delete packet commitment to avoid double ack
         delete packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
 
@@ -460,16 +465,31 @@ contract Dispatcher is IbcDispatcher, Ownable {
     }
 
     /**
-     * @notice Callback function to handle the timeout of an IBC packet
-     * @dev Verifies the given proof and calls the `onTimeoutPacket` function on the given `receiver` contract
+     * @notice Timeout of an IBC packet
+     * @dev Verifies the given proof and calls the `onTimeoutPacket` function on the given `receiver` contract, ie. the IBC-dApp.
+     * Prerequisite: the original packet is committed and not ack'ed or timed out yet.
      * @param receiver The IbcReceiver contract that should handle the packet timeout event
      * If the address doesn't satisfy the interface, the transaction will be reverted.
      * @param packet The IbcPacket data for the timed-out packet
-     * @param proof The proof data needed to verify the packet timeout
-     * @dev Throws an error if the proof verification fails
+     * @param proof The non-membership proof data needed to verify the packet timeout
      */
-    function onTimeoutPacket(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external {
-        require(verify(proof), 'Proof verification failed');
+    function timeout(IbcReceiver receiver, IbcPacket calldata packet, Proof calldata proof) external {
+        // verify `receiver` is the original packet sender
+        require(portIdAddressMatch(address(receiver), packet.src.portId), 'Receiver is not the original packet sender');
+        // prove absence of packet receipt on Polymer chain
+        require(
+            verifier.verifyNonMembership(latestConsensusState, proof, 'packet/receipt/path'),
+            'Fail to prove timeout'
+        );
+        // verify packet has been committed and not yet ack'ed or timed out
+        bool hasCommitment = packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
+        require(hasCommitment, 'Packet commitment not found');
+
         receiver.onTimeoutPacket(packet);
+
+        // delete packet commitment to avoid double timeout
+        delete packetCommitment[address(receiver)][packet.src.channelId][packet.sequence];
+
+        emit Timeout(address(receiver), packet.src.channelId, packet.sequence);
     }
 }

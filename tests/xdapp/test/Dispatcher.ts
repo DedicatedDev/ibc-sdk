@@ -427,7 +427,7 @@ describe('IBC Core Smart Contract', function () {
   })
 
   describe('acknowledge', function () {
-    it('succeeds if there is packet commitment', async function () {
+    it('succeeds only if there is packet commitment and valid proof', async function () {
       const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
       const packet = Object.assign({}, packets[0]) // make a copy
 
@@ -512,6 +512,7 @@ describe('IBC Core Smart Contract', function () {
       await assertAck(getPacket(packet, 1), 1, getAck(getPacket(packet, 1), false))
       // processed ackPacket cannot be acked again!
       await assertAck(getPacket(packet, 2), 2, getAck(getPacket(packet, 2), true), 'Packet commitment not found')
+      // cannot ack non-existing packet
       await assertAck(getPacket(packet, 100), 100, getAck(getPacket(packet, 100), false), 'Packet commitment not found')
       await assertAck(
         getPacket(packet, 3),
@@ -524,6 +525,94 @@ describe('IBC Core Smart Contract', function () {
         }
       )
       await assertAck(getPacket(packet, 3), 3, getAck(getPacket(packet, 3), true), 'Fail to prove ack', {
+        proof: C.InvalidProof,
+        srcPortId: `eth.polyibc.${ethers.utils.hexlify(mars.address).slice(2)}`
+      })
+    })
+  })
+
+  describe('timeout', function () {
+    it('succeeds only if there is packet commitment and valid proof', async function () {
+      const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
+      const packet = Object.assign({}, packets[0]) // make a copy
+
+      const getPacket = (packet: (typeof C.Packets)[0], sequence: number) => {
+        return {
+          ...packet,
+          msg: `packet.msg-${sequence}`,
+          sequence: sequence,
+          fee: ethers.utils.parseEther('0.123').mul(sequence + 1)
+        }
+      }
+
+      const assertSendPacket = async (packet: (typeof C.Packets)[0]) => {
+        await expect(
+          mars
+            .connect(accounts.user1)
+            .greet(dispatcher.address, packet.msg, channel.channelId, packet.timeout, packet.fee, {
+              value: packet.fee
+            })
+        )
+          .to.emit(dispatcher, 'SendPacket')
+          .withArgs(
+            channel.portAddress,
+            channel.channelId,
+            toBytes(packet.msg),
+            packet.sequence,
+            packet.timeout,
+            packet.fee
+          )
+      }
+
+      for (let i = 0; i < 3; i++) {
+        await assertSendPacket(getPacket(packet, i))
+      }
+
+      // unordered channel can ack packets in any order
+      const assertTimeout = async (
+        packet: (typeof C.Packets)[0],
+        sequence: number,
+        error?: string,
+        overrideArgs?: { srcPortId?: string; proof?: typeof C.ValidProof }
+      ) => {
+        const txArgs = overrideArgs || {
+          srcPortId: `eth.polyibc.${ethers.utils.hexlify(mars.address).slice(2)}`,
+          proof: C.ValidProof
+        }
+
+        const txTimeout = dispatcher.connect(accounts.relayer).timeout(
+          mars.address,
+          {
+            src: {
+              portId: txArgs.srcPortId!,
+              channelId: channel.channelId
+            },
+            dest: { portId: C.BscPortId, channelId: C.RemoteChannelIds[0] },
+            sequence: sequence,
+            data: toBytes(packet.msg),
+            timeout: { block: 0, timestamp: packet.timeout }
+          },
+          txArgs.proof!
+        )
+        if (!error) {
+          await expect(txTimeout)
+            .to.emit(dispatcher, 'Timeout')
+            .withArgs(channel.portAddress, channel.channelId, packet.sequence)
+        } else {
+          await expect(txTimeout).to.be.revertedWith(error)
+        }
+      }
+
+      await assertTimeout(getPacket(packet, 2), 2)
+      // processed timeoutPacket cannot be timed out again!
+      await assertTimeout(getPacket(packet, 2), 2, 'Packet commitment not found')
+      // cannot timeout non-existing packet
+      await assertTimeout(getPacket(packet, 100), 100, 'Packet commitment not found')
+      await assertTimeout(getPacket(packet, 3), 3, 'Receiver is not the original packet sender', {
+        srcPortId: `eth.polyibc.${ethers.utils.hexlify(accounts.otherUsers[0].address).slice(2)}`,
+        proof: C.ValidProof
+      })
+      await assertTimeout(getPacket(packet, 3), 3, 'Fail to prove timeout', {
         proof: C.InvalidProof,
         srcPortId: `eth.polyibc.${ethers.utils.hexlify(mars.address).slice(2)}`
       })
