@@ -2,7 +2,6 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { describe, it } from 'mocha'
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
-import { packet } from '../../../dist/lib/cosmos/client/polyibc'
 
 const toBytes32 = ethers.utils.formatBytes32String
 const toBytes = ethers.utils.toUtf8Bytes
@@ -28,7 +27,7 @@ describe('IBC Core Smart Contract', function () {
     ChannelIds: ['channel-0', 'channel-1'].map(toBytes32),
     RemoteChannelIds: ['channel-100', 'channel-101'].map(toBytes32),
     EmptyChannelId: toBytes32(''),
-    BscPortId: toBytes32('bsc.polyibc.9876543210'),
+    BscPortId: toBytes32('polyibc.bsc.9876543210'),
     Packets: [
       {
         msg: 'hello ibc',
@@ -68,7 +67,7 @@ describe('IBC Core Smart Contract', function () {
     const accounts = await getSignerAccounts()
     // Deploy Verifier and CoreSC contracts by owner
     const verifier = await factories.Verifier.deploy()
-    const dispatcher = await factories.Dispatcher.deploy(verifier.address, accounts.escrow.address)
+    const dispatcher = await factories.Dispatcher.deploy(verifier.address, accounts.escrow.address, 'polyibc.eth.')
 
     return { accounts, verifier, dispatcher, factories }
   }
@@ -486,7 +485,7 @@ describe('IBC Core Smart Contract', function () {
         const packet = getPacket(packetTemplate, sequence)
         const ack = getAck(packet, !ackError)
         const srcAddr = invalidReceiver ? accounts.otherUsers[0] : mars
-        const srcPortId = `eth.polyibc.${ethers.utils.hexlify(srcAddr.address).slice(2)}`
+        const srcPortId = `polyibc.eth.${ethers.utils.hexlify(srcAddr.address).slice(2)}`
 
         const txAck = dispatcher.connect(accounts.relayer).acknowledgement(
           mars.address,
@@ -540,6 +539,13 @@ describe('IBC Core Smart Contract', function () {
         packets: [packetTemplate]
       } = await sendNPacket(4)
 
+      // test setPortPrefix logic
+      const updatedPortPrefix = 'polyibc.ethereumLongLongPrefix.'
+      await expect(dispatcher.connect(accounts.relayer).setPortPrefix(updatedPortPrefix)).to.be.revertedWith(
+        'Ownable: caller is not the owner'
+      )
+      await dispatcher.setPortPrefix(updatedPortPrefix)
+
       // unordered channel can timeout packets in any order
       const assertTimeout = async (
         sequence: number,
@@ -549,8 +555,7 @@ describe('IBC Core Smart Contract', function () {
         const packet = getPacket(packetTemplate, sequence)
         const { invalidReceiver = false, invalidProof = false } = setting
         const srcAddr = invalidReceiver ? accounts.otherUsers[0] : mars
-        const srcPortId = `eth.polyibc.${ethers.utils.hexlify(srcAddr.address).slice(2)}`
-        // const ack = getAck(packet, !ackError)
+        const srcPortId = `${updatedPortPrefix}${ethers.utils.hexlify(srcAddr.address).slice(2)}`
 
         const txTimeout = dispatcher.connect(accounts.relayer).timeout(
           mars.address,

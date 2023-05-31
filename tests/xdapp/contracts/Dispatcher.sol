@@ -116,9 +116,8 @@ contract Dispatcher is IbcDispatcher, Ownable {
     bool isClientCreated = false;
     bytes public latestConsensusState;
     // IBC_PortID = portPrefix + address (hex string without 0x prefix, case insensitive)
-    // TODO: verify portPrefix matches IBC portID
-    string portPrefix = 'polyibc.eth';
-    uint64 portPrefixLen = 12;
+    string portPrefix;
+    uint32 portPrefixLen;
 
     mapping(address => mapping(bytes32 => Channel)) public portChannelMap;
     mapping(address => mapping(bytes32 => uint64)) nextSendPacketSequence;
@@ -137,10 +136,14 @@ contract Dispatcher is IbcDispatcher, Ownable {
     // methods
     //
 
-    constructor(ZKMintVerifier _verifier, address payable _escrow) {
+    constructor(ZKMintVerifier _verifier, address payable _escrow, string memory initPortPrefix) {
         verifier = _verifier;
         escrow = _escrow;
         require(escrow != address(0), 'Escrow cannot be zero address');
+
+        // initialize portPrefix
+        portPrefix = initPortPrefix;
+        portPrefixLen = uint32(bytes(initPortPrefix).length);
     }
 
     //
@@ -152,7 +155,7 @@ contract Dispatcher is IbcDispatcher, Ownable {
      * @param hexStr hex string to convert to address. Note that the hex string must not include a 0x prefix.
      * hexStr is case-insensitive.
      */
-    function hexStrToAddress(string memory hexStr) public pure returns (address) {
+    function hexStrToAddress(string memory hexStr) internal pure returns (address) {
         require(bytes(hexStr).length == 40, 'Invalid hex string length');
 
         bytes memory strBytes = bytes(hexStr);
@@ -175,10 +178,20 @@ contract Dispatcher is IbcDispatcher, Ownable {
 
     // verify an EVM address matches an IBC portId.
     // IBC_PortID = portPrefix + address (hex string without 0x prefix, case-insensitive)
-    // TODO: check portPrefix too. Right now only the suffix/address is checked.
     function portIdAddressMatch(address addr, string calldata portId) public view returns (bool) {
+        if (keccak256(abi.encodePacked(portPrefix)) != keccak256(abi.encodePacked(portId[0:portPrefixLen]))) {
+            return false;
+        }
         string memory portSuffix = portId[portPrefixLen:];
         return hexStrToAddress(portSuffix) == addr;
+    }
+
+    //
+    // CoreSC maaintainer methods, only invoked by the owner
+    //
+    function setPortPrefix(string calldata _portPrefix) external onlyOwner {
+        portPrefix = _portPrefix;
+        portPrefixLen = uint32(bytes(_portPrefix).length);
     }
 
     //
