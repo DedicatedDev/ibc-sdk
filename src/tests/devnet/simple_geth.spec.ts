@@ -3,8 +3,8 @@ import { z } from 'zod'
 import { AccountsConfigSchema, AccountsSchema } from '../../lib/dev/schemas.js'
 import * as utils from '../../lib/utils/index.js'
 import * as ethers from 'ethers'
-
 import anyTest, { TestFn } from 'ava'
+import { gethConfig } from './simple_geth_config'
 
 const test = anyTest as TestFn<{
   logger: utils.Logger
@@ -16,12 +16,10 @@ test.before((t) => {
   t.context = { logger }
 })
 
-const gethConfigPath = utils.getRelativeFilePath('../../../src/tests/devnet/simple_geth.config.yaml', __filename)
-
 test('start a geth chain from docker container', async (t) => {
   const logger = t.context.logger
 
-  const rawConfig = utils.readYaml(gethConfigPath)
+  const rawConfig = utils.readYaml(gethConfig)
   t.truthy(rawConfig)
   // override test config
   const configOverride = { chains: ['eth', 'polygon'], cleanupMode: 'debug' }

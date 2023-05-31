@@ -4,6 +4,7 @@ import os from 'os'
 import { utils } from '../../lib'
 import { RunningChainSets, runChainSets, cleanupChainSets } from '../../lib/dev/chainset'
 import { ChainConfig, ImageLabelTypes } from '../../lib/dev/schemas'
+import { gethConfig } from './simple_geth_config'
 
 const test = anyTest as TestFn<{
   logger: utils.Logger
@@ -185,41 +186,8 @@ ChainSets:
 })
 
 test('start eth node with labels and dependencies', async (t) => {
-  const baseConfig = `
-ChainSets:
-  - Name: "eth"
-    Type: "ethereum"
-    Images:
-      - Repository: "ethereum/client-go"
-        Tag: "v1.10.26"
-        Bin: "geth"
-    Accounts:
-      Mnemonic: "develop test test test test only develop test test test test only"
-      Count: 1
-  - Name: "prysm"
-    Type: "ethereum2"
-    DependsOn: "eth"
-    Images:
-      - Label: "main"
-        Repository: "ghcr.io/polymerdao/prysm-beacon-chain"
-        Tag: "polymer-v0.0.1-debug"
-        Bin: "/app/cmd/beacon-chain/beacon-chain.runfiles/prysm/cmd/beacon-chain/beacon-chain_/beacon-chain"
-      - Label: "genesis"
-        Repository: "ghcr.io/polymerdao/prysmctl"
-        Tag: "polymer-v0.0.1-debug"
-        Bin: "/app/cmd/prysmctl/prysmctl.runfiles/prysm/cmd/prysmctl/prysmctl_/prysmctl"
-      - Label: "validator"
-        Repository: "ghcr.io/polymerdao/prysm-validator"
-        Tag: "polymer-v0.0.1-debug"
-        Bin: "/app/cmd/validator/validator.runfiles/prysm/cmd/validator/validator_/validator"
-Run:
-  WorkingDir: "/tmp/test-chainsets/run-*"
-  CleanupMode: all
-  Logger:
-    Level: debug
-    Transports: log
-`
-  const config = utils.readYamlText(baseConfig)
+  const config = utils.readYamlText(gethConfig)
+  config.ChainSets = config.ChainSets.filter((c: any) => c.Type !== 'bsc')
   const runtime = await runChainSets(config, t.context.logger)
   t.truthy(runtime)
 
@@ -228,7 +196,7 @@ Run:
   t.is(eth.Name, 'eth')
 
   const prysm = runtime.runObj.ChainSets[1]
-  t.is(prysm.Name, 'prysm')
+  t.is(prysm.Name, 'eth2')
   t.is(prysm.Images[0].Label, ImageLabelTypes.Main)
   t.is(prysm.Nodes[0].Label, ImageLabelTypes.Main.toString())
   t.is(prysm.Images[1].Label, ImageLabelTypes.Genesis)

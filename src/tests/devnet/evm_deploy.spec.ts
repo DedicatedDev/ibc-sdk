@@ -2,8 +2,8 @@ import * as self from '../../lib/index'
 import * as utils from '../../lib/utils/index'
 import * as ethers from 'ethers'
 import path from 'path'
-
 import anyTest, { TestFn } from 'ava'
+import { gethConfig } from './simple_geth_config'
 
 const test = anyTest as TestFn<{
   logger: utils.Logger
@@ -15,13 +15,10 @@ test.before((t) => {
   t.context.logger = logger
 })
 
-const gethConfigPath = utils.getRelativeFilePath('../../../src/tests/devnet/simple_geth.config.yaml')
-
 test('deploy contracts on runtime chains', async (t) => {
   const logger = t.context.logger
-  const chainsetsConfig = utils.readYaml(gethConfigPath)
 
-  let { runObj: runtime, configObj: _ } = await self.dev.runChainSets(chainsetsConfig, logger)
+  let { runObj: runtime, configObj: _ } = await self.dev.runChainSets(gethConfig, logger)
 
   const contractsDir = path.resolve(__dirname, '..', '..', '..', 'tests', 'xdapp', 'artifacts', 'contracts')
   runtime = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsDir, logger)

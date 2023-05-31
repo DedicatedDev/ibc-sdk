@@ -268,6 +268,7 @@ class DockerImage {
 
 export const images = {
   polymer: new DockerImage('ghcr.io/polymerdao/polymer', 'sha-0f8262c', 'POLYMER_DOCKER_IMAGE_TAG'),
+  bsc: new DockerImage('ghcr.io/polymerdao/bsc', '1.1.10', 'BSC_DOCKER_IMAGE_TAG'),
   ethereum: new DockerImage('ethereum/client-go', 'v1.10.26', 'ETH_DOCKER_IMAGE_TAG'),
   prysm_main: new DockerImage('ghcr.io/polymerdao/prysm-beacon-chain', 'sha-0e64fa8', 'PRYSM_BEACON_DOCKER_IMAGE_TAG'),
   prysm_validator: new DockerImage(
