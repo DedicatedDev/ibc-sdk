@@ -82,7 +82,16 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.deepEqual((await getChannelsFrom(t, 'polymer')).channels, [])
   t.deepEqual((await getChannelsFrom(t, 'wasm')).channels, [])
 
-  const out2 = await runCommand(t, 'channel', 'eth-execution:' + marsAddress, 'wasm:' + wasmAddress)
+  const out2 = await runCommand(
+    t,
+    'channel',
+    'eth-execution:' + marsAddress,
+    'wasm:' + wasmAddress,
+    '--a-channel-version',
+    'some-version',
+    '--b-channel-version',
+    'polymer-demo-v1'
+  )
   t.assert(out2.exitCode === 0)
 
   // check the channels have been correctly created

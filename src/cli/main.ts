@@ -98,10 +98,12 @@ program
   )
   .arguments('<endpoint-a> <endpoint-b>')
   .allowExcessArguments(false)
-  .action(async (a, b) => {
+  .option('--a-channel-version <version>', 'IBC version to use during the channel handshake on endpoint A')
+  .option('--b-channel-version <version>', 'IBC version to use during the channel handshake on endpoint B')
+  .action(async (a, b, opts) => {
     const endpointA = parseChannelEnpoint(a)
     const endpointB = parseChannelEnpoint(b)
-    await commands.channel({ ...program.opts(), endpointA, endpointB }, newLogger(program.opts().logLevel))
+    await commands.channel({ ...program.opts(), endpointA, endpointB, ...opts }, newLogger(program.opts().logLevel))
   })
 
 program

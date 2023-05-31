@@ -242,6 +242,8 @@ type ChannelOpts = {
   workspace: string
   endpointA: { chainId: string; account: string }
   endpointB: { chainId: string; account: string }
+  aChannelVersion: string
+  bChannelVersion: string
 }
 
 export async function channel(opts: ChannelOpts, log: winston.Logger) {
@@ -275,10 +277,16 @@ export async function channel(opts: ChannelOpts, log: winston.Logger) {
   await channelHandshake(
     runtime,
     origEndpointA,
-    endpointA as self.dev.schemas.CosmosChainSet,
-    opts.endpointA.account,
-    endpointB as self.dev.schemas.CosmosChainSet,
-    opts.endpointB.account,
+    {
+      chain: endpointA as self.dev.schemas.CosmosChainSet,
+      address: opts.endpointA.account,
+      version: opts.aChannelVersion
+    },
+    {
+      chain: endpointB as self.dev.schemas.CosmosChainSet,
+      address: opts.endpointB.account,
+      version: opts.bChannelVersion
+    },
     log
   )
 }

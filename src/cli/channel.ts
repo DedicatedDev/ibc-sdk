@@ -52,28 +52,32 @@ async function waitForBlocks(client: Tendermint37Client, blocks: number = 2) {
   } while ((await client.block()).block.header.height < end)
 }
 
+type EndpointInfo = {
+  chain: self.dev.schemas.CosmosChainSet
+  address: string
+  version: string
+}
+
 export async function channelHandshake(
   runtime: ChainSetsRunObj,
   origSrc: string,
-  src: self.dev.schemas.CosmosChainSet,
-  srcAddress: string,
-  dst: self.dev.schemas.CosmosChainSet,
-  dstAddress: string,
+  src: EndpointInfo,
+  dst: EndpointInfo,
   log: winston.Logger
 ) {
-  const srcAccount = src.Accounts.find((a) => a.Name === 'relayer')
-  if (!srcAccount) throw new Error(`Could not find relayer account in '${src.Name}' chain`)
+  const srcAccount = src.chain.Accounts.find((a) => a.Name === 'relayer')
+  if (!srcAccount) throw new Error(`Could not find relayer account in '${src.chain.Name}' chain`)
 
-  const dstAccount = dst.Accounts.find((a) => a.Name === 'relayer')
-  if (!dstAccount) throw new Error(`Could not find relayer account in '${dst.Name}' chain`)
+  const dstAccount = dst.chain.Accounts.find((a) => a.Name === 'relayer')
+  if (!dstAccount) throw new Error(`Could not find relayer account in '${dst.chain.Name}' chain`)
 
-  const [srcQuery, srcClient] = await createSignerClient(srcAccount, src.Prefix, src.Nodes[0].RpcHost)
-  const [dstQuery, dstClient] = await createSignerClient(dstAccount, dst.Prefix, dst.Nodes[0].RpcHost)
+  const [srcQuery, srcClient] = await createSignerClient(srcAccount, src.chain.Prefix, src.chain.Nodes[0].RpcHost)
+  const [dstQuery, dstClient] = await createSignerClient(dstAccount, dst.chain.Prefix, dst.chain.Nodes[0].RpcHost)
 
   let lc = ''
   {
     const queryClient = self.cosmos.client.QueryClient.withExtensions(
-      await self.cosmos.client.newTendermintClient(src.Nodes[0].RpcHost),
+      await self.cosmos.client.newTendermintClient(src.chain.Nodes[0].RpcHost),
       self.cosmos.client.setupPolyIbcExtension
     )
 
@@ -126,19 +130,19 @@ export async function channelHandshake(
   }
 
   const enc = new TextEncoder()
-  const portEth2 = `polyibc.Ethereum-Devnet.${toHex(enc.encode(srcAddress))}`
+  const portEth2 = `polyibc.Ethereum-Devnet.${toHex(enc.encode(src.address))}`
 
   const ibcRelayerRuntime = runtime.Relayers.find((r) => r.Name.startsWith('ibc-relayer-'))
 
   if (!ibcRelayerRuntime) throw new Error('Could not find ibc-relayer runtime')
   const ibcconnections = ibcRelayerRuntime.Configuration.connections
 
-  const wasmPortId = 'wasm.' + dstAddress
+  const wasmPortId = 'wasm.' + dst.address
 
   // ChanOpenInit: on WASM
   let openinit: self.cosmos.client.polyibc.MsgOpenIBCChannelResponse
   {
-    log.info(`executing ChanOpenInit on ${dst.Name}`)
+    log.info(`executing ChanOpenInit on ${dst.chain.Name}`)
     const msg: self.cosmos.client.polyibc.MsgChannelOpenInitEncodeObject = {
       typeUrl: '/ibc.core.channel.v1.MsgChannelOpenInit',
       value: {
@@ -154,7 +158,7 @@ export async function channelHandshake(
           counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
             portId: portEth2
           }),
-          version: 'polymer-demo-v1'
+          version: dst.version
         }
       }
     }
@@ -162,12 +166,12 @@ export async function channelHandshake(
     const res = await dstClient.signAndBroadcast(dstAccount.Address, [msg], 'auto')
     openinit = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_init', res))
   }
-  log.info(`ChanOpenInit on ${dst.Name}: done`)
+  log.info(`ChanOpenInit on ${dst.chain.Name}: done`)
 
   // ChanOpenTry: on Polymer
   let opentry: self.cosmos.client.polyibc.MsgOpenIBCChannelResponse
   {
-    log.info(`executing ChanOpenTry on ${src.Name}`)
+    log.info(`executing ChanOpenTry on ${src.chain.Name}`)
     const msg: self.cosmos.client.polyibc.MsgOpenIBCChannelEncodeObject = {
       typeUrl: '/polyibc.core.MsgOpenIBCChannel',
       value: {
@@ -175,7 +179,7 @@ export async function channelHandshake(
         creator: srcAccount.Address,
         portId: portEth2,
         channel: self.cosmos.client.polyibc.channel.Channel.fromPartial({
-          version: 'polymer-demo-v1',
+          version: src.version,
           ordering: self.cosmos.client.polyibc.channel.Order.ORDER_UNORDERED,
           connectionHops: [vConnection.connection_id, ibcconnections.srcConnection],
           counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
@@ -185,7 +189,7 @@ export async function channelHandshake(
           state: self.cosmos.client.polyibc.channel.State.STATE_TRYOPEN
         }),
 
-        counterpartyVersion: 'polymer-demo-v1',
+        counterpartyVersion: dst.version,
         proofInit: new Uint8Array(Array(8).fill(0)),
         proofInitHeight: self.cosmos.client.polyibc.client.Height.fromPartial({
           revisionHeight: '100',
@@ -198,18 +202,18 @@ export async function channelHandshake(
     const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     opentry = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_try', res))
   }
-  log.info(`ChanOpenTry on ${src.Name}: done`)
+  log.info(`ChanOpenTry on ${src.chain.Name}: done`)
 
   // ChanOpenAck: on WASM
   let openack: self.cosmos.client.polyibc.MsgConnectIBCChannelResponse
   {
-    log.info(`executing ChanOpenAck on ${dst.Name}`)
+    log.info(`executing ChanOpenAck on ${dst.chain.Name}`)
     const msg: self.cosmos.client.polyibc.MsgChannelOpenAckEncodeObject = {
       typeUrl: '/ibc.core.channel.v1.MsgChannelOpenAck',
       value: {
         // TODO: this seems to be the only thing the ibc relayer knows about
         portId: wasmPortId,
-        counterpartyVersion: 'polymer-demo-v1',
+        counterpartyVersion: src.version,
         channelId: openinit.channel_id,
         counterpartyChannelId: opentry.channel_id,
         proofTry: new Uint8Array(Array(8).fill(0)),
@@ -224,12 +228,12 @@ export async function channelHandshake(
     const res = await dstClient.signAndBroadcast(dstAccount.Address, [msg], 'auto')
     openack = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_ack', res))
   }
-  log.info(`ChanOpenAck on ${dst.Name}: done`)
+  log.info(`ChanOpenAck on ${dst.chain.Name}: done`)
 
   // ChanOpenConfirm: on Polymer
   let openconfirm: self.cosmos.client.polyibc.MsgConnectIBCChannelResponse
   {
-    log.info(`executing ChanOpenConfirm on ${src.Name}`)
+    log.info(`executing ChanOpenConfirm on ${src.chain.Name}`)
     const msg: self.cosmos.client.polyibc.MsgConnectIBCChannelEncodeObject = {
       typeUrl: '/polyibc.core.MsgConnectIBCChannel',
       value: {
@@ -258,11 +262,11 @@ export async function channelHandshake(
     const relayer = await VIBCRelayer.reuse(vibcruntime, log)
     // this is counter intuitive but the original source was replaced by polymer
     // so we want to setup the path between polymer and the original source.
-    await relayer.update(src.Name, origSrc, openack.channel_id, openconfirm.channel_id)
+    await relayer.update(src.chain.Name, origSrc, openack.channel_id, openconfirm.channel_id)
     await relayer.start()
   }
 
-  log.info(`ChanOpenConfirm on ${src.Name}: done`)
-  log.info(`channel id on ${src.Name}: ${openack.channel_id}`)
-  log.info(`channel id on ${dst.Name}: ${openconfirm.channel_id}`)
+  log.info(`ChanOpenConfirm on ${src.chain.Name}: done`)
+  log.info(`channel id on ${src.chain.Name}: ${openack.channel_id}`)
+  log.info(`channel id on ${dst.chain.Name}: ${openconfirm.channel_id}`)
 }
