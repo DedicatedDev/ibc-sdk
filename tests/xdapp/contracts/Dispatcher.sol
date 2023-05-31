@@ -115,8 +115,9 @@ contract Dispatcher is IbcDispatcher, Ownable {
     address payable escrow;
     bool isClientCreated = false;
     bytes public latestConsensusState;
-    // IBC_PortID = portPrefix + address
-    string portPrefix = 'eth.polyibc.';
+    // IBC_PortID = portPrefix + address (hex string without 0x prefix, case insensitive)
+    // TODO: verify portPrefix matches IBC portID
+    string portPrefix = 'polyibc.eth';
     uint64 portPrefixLen = 12;
 
     mapping(address => mapping(bytes32 => Channel)) public portChannelMap;
@@ -172,7 +173,9 @@ contract Dispatcher is IbcDispatcher, Ownable {
         return addr;
     }
 
-    // toPortId returns the full IBC port ID for a given address
+    // verify an EVM address matches an IBC portId.
+    // IBC_PortID = portPrefix + address (hex string without 0x prefix, case-insensitive)
+    // TODO: check portPrefix too. Right now only the suffix/address is checked.
     function portIdAddressMatch(address addr, string calldata portId) public view returns (bool) {
         string memory portSuffix = portId[portPrefixLen:];
         return hexStrToAddress(portSuffix) == addr;
