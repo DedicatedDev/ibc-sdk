@@ -169,7 +169,7 @@ function parseEndpointInfo(value: string): EndpointInfo {
 program
   .command('trace-packets')
   .description(
-    'Trace packet execution over the specified endpoints. The endpoint format must be `chain_id:account_name_or_address`'
+    'Trace packet execution over the specified endpoints. The endpoint format must be `chain_id:channel_id:port_id`'
   )
   .allowExcessArguments(false)
   .arguments('<endpoint-a> <endpoint-b>')
