@@ -50,7 +50,10 @@ proto-gen:
 		--proto_path="$(POLYMER_CHAIN_DIR)/third_party/proto/ibc-go@v7_dep" \
 		--ts_proto_out=./src/lib/cosmos/client/_generated $(PROTO_FILES)
 
-test-all: build-ibctl
+test-vibc-core-contracts:
+	cd tests/xdapp && npx hardhat test
+
+test-all: build-ibctl test-vibc-core-contracts
 	npx ava
 
 clean-docker:
