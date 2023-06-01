@@ -36,12 +36,12 @@ const nameDescription =
 
 const connectionOption = new Option(
   '-c, --connection <path...>',
-  'A path must be in the form of "src-chain-id:dst-chain-id". This tells ibctl how to configure the relayers between the src and dst chains'
+  'A path must be in the form of "chain-id-a:chain-id-b". This tells ibctl how to configure the relayers between both chains'
 )
   .default([], 'No connection between chains')
   .argParser((current, previous: string[]) => {
     if (!current.match(/^[\w-]+:[\w-]+$/)) {
-      throw new InvalidArgumentError('Connection path must be of the form of "src-chain-id:dst-chain-id"')
+      throw new InvalidArgumentError('Connection path must be of the form of "chain-id-a:chain-id-b"')
     }
     return previous.concat([current])
   })

@@ -70,8 +70,7 @@ test.serial('running the init command twice should fail', async (t) => {
 test.serial('the start command starts stack', async (t) => {
   t.assert((await runInit(t)).exitCode === 0)
 
-  const out =
-    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution' --connection 'eth-execution:polymer'`
+  const out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution'`
   t.assert(out.exitCode === 0)
 
   const runtime = runningChainSetsSchema.parse(
@@ -104,7 +103,7 @@ test.serial('running the start command with invalid relay path should fail', asy
       t.assert(reject.exitCode === 1)
       t.regex(
         reject.stderr,
-        /.*argument 'foo' is invalid. Connection path must be of the form of "src-chain-id:dst-chain-id".*/
+        /.*argument 'foo' is invalid. Connection path must be of the form of "chain-id-a:chain-id-b".*/
       )
     }
   )
@@ -185,7 +184,7 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
   config.close()
 
   const out =
-    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:juno' --connection 'polymer:eth-execution' --connection 'eth-execution:polymer'`
+    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:juno' --connection 'polymer:eth-execution'`
   t.assert(out.exitCode === 0)
 
   const runtime = runningChainSetsSchema.parse(

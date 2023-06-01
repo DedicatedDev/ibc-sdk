@@ -36,10 +36,7 @@ async function getChannelsFrom(t: any, chain: string) {
 
 test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert((await runCommand(t, 'init')).exitCode === 0)
-  t.assert(
-    (await runCommand(t, 'start', '-c', 'wasm:polymer', '-c', 'polymer:eth-execution', '-c', 'eth-execution:polymer'))
-      .exitCode === 0
-  )
+  t.assert((await runCommand(t, 'start', '-c', 'wasm:polymer', '-c', 'polymer:eth-execution')).exitCode === 0)
 
   const runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
   t.assert(runtime)

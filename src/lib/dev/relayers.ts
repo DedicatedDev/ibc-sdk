@@ -1,9 +1,11 @@
 import winston from 'winston'
-import { ChainSetsRunObj, isCosmosChain, isEvmChain } from './schemas'
+import { ChainSetsRunObj, isCosmosChain } from './schemas'
 import { CosmosAccount, CosmosAccounts } from './accounts_config.js'
 import { VIBCRelayer } from './vibc_relayer'
 import * as self from '../../lib/index.js'
 import { EthRelayer } from './eth_relayer.js'
+
+type Tuple = [string, string]
 
 function findRelayerAccount(runtime: ChainSetsRunObj, src: string, dst: string): CosmosAccount | undefined {
   for (const chain of runtime.ChainSets) {
@@ -15,7 +17,7 @@ function findRelayerAccount(runtime: ChainSetsRunObj, src: string, dst: string):
   return undefined
 }
 
-async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: string[], log: winston.Logger) {
+async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: Tuple, log: winston.Logger) {
   const [src, dst] = relayPath
   log.info(`starting ibc-relayer with path ${src} -> ${dst}`)
 
@@ -51,7 +53,7 @@ async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: string[], lo
   log.info('ibc-relayer started')
 }
 
-async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: string[][], log: winston.Logger) {
+async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[], log: winston.Logger) {
   log.info(`setting up vibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
 
   const relayer = await VIBCRelayer.create(runtime.Run.WorkingDir, log)
@@ -62,7 +64,7 @@ async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: string[][], log
   log.info('vibc-relayer set up')
 }
 
-async function setupEthRelayer(runtime: ChainSetsRunObj, paths: string[], log: winston.Logger) {
+async function setupEthRelayer(runtime: ChainSetsRunObj, paths: Tuple, log: winston.Logger) {
   log.info(`starting eth-relayer with path ${paths[0]} -> ${paths[1]}`)
   const relayer = await EthRelayer.create(runtime, paths, log)
   const out = await relayer.run()
@@ -75,15 +77,15 @@ async function setupEthRelayer(runtime: ChainSetsRunObj, paths: string[], log: w
 }
 
 export type RelayingPaths = {
-  vibc: string[][]
-  eth2: string[][]
-  ibc: string[][]
+  vibc: Tuple[]
+  eth2: Tuple[]
+  ibc: Tuple[]
 }
 
-export function configurePaths(runtime: ChainSetsRunObj, paths: string[]): RelayingPaths {
-  const ibcPaths: string[][] = []
-  const vibcPaths: string[][] = []
-  const eth2Paths: string[][] = []
+export function configurePaths(runtime: ChainSetsRunObj, connections: string[]): RelayingPaths {
+  const ibcPaths = new Set<string>()
+  const vibcPaths = new Set<string>()
+  const eth2Paths = new Set<string>()
   const chainType: { [id: string]: string } = {}
 
   for (const chain of runtime.ChainSets) {
@@ -91,41 +93,45 @@ export function configurePaths(runtime: ChainSetsRunObj, paths: string[]): Relay
   }
 
   // if relaying paths were provided, respect them
-  for (const path of paths) {
-    const [src, dst] = path.split(':')
-    if (!chainType[src]) throw new Error(`Invalid source path end: unknown chain ${src}`)
-    if (!chainType[dst]) throw new Error(`Invalid destination path end: unknown chain ${dst}`)
+  for (const connection of connections) {
+    const [chainA, chainB] = connection.split(':')
+    if (!chainType[chainA]) throw new Error(`Invalid path end: unknown chain ${chainA}`)
+    if (!chainType[chainB]) throw new Error(`Invalid path end: unknown chain ${chainB}`)
 
     // cosmos to cosmos -> set up ibc relayer path
-    if (isCosmosChain(chainType[src]) && isCosmosChain(chainType[dst])) {
-      ibcPaths.push([src, dst])
+    if (isCosmosChain(chainType[chainA]) && isCosmosChain(chainType[chainB])) {
+      ibcPaths.add(chainA + ':' + chainB)
       continue
     }
 
-    // polymer to evm -> set up eth relayer path
-    if (chainType[src] === 'polymer' && isEvmChain(chainType[dst])) {
-      vibcPaths.push([src, dst])
+    // polymer to evm -> set up eth/vibc relayer path
+    if (chainType[chainA] === 'polymer' && chainType[chainB] === 'ethereum') {
+      vibcPaths.add(chainA + ':' + chainB)
+      eth2Paths.add(chainB + ':' + chainA)
       continue
     }
 
-    if (isEvmChain(chainType[src]) && chainType[dst] === 'polymer') {
-      eth2Paths.push([src, dst])
+    // evm to polymer -> set up eth/vibc relayer path
+    if (chainType[chainA] === 'ethereum' && chainType[chainB] === 'polymer') {
+      eth2Paths.add(chainA + ':' + chainB)
+      vibcPaths.add(chainB + ':' + chainA)
       continue
     }
 
     // anything else, throw an error!
-    throw new Error(`Invalid relaying path configuration: ${src} -> ${dst}`)
+    throw new Error(`Invalid relaying path configuration: ${chainA} -> ${chainB}`)
   }
 
-  return { ibc: ibcPaths, vibc: vibcPaths, eth2: eth2Paths }
+  const list = (s: Set<string>): Tuple[] => Array.from(s).map((a) => a.split(':')) as Tuple[]
+  return { ibc: list(ibcPaths), vibc: list(vibcPaths), eth2: list(eth2Paths) }
 }
 
 export async function runRelayers(
   runtime: ChainSetsRunObj,
-  relayingPaths: string[],
+  connections: string[],
   logger: winston.Logger
 ): Promise<ChainSetsRunObj> {
-  const paths = configurePaths(runtime, relayingPaths)
+  const paths = configurePaths(runtime, connections)
   const promises: Promise<void>[] = []
 
   if (paths.vibc.length > 0) {

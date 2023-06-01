@@ -38,13 +38,36 @@ test('configure empty paths with virtual chains', (t) => {
 })
 
 test('configure paths with virtual chains and polymer', (t) => {
-  const got = relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:bsc', 'poly:eth', 'eth:poly'])
-  const vibc = [
-    ['poly', 'eth'],
-    ['poly', 'bsc']
-  ]
+  const got = relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:eth', 'eth:poly'])
+  const vibc = [['poly', 'eth']]
   const eth2 = [['eth', 'poly']]
   checkPaths(t, got, vibc, [], eth2)
+})
+
+test('configure duplicated paths with virtual chains and polymer', (t) => {
+  const got = relayers.configurePaths(runWithVchains as ChainSetsRunObj, [
+    'poly:eth',
+    'eth:poly',
+    'poly:eth',
+    'eth:poly'
+  ])
+  const vibc = [['poly', 'eth']]
+  const eth2 = [['eth', 'poly']]
+  checkPaths(t, got, vibc, [], eth2)
+})
+
+test('configuring with unsupported virtual chains should fail', (t) => {
+  let err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['bsc:poly']))
+  t.assert(err?.message === 'Invalid relaying path configuration: bsc -> poly')
+
+  err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:bsc']))
+  t.assert(err?.message === 'Invalid relaying path configuration: poly -> bsc')
+
+  err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['prysm:poly']))
+  t.assert(err?.message === 'Invalid relaying path configuration: prysm -> poly')
+
+  err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:prysm']))
+  t.assert(err?.message === 'Invalid relaying path configuration: poly -> prysm')
 })
 
 test('configuring paths only with virtual chains should fail', (t) => {
@@ -54,10 +77,10 @@ test('configuring paths only with virtual chains should fail', (t) => {
 
 test('configuring paths with unkonwn virutal chain ids', (t) => {
   let err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['foo:eth']))
-  t.assert(err?.message === 'Invalid source path end: unknown chain foo')
+  t.assert(err?.message === 'Invalid path end: unknown chain foo')
 
   err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['eth:foo']))
-  t.assert(err?.message === 'Invalid destination path end: unknown chain foo')
+  t.assert(err?.message === 'Invalid path end: unknown chain foo')
 })
 
 const runWithIbcChains = {
@@ -93,10 +116,10 @@ test('configure paths with ibc chains and polymer', (t) => {
 
 test('configuring paths with ibc chain ids', (t) => {
   let err = t.throws(() => relayers.configurePaths(runWithIbcChains as ChainSetsRunObj, ['foo:poly']))
-  t.assert(err?.message === 'Invalid source path end: unknown chain foo')
+  t.assert(err?.message === 'Invalid path end: unknown chain foo')
 
   err = t.throws(() => relayers.configurePaths(runWithIbcChains as ChainSetsRunObj, ['poly:foo']))
-  t.assert(err?.message === 'Invalid destination path end: unknown chain foo')
+  t.assert(err?.message === 'Invalid path end: unknown chain foo')
 })
 
 const runWithMixedChains = {
@@ -126,8 +149,8 @@ test('configure empty paths with ibc and virtual chains', (t) => {
 })
 
 test('configure paths with ibc and virtual chains', (t) => {
-  const got = relayers.configurePaths(runWithMixedChains as ChainSetsRunObj, ['poly:bsc', 'poly:gaia', 'eth:poly'])
-  const vibc = [['poly', 'bsc']]
+  const got = relayers.configurePaths(runWithMixedChains as ChainSetsRunObj, ['poly:gaia', 'eth:poly'])
+  const vibc = [['poly', 'eth']]
   const ibc = [['poly', 'gaia']]
   const eth2 = [['eth', 'poly']]
   checkPaths(t, got, vibc, ibc, eth2)
