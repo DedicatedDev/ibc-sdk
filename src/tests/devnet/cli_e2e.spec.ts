@@ -12,16 +12,20 @@ const test = anyTest as TestFn<{
   cli: string
 }>
 
-test.before(async (t) => {
+test.before((t) => {
   t.context.cli = path.resolve(__dirname, '..', '..', '..', 'bin', 'ibctl')
   $.verbose = true
   process.env.TEST_LOG_LEVEL = 'verbose'
+  t.context.workspace = process.env.TEST_IBCTL_WORKSPACE ?? fs.mkdtempSync(path.join('/tmp', 'ibctl-tests-'))
 })
 
-test.beforeEach((t) => {
-  // Run tests on different workspaces every time since docker will not like
-  // directories to be removed while these are mapped out as volumes.
-  t.context.workspace = fs.mkdtempSync(path.join('/tmp', 'ibctl-tests-'))
+test.after.always(async (t) => {
+  if (!process.env.TEST_IBCTL_WORKSPACE) {
+    // TODO: assert here. See https://github.com/polymerdao/ibc-sdk/issues/10
+    await runCommand(t, 'stop').catch((e) => {
+      console.error(e)
+    })
+  }
 })
 
 async function runCommand(t: any, ...args: string[]): Promise<ProcessOutput> {
@@ -124,12 +128,6 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   await runCommand(t, 'logs', 'polymer', '-n', '5')
   await runCommand(t, 'logs', 'wasm', '-n', '5')
   await runCommand(t, 'logs', 'eth-exec', '-n', '5')
-
-  // TODO: assert here
-  // See https://github.com/polymerdao/ibc-sdk/issues/10
-  runCommand(t, 'stop').catch((e) => {
-    console.error(e)
-  })
 })
 
 // Test the following sequence
