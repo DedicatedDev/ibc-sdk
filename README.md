@@ -1,5 +1,7 @@
 # IBC SDK
 
+![Tests](https://github.com/polymerdao/ibc-sdk/actions/workflows/test.yml/badge.svg?branch=main)
+
 A NodeJS package that facilitates cross-chain dapp (xdapp) development using IBC.
 
 ## Quick start
