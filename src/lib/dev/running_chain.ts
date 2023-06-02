@@ -8,6 +8,7 @@ export type NodeAccounts = ChainSetsRunObj['ChainSets'][number]
 
 export interface RunningChain {
   start(dependencyRuntime: NodeAccounts[]): Promise<void>
+  stop()
   getRunObj(): Promise<NodeAccounts>
 }
 
@@ -78,6 +79,7 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
   }
 
   abstract start(dependencyRuntime: NodeAccounts[]): Promise<void>
+  abstract stop()
 
   abstract generateAccounts(config: any): Promise<Accounts>
 

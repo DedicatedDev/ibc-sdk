@@ -171,6 +171,27 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
     await this.getContainer(ImageLabelTypes.Validator).exec(cmds, true, true)
   }
 
+  async stopChainDaemon() {
+    const container = await this.getContainer(ImageLabelTypes.Main)
+    const killCmd = ['killall', imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!]
+    await container.exec(killCmd, true, true)
+    const rmCmd = ['rm', '-rf', this.containerPrysmDataDir]
+    await container.exec(rmCmd, true, true)
+  }
+
+  async stopValidatorDaemon() {
+    const container = await this.getContainer(ImageLabelTypes.Validator)
+    const killCmd = ['killall', imageByLabel(this.config.Images, ImageLabelTypes.Validator).Bin!]
+    await container.exec(killCmd, true, true)
+    const rmCmd = ['rm', '-rf', this.containerValidatorDataDir]
+    await container.exec(rmCmd, true, true)
+  }
+
+  override async stop() {
+    await this.stopValidatorDaemon()
+    await this.stopChainDaemon()
+  }
+
   private async writeConfigFile() {
     const config = `CONFIG_NAME: interop
 PRESET_BASE: interop

@@ -193,6 +193,9 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
   }
 
   for (const chain of runtime.ChainSets) {
+    if (opts.all) {
+      // We should call stop() here on the running chain object but we don't have a hold of it
+    }
     for (const node of chain.Nodes) {
       log.info(`Removing '${chain.Name}:${node.Label}' container...`)
       await $`docker container rm -f ${node.ContainerId}`

@@ -21,10 +21,8 @@ test.before((t) => {
 
 test.after.always(async (t) => {
   if (!process.env.TEST_IBCTL_WORKSPACE) {
-    // TODO: assert here. See https://github.com/polymerdao/ibc-sdk/issues/10
-    await runCommand(t, 'stop').catch((e) => {
-      console.error(e)
-    })
+    const out = await runCommand(t, 'stop')
+    t.assert(out.exitCode === 0)
   }
 })
 
