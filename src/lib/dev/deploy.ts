@@ -32,12 +32,26 @@ async function deployVIBCCoreContractsOnChain(
   contracts.push(verifier)
 
   scpath = path.join(contractsDir, 'Dispatcher.sol', 'Dispatcher.json')
-  contracts.push(await deployEvmSmartContract(chain, account, scpath, verifier.Address))
+  // TODO: using the same account that deploys the contract as the escrow address
+  // TODO: calculate the port prefix based on the actual chain id.
+  const prefix = 'polyibc.Ethereum-Devnet.'
+  const dispatcher = await deployEvmSmartContract(chain, account, scpath, verifier.Address, account, prefix)
+  contracts.push(dispatcher)
 
   chain.Contracts = contracts
   saveChainSetsRuntime(runtime)
 
   log.verbose(`deployed ${contracts.length} contracts on ${chain.Name}`)
+
+  // TODO create this dummy client on the core sc so future calls to verifyMembership work
+  const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
+  const signer = new ethers.Wallet(chain.Accounts[0].PrivateKey!).connect(provider)
+  const contract = new ethers.Contract(dispatcher.Address, dispatcher.Abi!, signer)
+  const client = await contract.createClient({
+    clientState: ethers.utils.toUtf8Bytes('clientState'),
+    consensusState: ethers.utils.toUtf8Bytes('consensusState')
+  })
+  await client.wait()
 }
 
 /**

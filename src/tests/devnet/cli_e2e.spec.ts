@@ -78,6 +78,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const out1 = await runCommand(t, 'deploy', 'eth-execution', eth1Account.Address, marsPath)
   t.assert(out1.exitCode === 0)
   const marsAddress = out1.stdout.trim()
+  const mars = JSON.parse(fs.readFileSync(marsPath, 'utf-8'))
 
   // check there's no channels after chains are started
   t.deepEqual((await getChannelsFrom(t, 'polymer')).channels, [])
@@ -118,7 +119,8 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
     wasmChannel: wasmChannel,
     wasmAddress: wasmAddress,
     polyChannel: polyChannel,
-    contract: dispatcher
+    dispatcher: dispatcher,
+    receiver: { Address: marsAddress, Abi: mars.abi }
   }
 
   await testMessagesFromWasmToEth(t, config)
@@ -138,15 +140,37 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
 async function testMessagesFromEthToWasm(t: any, c: any) {
   const provider = new ethers.providers.JsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
   const signer = new ethers.Wallet(c.eth1Account.PrivateKey).connect(provider)
-  const contract = new ethers.Contract(c.contract.Address, c.contract.Abi, signer)
+
+  const dispatcher = new ethers.Contract(c.dispatcher.Address, c.dispatcher.Abi, signer)
+
+  // TODO: call this so the contract stores the channel id in one of its internal mappings.
+  // Otherwise, the next call to sendPacket() will fail with a 'Channel not owned by sender' error
+  const connect = await dispatcher.connectIbcChannel(
+    c.receiver.Address,
+    ethers.utils.formatBytes32String(c.polyChannel.channels[0].channel_id),
+    c.polyChannel.channels[0].connection_hops,
+    0,
+    c.polyChannel.channels[0].counterparty.port_id,
+    ethers.utils.formatBytes32String(c.polyChannel.channels[0].counterparty.channel_id),
+    ethers.utils.formatBytes32String('1.0'),
+    { proofHeight: 0, proof: ethers.utils.toUtf8Bytes('1') }
+  )
+  await connect.wait()
 
   console.log('Sending message from ETH to WASM...')
-  const res = await contract.sendIbcPacket(
+  const receiver = new ethers.Contract(c.receiver.Address, c.receiver.Abi, signer)
+  const response = await receiver.greet(
+    c.dispatcher.Address,
+    JSON.stringify({ message: { m: 'Hello from ETH' } }),
     ethers.utils.formatBytes32String(c.polyChannel.channels[0].channel_id),
-    ethers.utils.toUtf8Bytes(JSON.stringify({ message: { m: 'Hello from ETH' } })),
-    ((Date.now() + 60 * 60 * 1000) * 1_000_000).toString()
+    ((Date.now() + 60 * 60 * 1000) * 1_000_000).toString(),
+    0
   )
-  t.truthy(res)
+  // Get the sequence number from the emitted SendPacket event
+  const receipt = await response.wait()
+  const iface = new ethers.utils.Interface(c.dispatcher.Abi)
+  const parsed = iface.parseLog(receipt.logs[0])
+  const [_sourcePortAddress, _sourceChannelId, _packet, sendPacketSequence, _timeout, _fee] = parsed.args
 
   const client = await Tendermint37Client.connect(c.wasmChain.Nodes[0].RpcHost)
 
@@ -186,6 +210,29 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
       10_000
     )
   )
+
+  t.assert(
+    await utils.waitUntil(
+      async () => {
+        const result = await dispatcher.queryFilter('Acknowledgement')
+        const event = result[0]
+        if (!event) return false
+
+        console.log(`got ack from ETH: ${JSON.stringify(event)}`)
+        const [receiverAddress, srcChannelId, ackpacket, sequence] = event.args!
+        t.assert(receiverAddress === c.receiver.Address)
+        t.assert(ethers.utils.parseBytes32String(srcChannelId) === c.polyChannel.channels[0].channel_id)
+        t.assert(ethers.BigNumber.from(sendPacketSequence).toString() === ethers.BigNumber.from(sequence).toString())
+        t.assert(ackpacket[0] === true)
+        // this is set by the CW contract
+        console.log(ethers.utils.toUtf8String(ackpacket[1]))
+        t.assert(ethers.utils.toUtf8String(ackpacket[1]) === `{"ok":{"account":"","reply":"I don't understand"}}`)
+        return true
+      },
+      20,
+      10_000
+    )
+  )
 }
 
 // Test the following sequence
@@ -211,22 +258,57 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   t.assert(out.exitCode === 0)
 
   const provider = new ethers.providers.JsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
-  const contract = new ethers.Contract(c.contract.Address, c.contract.Abi, provider)
+  const contract = new ethers.Contract(c.dispatcher.Address, c.dispatcher.Abi, provider)
   t.assert(
     await utils.waitUntil(
       async () => {
-        const result = await contract.queryFilter('OnRecvPacket')
+        const result = await contract.queryFilter('RecvPacket')
         const event = result[0]
         if (!event) return false
 
         console.log(`got event from ETH: ${JSON.stringify(event)}`)
-        const [srcChannelId, srcPortId, dstChannelId, dstPortId, data] = event.args!
-        const msg = JSON.parse(ethers.utils.toUtf8String(data))
-        t.assert(msg.message.m === 'Hello from WASM')
+        const [dstPortAddress, dstChannelId, srcPortId, srcChannelId, sequence] = event.args!
         t.assert(ethers.utils.parseBytes32String(srcChannelId) === c.wasmChannel.channels[0].channel_id)
         t.assert(ethers.utils.parseBytes32String(dstChannelId) === c.wasmChannel.channels[0].counterparty.channel_id)
         t.assert(srcPortId === c.wasmChannel.channels[0].port_id)
-        t.assert(dstPortId === c.wasmChannel.channels[0].counterparty.port_id)
+        t.assert(dstPortAddress === c.receiver.Address)
+        t.assert('1' === ethers.BigNumber.from(sequence).toString())
+        return true
+      },
+      20,
+      10_000
+    )
+  )
+
+  const client = await Tendermint37Client.connect(c.wasmChain.Nodes[0].RpcHost)
+  let h = 1
+  t.assert(
+    await utils.waitUntil(
+      async () => {
+        const query = `acknowledge_packet.packet_sequence EXISTS AND tx.height>=${h}`
+        const result = await client.txSearchAll({ query: query })
+        const events: any[] = []
+
+        result.txs.map(({ height, result }) => {
+          h = Math.max(height, h)
+          const rawLogs = logs.parseRawLog(result.log)
+          for (const log of rawLogs) {
+            log.events.forEach((e) => {
+              if (e.type !== 'acknowledge_packet') return
+              const kv: any = {}
+              e.attributes.forEach((e) => (kv[e.key] = e.value))
+              events.push(kv)
+            })
+          }
+        })
+        h++
+        if (events.length === 0) return false
+        const kv = events[0]
+        console.log(`got ack from WASM: ${JSON.stringify(kv)}`)
+        t.assert(kv.packet_dst_channel === c.polyChannel.channels[0].channel_id)
+        t.assert(kv.packet_src_channel === c.polyChannel.channels[0].counterparty.channel_id)
+        t.assert(kv.packet_dst_port === c.polyChannel.channels[0].port_id)
+        t.assert(kv.packet_src_port === c.polyChannel.channels[0].counterparty.port_id)
         return true
       },
       20,

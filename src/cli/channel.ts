@@ -2,7 +2,6 @@ import winston from 'winston'
 import { ChainSetsRunObj, CosmosAccount } from '../lib/dev/schemas'
 import * as self from '../lib/index.js'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
-import { toHex } from '@cosmjs/encoding'
 import { DeliverTxResponse, SigningStargateClient } from '@cosmjs/stargate'
 import { TextEncoder } from 'util'
 import Long from 'long'
@@ -129,9 +128,7 @@ export async function channelHandshake(
     )
   }
 
-  const enc = new TextEncoder()
-  const portEth2 = `polyibc.Ethereum-Devnet.${toHex(enc.encode(src.address))}`
-
+  const portEth2 = `polyibc.Ethereum-Devnet.${src.address.toLowerCase().slice(2)}`
   const ibcRelayerRuntime = runtime.Relayers.find((r) => r.Name.startsWith('ibc-relayer-'))
 
   if (!ibcRelayerRuntime) throw new Error('Could not find ibc-relayer runtime')
