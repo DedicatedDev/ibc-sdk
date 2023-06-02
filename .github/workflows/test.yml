@@ -4,6 +4,10 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
+
 env:
   TEST_IBCTL_WORKSPACE: /tmp/ibctl-e2e-test
 
