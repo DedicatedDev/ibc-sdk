@@ -418,8 +418,8 @@ contract Dispatcher is IbcDispatcher, Ownable {
         (bool sent, ) = escrow.call{value: fee}('');
         require(sent, 'Failed to escrow packet fee');
         // packet sequence
-        uint64 sequence = nextSendPacketSequence[msg.sender][channelId];
-        nextSendPacketSequence[msg.sender][channelId] = sequence + 1;
+        uint64 sequence = nextSendPacketSequence[msg.sender][channelId] + 1;
+        nextSendPacketSequence[msg.sender][channelId] = sequence;
         // packet commitment
         sendPacketCommitment[msg.sender][channelId][sequence] = true;
 
@@ -427,7 +427,7 @@ contract Dispatcher is IbcDispatcher, Ownable {
     }
 
     /**
-     * @notice Handle the acknowledgement of an IBC packet by the counterparty 
+     * @notice Handle the acknowledgement of an IBC packet by the counterparty
      * @dev Verifies the given proof and calls the `onAcknowledgementPacket` function on the given `receiver` contract,
        ie. the IBC dApp.
        Prerequisite: the original packet is committed and not ack'ed or timed out yet.
