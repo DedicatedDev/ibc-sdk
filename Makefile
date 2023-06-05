@@ -25,8 +25,8 @@ start: build-ibctl
 stop: build-ibctl
 	./bin/ibctl stop -l verbose
 
-clean: clean-docker
-	rm -rf bin dist node_modules ~/.ibc-sdk
+clean:
+	rm -rf bin dist node_modules
 
 build-vibc-core-contracts:
 	npx hardhat compile --config ./tests/xdapp/hardhat.config.ts --force
@@ -58,6 +58,7 @@ test-all: build-ibctl test-vibc-core-contracts
 
 clean-docker:
 	docker ps -a --format json | grep 'org.polymerlabs.runner=ibc-sdk' | jq .ID | xargs docker rm -f || true
+	rm -rf ~/.ibc-sdk
 
 .PHONY: test test-e2e test-cli test-vibc-relayer-config test-evm-deploy
 .PHONY: clean package-contracts
