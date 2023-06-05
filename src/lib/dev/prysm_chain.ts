@@ -67,11 +67,13 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
     return chain
   }
 
-  prysmDataDirName = 'prysmDataDir'
-  containerPrysmDataDir: string = utils.path.join('/tmp', this.prysmDataDirName)
   configFileName = 'config.yml'
-  containerConfigFilePath: string = utils.path.join(this.containerPrysmDataDir, this.configFileName)
-  containerValidatorDataDir: string = '/tmp/prysmValidatorDataDir'
+
+  containerConfigFilePath: string = utils.path.join(
+    imageByLabel(this.config.Images, ImageLabelTypes.Main).DataDir!,
+    this.configFileName
+  )
+
   readonly rpcEndpoint = RunningPrysmChain.rpcEndpoint
 
   generateAccounts(_config: any): Promise<any> {
@@ -121,7 +123,14 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
     // TODO: this needs to be generated on the fly in geth and passed to prysm in code
     const JWTToken = '05034ab3d5592713a504712139d38bb0e7b418a30d1005b8bcaa665ebc0850dd'
 
-    utils.fs.writeFileSync(this.hostDirPath(utils.path.join(this.prysmDataDirName, 'jwt.hex')), JWTToken)
+    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
+
+    // TODO: remove this assumption since it's configurable
+    const dataDirPrefix = '/tmp/'
+    if (!image.DataDir!.startsWith(dataDirPrefix)) {
+      throw new Error('prysm beacon chain data dir must be in /tmp')
+    }
+    utils.fs.writeFileSync(utils.path.join(this.dataDir, 'jwt.hex'), JWTToken)
 
     const eth = runtime.find((c) => c.Type === 'ethereum')
     if (eth === undefined) throw new Error('Need an eth node to run execution')
@@ -130,17 +139,17 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       RunningGethChain.authRpcEndpoint.port
     }`
     const rawCmds = [
-      imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!,
-      `--datadir=${this.containerPrysmDataDir}`,
+      image.Bin!,
+      `--datadir=${image.DataDir!}`,
       '--min-sync-peers=0',
-      `--interop-genesis-state=${utils.path.join(this.containerPrysmDataDir, 'genesis.ssz')}`,
+      `--interop-genesis-state=${utils.path.join(image.DataDir!, 'genesis.ssz')}`,
       '--interop-eth1data-votes',
       '--bootstrap-node=',
       `--chain-config-file=${this.containerConfigFilePath}`,
       `--chain-id=${RunningGethChain.chainId.toString()}`,
       `--execution-endpoint=${executionContainer!}`,
       '--accept-terms-of-use',
-      `--jwt-secret=${utils.path.join(this.containerPrysmDataDir, 'jwt.hex')}`,
+      `--jwt-secret=${utils.path.join(image.DataDir!, 'jwt.hex')}`,
       '--rpc-host=0.0.0.0',
       '--grpc-gateway-host=0.0.0.0',
       '--suggested-fee-recipient=0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934',
@@ -153,10 +162,11 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
 
   async startValidatorDaemon() {
     const prysmContainer = await this.getRunObj()
+    const image = imageByLabel(this.config.Images, ImageLabelTypes.Validator)
     const rawCmds = [
-      imageByLabel(this.config.Images, ImageLabelTypes.Validator).Bin!,
+      image.Bin!,
       `--beacon-rpc-provider=${prysmContainer.Nodes[0].RpcContainer.split('//')[1]}`,
-      `--datadir=${this.containerValidatorDataDir}`,
+      `--datadir=${image.DataDir}`,
       '--accept-terms-of-use',
       '--interop-num-validators=36',
       '--interop-start-index=0',
@@ -169,27 +179,6 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
     const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>${this.entrypointStdout} 2>${this.entrypointStderr}`]
     utils.fs.writeFileSync(this.hostDirPath('validator.d.cmd'), cmds.join(' '))
     await this.getContainer(ImageLabelTypes.Validator).exec(cmds, true, true)
-  }
-
-  async stopChainDaemon() {
-    const container = await this.getContainer(ImageLabelTypes.Main)
-    const killCmd = ['killall', imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!]
-    await container.exec(killCmd, true, true)
-    const rmCmd = ['rm', '-rf', this.containerPrysmDataDir]
-    await container.exec(rmCmd, true, true)
-  }
-
-  async stopValidatorDaemon() {
-    const container = await this.getContainer(ImageLabelTypes.Validator)
-    const killCmd = ['killall', imageByLabel(this.config.Images, ImageLabelTypes.Validator).Bin!]
-    await container.exec(killCmd, true, true)
-    const rmCmd = ['rm', '-rf', this.containerValidatorDataDir]
-    await container.exec(rmCmd, true, true)
-  }
-
-  override async stop() {
-    await this.stopValidatorDaemon()
-    await this.stopChainDaemon()
   }
 
   private async writeConfigFile() {
@@ -209,14 +198,16 @@ SAFE_SLOTS_TO_UPDATE_JUSTIFIED: 0
 SECONDS_PER_ETH1_BLOCK: 3
 DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
 `
-    utils.fs.mkdirSync(this.hostDirPath(this.prysmDataDirName))
+    const prysmDataDir = imageByLabel(this.config.Images, ImageLabelTypes.Main).DataDir!
+
+    utils.fs.mkdirSync(this.dataDir)
     utils.fs.writeFileSync(this.configFile, config)
 
     const args = [
       'testnet',
       'generate-genesis',
       '--num-validators=36',
-      `--output-ssz=${utils.path.join(this.containerPrysmDataDir, 'genesis.ssz')}`,
+      `--output-ssz=${utils.path.join(prysmDataDir, 'genesis.ssz')}`,
       `--chain-config-file=${this.containerConfigFilePath}`
     ]
 
@@ -237,7 +228,13 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
   }
 
   private get dataDir(): string {
-    return utils.path.join(this.hostWd, 'prysmDataDir')
+    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
+    // TODO: remove this assumption since it's configurable
+    const dataDirPrefix = '/tmp/'
+    if (!image.DataDir!.startsWith(dataDirPrefix)) {
+      throw new Error('prysm beacon chain data dir must be in /tmp')
+    }
+    return utils.path.join(this.hostWd, image.DataDir!.substring(dataDirPrefix.length))
   }
 
   private get configFile(): string {

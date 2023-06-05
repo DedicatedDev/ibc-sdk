@@ -194,7 +194,17 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
 
   for (const chain of runtime.ChainSets) {
     if (opts.all) {
-      // We should call stop() here on the running chain object but we don't have a hold of it
+      // TODO: this should be chain-specific logic but we don't have a hold of running chain objects here
+      for (const node of chain.Nodes) {
+        var label: ImageLabelTypes = ImageLabelTypes[node.Label]
+        const image = imageByLabel(chain.Images, label)
+        if (image.Bin) {
+          await $`docker container exec ${node.ContainerId} killall ${image.Bin}`
+        }
+        if (image.DataDir) {
+          await $`docker container exec ${node.ContainerId} rm -rf ${image.DataDir}`
+        }
+      }
     }
     for (const node of chain.Nodes) {
       log.info(`Removing '${chain.Name}:${node.Label}' container...`)

@@ -144,7 +144,6 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     return chain
   }
 
-  containerGethDataDir: string = '/tmp/gethDataDir'
   readonly rpcEndpoint = RunningGethChain.rpcEndpoint
   protected override accounts?: ReturnType<typeof generateEvmAccounts>
 
@@ -185,10 +184,10 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
 
   async startChainDaemon() {
     utils.fs.writeFileSync(this.hostDirPath('jwt.hex'), RunningGethChain.JWTToken)
-
+    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
     // Based on https://github.com/rauljordan/eth-pos-devnet/blob/master/docker-compose.yml
     const rawCmds = [
-      imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!,
+      image.Bin!,
       '--nodiscover',
       '--http',
       '--http.api',
@@ -202,14 +201,14 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
       '--authrpc.jwtsecret',
       '/tmp/jwt.hex',
       '--datadir',
-      this.containerGethDataDir,
+      image.DataDir!,
       '--allow-insecure-unlock',
       '--unlock',
       RunningGethChain.signer,
       '--password',
-      utils.path.join(this.containerGethDataDir, 'signerPwd'),
+      utils.path.join(image.DataDir!, 'signerPwd'),
       '--keystore',
-      utils.path.join(this.containerGethDataDir, 'keystore'),
+      utils.path.join(image.DataDir!, 'keystore'),
       '--syncmode',
       'full',
       '--mine',
@@ -222,17 +221,9 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     await this.getContainer(ImageLabelTypes.Main).exec(cmds, true, true)
   }
 
-  override async stop() {
-    const container = await this.getContainer(ImageLabelTypes.Main)
-    const killCmd = ['killall', imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!]
-    await container.exec(killCmd, true, true)
-    const rmCmd = ['rm', '-rf', this.containerGethDataDir]
-    await container.exec(rmCmd, true, true)
-  }
-
   private writeSignerFile() {
     const genesisSignerData = `{"address":"${RunningGethChain.signer}","crypto":{"cipher":"aes-128-ctr","ciphertext":"93b90389b855889b9f91c89fd15b9bd2ae95b06fe8e2314009fc88859fc6fde9","cipherparams":{"iv":"9dc2eff7967505f0e6a40264d1511742"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"c07503bb1b66083c37527cd8f06f8c7c1443d4c724767f625743bd47ae6179a4"},"mac":"6d359be5d6c432d5bbb859484009a4bf1bd71b76e89420c380bd0593ce25a817"},"id":"622df904-0bb1-4236-b254-f1b8dfdff1ec","version":3}`
-    // todo: change to the first account from config
+    // TODO: change to the first account from config
     const signerFileName = `UTC--2022-08-19T17-38-31.257380510Z--${RunningGethChain.signer}`
     utils.fs.writeFileSync(utils.path.join(this.keyStoreDir, signerFileName), genesisSignerData)
     utils.fs.writeFileSync(this.passwordFile, '')
@@ -247,20 +238,28 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     }
     utils.fs.writeFileSync(this.genesisFile, JSON.stringify(RunningGethChain.genesis))
 
+    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
+
     // Run `geth init` in container
-    const hostGenesisFilePath = utils.path.join(this.containerGethDataDir, 'genesis.json')
+    const hostGenesisFilePath = utils.path.join(image.DataDir!.toString(), 'genesis.json')
     // await this.container.exec(['mkdir', hostGenesisFilePath])
     await this.getContainer(ImageLabelTypes.Main).exec([
-      imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!,
+      image.Bin!,
       'init',
       '--datadir',
-      this.containerGethDataDir,
+      image.DataDir!,
       hostGenesisFilePath
     ])
   }
 
   private get dataDir(): string {
-    return utils.path.join(this.hostWd, 'gethDataDir')
+    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
+    // TODO: remove this assumption since it's configurable
+    const dataDirPrefix = '/tmp/'
+    if (!image.DataDir!.startsWith(dataDirPrefix)) {
+      throw new Error('prysm beacon chain data dir must be in /tmp')
+    }
+    return utils.path.join(this.hostWd, image.DataDir!.substring(dataDirPrefix.length))
   }
 
   private get keyStoreDir(): string {

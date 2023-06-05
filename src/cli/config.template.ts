@@ -32,6 +32,9 @@ ChainSets:
         # Can be one of: main, genesis, validator. If not set it defaults to main.
         Label: "${images.ethereum.label}"
 
+        # Data directory where the chain data will be stored in the container.
+        DataDir: "/tmp/data"
+
     # This section is used to generate and fund accounts once the chain is started.
     Accounts:
 
@@ -52,6 +55,7 @@ ChainSets:
         Repository: "${images.prysm_main.repo}"
         Tag: "${images.prysm_main.tag}"
         Bin: "beacon-chain"
+        DataDir: "/tmp/beacon_chain_data"
       - Label: "${images.prysm_genesis.label}"
         Repository: "${images.prysm_genesis.repo}"
         Tag: "${images.prysm_genesis.tag}"
@@ -60,6 +64,7 @@ ChainSets:
         Repository: "${images.prysm_validator.repo}"
         Tag: "${images.prysm_validator.tag}"
         Bin: "validator"
+        DataDir: "/tmp/validator_data"
 
   - Name: "polymer"
     Type: "polymer"

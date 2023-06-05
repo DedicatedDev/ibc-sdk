@@ -8,6 +8,7 @@ ChainSets:
       - Repository: "${images.ethereum.repo}"
         Tag: "${images.ethereum.tag}"
         Bin: "geth"
+        DataDir: "/tmp/data"
     Accounts:
       Mnemonic: "develop test test test test only develop test test test test only"
       Count: 10
@@ -19,6 +20,7 @@ ChainSets:
         Repository: "${images.prysm_main.repo}"
         Tag: "${images.prysm_main.tag}"
         Bin: "beacon-chain"
+        DataDir: "/tmp/beacon_chain_data"
       - Label: "${images.prysm_genesis.label}"
         Repository: "${images.prysm_genesis.repo}"
         Tag: "${images.prysm_genesis.tag}"
@@ -27,6 +29,7 @@ ChainSets:
         Repository: "${images.prysm_validator.repo}"
         Tag: "${images.prysm_validator.tag}"
         Bin: "validator"
+        DataDir: "/tmp/validator_data"
   - Name: "bsc"
     Type: "bsc"
     Images:
