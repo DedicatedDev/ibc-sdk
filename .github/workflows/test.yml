@@ -28,7 +28,7 @@ jobs:
         password: ${{ secrets.PACKAGES_TOKEN }}
 
     - name: Test
-      run: make test-e2e
+      run: make test-all
 
     - name: Show logs
       if: ${{ always() }}
