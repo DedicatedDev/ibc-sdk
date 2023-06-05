@@ -62,8 +62,11 @@ export async function cleanupChainSets(runtime: ChainSetsRunObj) {
           await $`docker container exec ${node.ContainerId} rm -rf ${image.DataDir}`
         }
       }
-      logger.info(`Removing '${chain.Name}:${node.Label}' container...`)
-      await $`docker container rm -f ${node.ContainerId}`
+      if (runtime.Run.CleanupMode !== 'debug' && runtime.Run.CleanupMode !== 'reuse') {
+        logger.info(`Removing '${chain.Name}:${node.Label}' container...`)
+        await $`docker container stop ${node.ContainerId}`
+        await $`docker container rm -f ${node.ContainerId}`
+      }
     }
   }
 }
