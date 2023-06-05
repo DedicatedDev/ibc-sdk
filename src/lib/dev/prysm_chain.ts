@@ -187,7 +187,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       '--suggested-fee-recipient=0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934',
       '--enable-polymer-devnet-mode'
     ]
-    const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>validator.d.stdout 2>validator.d.stderr`]
+    const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>${this.entrypointStdout} 2>${this.entrypointStderr}`]
     utils.fs.writeFileSync(this.hostDirPath('validator.d.cmd'), cmds.join(' '))
     await this.getContainer(ImageLabelTypes.Validator).exec(cmds, true, true)
   }
@@ -221,7 +221,7 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
       `--chain-config-file=${this.containerConfigFilePath}`
     ]
 
-    const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>genesis.d.stdout 2>genesis.d.stderr`]
+    const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>${this.entrypointStdout} 2>${this.entrypointStderr}`]
     utils.fs.writeFileSync(this.hostDirPath('genesis.d.cmd'), cmds.join(' '))
     await this.getContainer(ImageLabelTypes.Genesis).exec(cmds)
   }
