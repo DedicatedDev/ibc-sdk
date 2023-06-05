@@ -35,6 +35,21 @@ build-vibc-core-contracts:
 		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
 		src/cli/contracts.template.ts
 
+POLYMER_CHAIN_DIR = ../polymerase/chain
+PROTO_FILES = $(shell find $(POLYMER_CHAIN_DIR)/proto/ -name '*.proto')
+
+proto-gen:
+	@test -d $(POLYMER_CHAIN_DIR) || { echo "$(POLYMER_CHAIN_DIR) does not exist" ; exit 1; }
+	protoc \
+		--plugin=./node_modules/.bin/protoc-gen-ts_proto \
+		--ts_proto_opt="esModuleInterop=true,forceLong=string,useOptionals=messages" \
+		--proto_path="$(POLYMER_CHAIN_DIR)/proto" \
+		--proto_path="$(POLYMER_CHAIN_DIR)/third_party/proto/cosmos-sdk@v0.47" \
+		--proto_path="$(POLYMER_CHAIN_DIR)/third_party/proto/third_party" \
+		--proto_path="$(POLYMER_CHAIN_DIR)/third_party/proto/ibc-go@v7" \
+		--proto_path="$(POLYMER_CHAIN_DIR)/third_party/proto/ibc-go@v7_dep" \
+		--ts_proto_out=./src/lib/cosmos/client/_generated $(PROTO_FILES)
+
 test-all: build-ibctl
 	npx ava
 
