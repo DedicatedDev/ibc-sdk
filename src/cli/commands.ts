@@ -1,4 +1,5 @@
 import path from 'path'
+import * as os from 'os'
 import * as winston from 'winston'
 import { utils } from '../lib'
 import { $, fs } from '../lib/utils'
@@ -11,6 +12,7 @@ import { ChainSetsRunObj, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmCha
 import { containerFromId } from '../lib/dev/docker'
 import { ProcessOutput } from 'zx-cjs'
 import { ethers } from 'ethers'
+import archiver from 'archiver'
 
 const configFile = 'config.yaml'
 
@@ -335,6 +337,51 @@ export async function logs(opts: LogsOpts, log: winston.Logger) {
   const containerId = filterContainers(runtime, opts.name).id
   const container = await containerFromId(containerId, log)
   await container.logs({ stdout: process.stdout, stderr: process.stderr, ...opts }).then(...thenClause)
+}
+
+type ArchiveOpts = {
+  workspace: string
+  output: string
+}
+
+export async function archiveLogs(opts: ArchiveOpts, log: winston.Logger) {
+  const runtime = loadWorkspace(opts.workspace)
+
+  const components = runtime.ChainSets.map((c) =>
+    c.Nodes.map((n) => ({ name: `${c.Name}.${n.Label}`, id: n.ContainerId }))
+  ).flat()
+  components.push(...runtime.Relayers.map((r) => ({ name: r.Name, id: r.ContainerId })))
+
+  const archive = new Promise(async () => {
+    const dir = fs.mkdtempSync(os.tmpdir())
+    const archive = archiver('tar', { gzip: true })
+    const output = fs.createWriteStream(opts.output)
+    archive.pipe(output)
+
+    archive.on('error', (err) => {
+      throw err
+    })
+    archive.on('warning', (err) => {
+      if (err.code !== 'ENOENT') throw err
+      log.warning(err)
+    })
+
+    output.on('close', () => {
+      fs.rmSync(dir, { force: true, recursive: true })
+      log.info(`logs have been saved to ${opts.output}`)
+    })
+
+    for (const comp of components) {
+      const container = await containerFromId(comp.id, log)
+      const out = fs.createWriteStream(path.join(dir, `${comp.name}.log`))
+      await container.logs({ stdout: out, stderr: out })
+    }
+
+    archive.directory(dir, 'logs')
+    await archive.finalize()
+  }).then(...thenClause)
+
+  await archive
 }
 
 type WrapCommandsOpts = {

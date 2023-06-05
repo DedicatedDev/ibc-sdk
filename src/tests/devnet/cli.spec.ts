@@ -70,7 +70,7 @@ test.serial('running the init command twice should fail', async (t) => {
 test.serial('the start command starts stack', async (t) => {
   t.assert((await runInit(t)).exitCode === 0)
 
-  const out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution'`
+  let out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution'`
   t.assert(out.exitCode === 0)
 
   const runtime = runningChainSetsSchema.parse(
@@ -94,6 +94,28 @@ test.serial('the start command starts stack', async (t) => {
       t.assert(reject.exitCode === 1)
     }
   )
+
+  const output = path.join(t.context.workspace, 'logs.tar.gz')
+  out = await $`${t.context.cli} -w ${t.context.workspace} archive-logs -o ${output}`
+  t.assert(out.exitCode === 0)
+  t.assert(fs.existsSync(output))
+
+  out = await $`tar zxvf ${output} -C ${t.context.workspace}`
+  t.assert(out.exitCode === 0)
+  const logs = [
+    '', // so we can check the parent directory exists
+    'eth-consensus.genesis.log',
+    'eth-consensus.main.log',
+    'eth-consensus.validator.log',
+    'eth-execution.main.log',
+    'eth-relayer.log',
+    'polymer.main.log',
+    'vibc-relayer.log'
+  ]
+  for (const l of logs) {
+    const p = path.join(t.context.workspace, 'logs', l)
+    t.assert(fs.existsSync(p), `File not found: ${p}`)
+  }
 })
 
 test.serial('running the start command with invalid relay path should fail', async (t) => {

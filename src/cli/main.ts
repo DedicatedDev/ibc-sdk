@@ -128,6 +128,15 @@ program
   })
 
 program
+  .command('archive-logs')
+  .description('Fetches logs from all components in the stack and archives them in a tarball')
+  .option('-o, --output <output>', 'Output file', 'logs.tar.gz')
+  .allowExcessArguments(false)
+  .action(async (opts) => {
+    await commands.archiveLogs({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel))
+  })
+
+program
   .command('logs')
   .description(
     'Fetches the logs from any component of the stack. It mimics the `docker logs` functionality with similar options.'
