@@ -170,8 +170,8 @@ function parseEndpointInfo(value: string): EndpointInfo {
   }
   return {
     chainID: args[0],
-    portID: args[1],
-    channelID: args[2]
+    channelID: args[1],
+    portID: args[2]
   }
 }
 
