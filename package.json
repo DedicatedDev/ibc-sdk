@@ -71,7 +71,7 @@
   },
   "ava": {
     "verbose": true,
-    "failFast": true,
+    "failFast": false,
     "concurrency": 1,
     "workerThreads": false,
     "timeout": "600s",
