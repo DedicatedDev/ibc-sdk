@@ -123,13 +123,6 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
     // TODO: this needs to be generated on the fly in geth and passed to prysm in code
     const JWTToken = '05034ab3d5592713a504712139d38bb0e7b418a30d1005b8bcaa665ebc0850dd'
 
-    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
-
-    // TODO: remove this assumption since it's configurable
-    const dataDirPrefix = '/tmp/'
-    if (!image.DataDir!.startsWith(dataDirPrefix)) {
-      throw new Error('prysm beacon chain data dir must be in /tmp')
-    }
     utils.fs.writeFileSync(utils.path.join(this.dataDir, 'jwt.hex'), JWTToken)
 
     const eth = runtime.find((c) => c.Type === 'ethereum')
@@ -138,6 +131,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
     const executionContainer = `${eth.Nodes[0].RpcContainer.split(':', 2).join(':')}:${
       RunningGethChain.authRpcEndpoint.port
     }`
+    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
     const rawCmds = [
       image.Bin!,
       `--datadir=${image.DataDir!}`,
