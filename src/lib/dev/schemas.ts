@@ -33,6 +33,19 @@ export enum ImageLabelTypes {
   Validator = 'validator'
 }
 
+export function imageLabelFromString(label: string): ImageLabelTypes {
+  switch (label) {
+    case ImageLabelTypes.Main:
+      return ImageLabelTypes.Main
+    case ImageLabelTypes.Genesis:
+      return ImageLabelTypes.Genesis
+    case ImageLabelTypes.Validator:
+      return ImageLabelTypes.Validator
+    default:
+      throw new Error(`Unknown image label: ${label}`)
+  }
+}
+
 export function imageByLabel(images: ImageConfigSchema[], label: ImageLabelTypes): ImageConfigSchema {
   const image = images.find((i) => i.Label === label)
   if (!image) throw new Error(`Could not find image by label ${label.toString()} in: ${JSON.stringify(images)}`)

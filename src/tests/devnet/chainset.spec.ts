@@ -194,6 +194,8 @@ test('start eth node with labels and dependencies', async (t) => {
   t.assert(runtime.runObj.ChainSets.length === 2)
   const eth = runtime.runObj.ChainSets[0]
   t.is(eth.Name, 'eth')
+  t.is(eth.Images[0].Label, ImageLabelTypes.Main)
+  t.is(eth.Nodes[0].Label, ImageLabelTypes.Main.toString())
 
   const prysm = runtime.runObj.ChainSets[1]
   t.is(prysm.Name, 'eth2')
@@ -214,5 +216,5 @@ test('start eth node with labels and dependencies', async (t) => {
   const tx = await provider.getTransaction(receipt.hash)
   t.truthy(tx)
 
-  await cleanupChainSets(config)
+  await cleanupChainSets(runtime.runObj)
 })

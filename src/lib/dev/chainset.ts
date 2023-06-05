@@ -1,14 +1,15 @@
 import { RunningBSCChain } from './bsc_chain'
-import { $, utils, Logger, winston } from './deps.js'
+import { $, Logger, utils, winston } from './deps.js'
 import { RunningGethChain } from './geth_chain.js'
 import {
-  ChainSetsRunObj,
-  ChainSetsRunConfig,
   ChainConfig,
+  ChainSetsRunConfig,
   chainSetsRunConfigSchema,
-  runningChainSetsSchema,
+  ChainSetsRunObj,
+  imageByLabel,
+  imageLabelFromString,
   ImageLabelTypes,
-  imageByLabel
+  runningChainSetsSchema
 } from './schemas.js'
 import { RunningCosmosChain } from './cosmos_chain.js'
 import { NodeAccounts, RunningChain, RunningChainCreator } from './running_chain.js'
@@ -49,20 +50,18 @@ export async function runChainSets(
 export async function cleanupChainSets(runtime: ChainSetsRunObj) {
   const logger = utils.createLogger({ Level: 'debug', Colorize: true })
   for (const chain of runtime.ChainSets) {
-    if (runtime.Run.CleanupMode === 'all') {
-      // TODO: this should be chain-specific logic but we don't have a hold of running chain objects here
-      for (const node of chain.Nodes) {
-        var label: ImageLabelTypes = ImageLabelTypes[node.Label]
-        const image = imageByLabel(chain.Images, label)
-        if (image.Bin) {
+    for (const node of chain.Nodes) {
+      if (runtime.Run.CleanupMode === 'all') {
+        logger.verbose(`cleaning up '${node.Label}' container for chain '${chain.Name}'...`)
+        // TODO: this should be chain-specific logic but we don't have a hold of running chain objects here
+        const image = imageByLabel(chain.Images, imageLabelFromString(node.Label))
+        if (image.Bin && image.Label !== ImageLabelTypes.Genesis) {
           await $`docker container exec ${node.ContainerId} killall ${image.Bin}`
         }
         if (image.DataDir) {
           await $`docker container exec ${node.ContainerId} rm -rf ${image.DataDir}`
         }
       }
-    }
-    for (const node of chain.Nodes) {
       logger.info(`Removing '${chain.Name}:${node.Label}' container...`)
       await $`docker container rm -f ${node.ContainerId}`
     }
