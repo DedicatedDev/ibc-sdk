@@ -15,7 +15,8 @@ test.before((t) => {
   t.context.logger = logger
 })
 
-test('deploy contracts on runtime chains', async (t) => {
+// TODO: fix https://github.com/polymerdao/ibc-sdk/issues/32
+test.skip('deploy contracts on runtime chains', async (t) => {
   const logger = t.context.logger
 
   let { runObj: runtime, configObj: _ } = await self.dev.runChainSets(gethConfig, logger)

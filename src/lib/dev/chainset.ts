@@ -6,7 +6,9 @@ import {
   ChainSetsRunConfig,
   ChainConfig,
   chainSetsRunConfigSchema,
-  runningChainSetsSchema
+  runningChainSetsSchema,
+  ImageLabelTypes,
+  imageByLabel
 } from './schemas.js'
 import { RunningCosmosChain } from './cosmos_chain.js'
 import { NodeAccounts, RunningChain, RunningChainCreator } from './running_chain.js'
@@ -42,22 +44,28 @@ export async function runChainSets(
  * Clean up resources the running chainsets are using, including:
  * - Stop and remove docker containers where chain nodes are running.
  * - Remove working directories recursively.
- * @param config The `runObj` returned by `runChainSets` func.
+ * @param runtime The chain set runtime
  */
-export async function cleanupChainSets(config: ChainSetsRunObj) {
-  const mode = config.Run.CleanupMode
+export async function cleanupChainSets(runtime: ChainSetsRunObj) {
   const logger = utils.createLogger({ Level: 'debug', Colorize: true })
-  if (mode === 'all') {
-    logger.verbose(`removing run word dir: ${config.Run.WorkingDir}`)
-    utils.rmDir(config.Run.WorkingDir)
-  }
-  if (mode !== 'debug' && mode !== 'reuse') {
-    logger.verbose(`cleaning up containers of chains: [${config.ChainSets.map((cs) => cs.Name).join(', ')}]`)
-    const containerId = config.ChainSets.flatMap((cs) => cs.Nodes.map((n) => n.ContainerId))
-    logger.verbose(`docker container stop ${containerId.join(' ')}`)
-    await $`docker container stop ${containerId}`
-    logger.verbose(`docker container rm -f ${containerId.join(' ')}`)
-    await $`docker container rm -f ${containerId}`
+  for (const chain of runtime.ChainSets) {
+    if (runtime.Run.CleanupMode === 'all') {
+      // TODO: this should be chain-specific logic but we don't have a hold of running chain objects here
+      for (const node of chain.Nodes) {
+        var label: ImageLabelTypes = ImageLabelTypes[node.Label]
+        const image = imageByLabel(chain.Images, label)
+        if (image.Bin) {
+          await $`docker container exec ${node.ContainerId} killall ${image.Bin}`
+        }
+        if (image.DataDir) {
+          await $`docker container exec ${node.ContainerId} rm -rf ${image.DataDir}`
+        }
+      }
+    }
+    for (const node of chain.Nodes) {
+      logger.info(`Removing '${chain.Name}:${node.Label}' container...`)
+      await $`docker container rm -f ${node.ContainerId}`
+    }
   }
 }
 

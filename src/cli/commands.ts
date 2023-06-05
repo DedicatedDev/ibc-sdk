@@ -13,6 +13,7 @@ import { containerFromId } from '../lib/dev/docker'
 import { ProcessOutput } from 'zx-cjs'
 import { ethers } from 'ethers'
 import archiver from 'archiver'
+import { cleanupChainSets } from '../lib/dev'
 
 const configFile = 'config.yaml'
 
@@ -192,26 +193,7 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
     await $`docker container rm -f ${relayer.ContainerId}`
   }
 
-  for (const chain of runtime.ChainSets) {
-    if (opts.all) {
-      // TODO: this should be chain-specific logic but we don't have a hold of running chain objects here
-      for (const node of chain.Nodes) {
-        var label: ImageLabelTypes = ImageLabelTypes[node.Label]
-        const image = imageByLabel(chain.Images, label)
-        if (image.Bin) {
-          await $`docker container exec ${node.ContainerId} killall ${image.Bin}`
-        }
-        if (image.DataDir) {
-          await $`docker container exec ${node.ContainerId} rm -rf ${image.DataDir}`
-        }
-      }
-    }
-    for (const node of chain.Nodes) {
-      log.info(`Removing '${chain.Name}:${node.Label}' container...`)
-      await $`docker container rm -f ${node.ContainerId}`
-    }
-  }
-
+  await cleanupChainSets(runtime)
   if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse') {
     log.info(`Removing zkmint prover container...`)
     try {
