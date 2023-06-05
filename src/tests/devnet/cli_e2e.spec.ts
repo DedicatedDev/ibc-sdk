@@ -42,10 +42,10 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert((await runCommand(t, 'init')).exitCode === 0)
   t.assert((await runCommand(t, 'start', '-c', 'wasm:polymer', '-c', 'polymer:eth-execution')).exitCode === 0)
 
-  const runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
+  let runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
   t.assert(runtime)
 
-  const eth1Chain: EvmChainSet = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-execution')
+  let eth1Chain: EvmChainSet = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-execution')
   t.assert(eth1Chain)
 
   const vibcRelayer = runtime.Relayers.find((r: RelayerRunObj) => r.Name === 'vibc-relayer')
@@ -77,8 +77,14 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert(fs.existsSync(marsPath))
   const out1 = await runCommand(t, 'deploy', 'eth-execution', eth1Account.Address, marsPath)
   t.assert(out1.exitCode === 0)
-  const marsAddress = out1.stdout.trim()
-  const mars = JSON.parse(fs.readFileSync(marsPath, 'utf-8'))
+
+  runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
+  t.assert(runtime)
+  eth1Chain = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-execution')
+  t.assert(eth1Chain)
+
+  const mars = eth1Chain.Contracts.find((c: any) => c.Name === 'Mars')
+  t.assert(mars)
 
   // check there's no channels after chains are started
   t.deepEqual((await getChannelsFrom(t, 'polymer')).channels, [])
@@ -87,7 +93,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const out2 = await runCommand(
     t,
     'channel',
-    'eth-execution:' + marsAddress,
+    'eth-execution:' + mars!.Address,
     'wasm:' + wasmAddress,
     '--a-channel-version',
     'some-version',
@@ -120,7 +126,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
     wasmAddress: wasmAddress,
     polyChannel: polyChannel,
     dispatcher: dispatcher,
-    receiver: { Address: marsAddress, Abi: mars.abi }
+    receiver: mars
   }
 
   await testMessagesFromWasmToEth(t, config)

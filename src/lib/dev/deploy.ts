@@ -247,5 +247,9 @@ export async function deploySmartContract(
   log.info(
     `Deployed contract ${contract.Name} on chain ${chain.Name} at ${contract.Address} with tx hash ${contract.TxHash} by address ${contract.DeployerAddress}`
   )
+
+  chain.Contracts.push(contract)
+  saveChainSetsRuntime(runtime)
+
   return contract
 }
