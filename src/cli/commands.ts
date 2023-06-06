@@ -297,6 +297,7 @@ type TracePacketsOpts = {
   workspace: string
   endpointA: EndpointInfo
   endpointB: EndpointInfo
+  json: boolean
 }
 
 export async function tracePackets(opts: TracePacketsOpts, log: winston.Logger) {
@@ -312,7 +313,9 @@ export async function tracePackets(opts: TracePacketsOpts, log: winston.Logger) 
     .tracePackets(chainA.Nodes[0].RpcHost, chainB.Nodes[0].RpcHost, opts.endpointA, opts.endpointB, log)
     .then(...thenClause)
   const packets = packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
-  console.table(packets, ['channelID', 'portID', 'sequence', 'state'])
+
+  if (opts.json) console.log(JSON.stringify(packets))
+  else console.table(packets, ['channelID', 'portID', 'sequence', 'state'])
 }
 
 type LogsOpts = {

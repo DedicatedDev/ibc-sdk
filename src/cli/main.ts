@@ -182,10 +182,14 @@ program
   )
   .allowExcessArguments(false)
   .arguments('<endpoint-a> <endpoint-b>')
-  .action(async (a, b) => {
+  .option('--json', 'Output in JSON format', false)
+  .action(async (a, b, opts) => {
     const endpointA = parseEndpointInfo(a)
     const endpointB = parseEndpointInfo(b)
-    await commands.tracePackets({ ...program.opts(), endpointA, endpointB }, newLogger(program.opts().logLevel))
+    await commands.tracePackets(
+      { ...program.opts(), endpointA, endpointB, ...opts },
+      newLogger(program.opts().logLevel)
+    )
   })
 
 program

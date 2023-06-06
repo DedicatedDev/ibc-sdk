@@ -131,12 +131,28 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
 
   await testMessagesFromWasmToEth(t, config)
   await testMessagesFromEthToWasm(t, config)
+  await testTracePackets(t, config)
 
   await runCommand(t, 'show')
   await runCommand(t, 'logs', 'polymer', '-n', '5')
   await runCommand(t, 'logs', 'wasm', '-n', '5')
   await runCommand(t, 'logs', 'eth-exec', '-n', '5')
 })
+
+async function testTracePackets(t: any, c: any) {
+  // TODO: endpoint will throw an invalid port error otherwsie
+  const portid = c.wasmChannel.channels[0].port_id.replace(/^wasm\./, '')
+  const endpointA = `${c.wasmChain.Name}:${c.wasmChannel.channels[0].channel_id}:${portid}`
+  const endpointB = `polymer:${c.polyChannel.channels[0].channel_id}:${c.polyChannel.channels[0].port_id}`
+
+  const out = await runCommand(t, 'trace-packets', '--json', endpointA, endpointB)
+  t.assert(out.exitCode === 0)
+  const packets = JSON.parse(out.stdout.trim())
+
+  // TODO: this should say "2 packets were received"
+  t.assert(packets.length === 1)
+  t.assert(packets.filter((p: any) => p.state === 'received').length === packets.length)
+}
 
 // Test the following sequence
 //  - Call sendIbcPacket() on the vIBC contract running on ethereum
