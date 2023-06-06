@@ -175,7 +175,7 @@ type StopOpts = {
 export async function stop(opts: StopOpts, log: winston.Logger) {
   const removeAll = () => {
     if (!opts.all) return
-    log.info('Removing the entire workspace!')
+    log.info('removing the entire workspace')
     fs.rmSync(opts.workspace, { force: true, recursive: true })
   }
 
@@ -189,17 +189,17 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
   }
 
   for (const relayer of runtime.Relayers) {
-    log.info(`Removing '${relayer.Name}' container...`)
+    log.info(`removing '${relayer.Name}' container...`)
     await $`docker container rm -f ${relayer.ContainerId}`
   }
 
   await cleanupChainSets(runtime)
   if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse') {
-    log.info(`Removing zkmint prover container...`)
+    log.info(`removing zkmint prover container...`)
     try {
       await $`docker container rm -f ${runtime.Prover.ContainerId}`
     } catch (e) {
-      log.warn(`Could not remove zkmint prover container: ${e}`)
+      log.warn(`could not remove zkmint prover container: ${e}`)
     }
   }
 

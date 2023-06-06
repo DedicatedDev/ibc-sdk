@@ -13,7 +13,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: gce-runner-x64
 
     steps:
 
@@ -37,11 +37,4 @@ jobs:
         whoami
         docker ps -a
         ls -lR /tmp/ibctl-tests-* || true
-        tail /tmp/ibctl-tests-*/run/*/* || true
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs polymer
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs eth-execution
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs wasm
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs eth-relayer
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs vibc-relayer
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs ibc-relayer
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" stop || true
+        tail /tmp/*/run/*/* || true
