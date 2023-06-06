@@ -6,6 +6,7 @@ import { EndpointInfo } from '../lib/dev/query'
 import * as commands from './commands'
 import path from 'path'
 import { homedir } from 'os'
+import { version } from '../.package.json'
 
 function newLogger(level: string) {
   const timestampFormat = 'HH:mm:ss.SSS'
@@ -54,6 +55,7 @@ const program = new Command()
     new Option('-l, --log-level <level>', 'Log level').choices(['error', 'warn', 'info', 'verbose']).default('info')
   )
   .addOption(new Option('-w, --workspace <workspace>', 'Working directory').default(defaultWorkspace, defaultWorkspace))
+  .version(version)
 
 const useZkMintOption = new Option('--use-zk-mint', 'Use ZK minting').default(false)
 
