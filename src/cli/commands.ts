@@ -302,24 +302,17 @@ type TracePacketsOpts = {
 export async function tracePackets(opts: TracePacketsOpts, log: winston.Logger) {
   const runtime = loadWorkspace(opts.workspace)
 
-  const src = runtime.ChainSets.find((c) => c.Name === opts.endpointA.chainID)
-  const dst = runtime.ChainSets.find((c) => c.Name === opts.endpointB.chainID)
-  if (!src || !dst) {
+  const chainA = runtime.ChainSets.find((c) => c.Name === opts.endpointA.chainID)
+  const chainB = runtime.ChainSets.find((c) => c.Name === opts.endpointB.chainID)
+  if (!chainA || !chainB) {
     throw new Error('Could not find chain runtime object!')
   }
-  const packets = await self.dev
-    .tracePackets(src.Nodes[0].RpcHost, dst.Nodes[0].RpcHost, opts.endpointA, opts.endpointB, log)
-    .then(...thenClause)
 
-  console.table(
-    packets.map(
-      (packet: Packet) => ({
-        ...packet,
-        sequence: packet.sequence.toString()
-      }),
-      ['channelID', 'portID', 'sequence', 'state']
-    )
-  )
+  const packetsRaw = await self.dev
+    .tracePackets(chainA.Nodes[0].RpcHost, chainB.Nodes[0].RpcHost, opts.endpointA, opts.endpointB, log)
+    .then(...thenClause)
+  const packets = packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
+  console.table(packets, ['channelID', 'portID', 'sequence', 'state'])
 }
 
 type LogsOpts = {
