@@ -7,7 +7,7 @@ import { configTemplate } from './config.template'
 import { contractsTemplate } from './contracts.template'
 import * as self from '../lib/index.js'
 import { channelHandshake } from './channel'
-import { EndpointInfo, Packet } from '../lib/dev/query'
+import { EndpointInfo, Packet, TxEvent } from '../lib/dev/query'
 import { ChainSetsRunObj, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmChain } from '../lib/dev/schemas'
 import { containerFromId } from '../lib/dev/docker'
 import { ProcessOutput } from 'zx-cjs'
@@ -424,4 +424,25 @@ export async function accounts(opts: WrapCommandsOpts) {
   if (!chain) throw new Error(`Expected any chain`)
 
   process.stdout.write(opts.json ? JSON.stringify(chain.Accounts) : utils.dumpYamlSafe(chain.Accounts))
+}
+
+type EventsOpts = {
+  workspace: string
+  name: string
+  height: number
+  minHeight: number
+  maxHeight: number
+  extended: boolean
+}
+
+export async function events(opts: EventsOpts, _log: winston.Logger) {
+  const runtime = loadWorkspace(opts.workspace)
+  const found = filterContainers(runtime, opts.name)
+  const chain = runtime.ChainSets.find((c) => c.Name === found.name)
+  if (!chain) throw new Error(`Expected any chain`)
+
+  await self.dev.events(chain, opts, (event: TxEvent) => {
+    if (opts.extended) console.log(event.height, ':', event.kv)
+    else console.log(event.height, ':', Object.keys(event.kv).join(' '))
+  })
 }

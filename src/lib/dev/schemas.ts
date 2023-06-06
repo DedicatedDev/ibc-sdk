@@ -180,6 +180,7 @@ export type ChainSetsRunConfig = z.infer<typeof chainSetsRunConfigSchema>
 export type ChainSetsRunObj = z.infer<typeof runningChainSetsSchema>
 export type RelayerRunObj = z.infer<typeof runningRelayerSchema>
 export type ProverRunObj = z.infer<typeof runningProverSchema>
+export type ChainSet = z.infer<typeof chainSetSchema.all>
 export type EvmChainSet = z.infer<typeof chainSetSchema.evm>
 export type CosmosChainSet = z.infer<typeof chainSetSchema.cosmos>
 

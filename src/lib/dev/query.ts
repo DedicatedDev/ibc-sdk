@@ -1,6 +1,7 @@
 import winston from 'winston'
-import * as self from '../../lib/index.js'
-import { IbcExtension, QueryClient, setupIbcExtension } from '@cosmjs/stargate'
+import * as self from '../../lib/index'
+import { IbcExtension, logs, QueryClient, setupIbcExtension } from '@cosmjs/stargate'
+import { ChainSet, CosmosChainSet, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
 
 export enum PacketState {
   Sent = 'sent',
@@ -93,4 +94,54 @@ export async function tracePackets(
   log.info(`Traced ${packets.length} packets`)
 
   return packets
+}
+
+type EventsFilter = {
+  height: number
+  minHeight: number
+  maxHeight: number
+}
+
+export type TxEvent = {
+  height: number
+  kv: { [k: string]: {} }
+}
+
+type TxEventCb = (e: TxEvent) => void
+
+async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEventCb) {
+  const tmClient = await self.cosmos.client.newTendermintClient(chain.Nodes[0].RpcHost)
+  const query: string[] = []
+
+  if (opts.height) {
+    query.push(`tx.height=${opts.height}`)
+  } else {
+    if (opts.minHeight) query.push(`tx.height>=${opts.minHeight}`)
+    if (opts.maxHeight) query.push(`tx.height<=${opts.maxHeight}`)
+  }
+
+  const result = await tmClient.txSearchAll({ query: query.join(' AND ') })
+
+  result.txs.map(({ height, result }) => {
+    const rawLogs = logs.parseRawLog(result.log)
+
+    const kv = {}
+    for (const log of rawLogs) {
+      for (const ev of log.events) {
+        kv[ev.type] = {}
+        ev.attributes.forEach((e: any) => (kv[ev.type][e.key] = e.value))
+      }
+    }
+    cb({ height, kv })
+  })
+}
+
+async function evmEvents(_chain: EvmChainSet, _opts: EventsFilter, _cb: TxEventCb) {
+  throw new Error('not implemented')
+}
+
+export async function events(chain: ChainSet, opts: EventsFilter, cb: TxEventCb) {
+  if (isEvmChain(chain.Type)) return await evmEvents(chain as EvmChainSet, opts, cb)
+  if (isCosmosChain(chain.Type)) return await cosmosEvents(chain as CosmosChainSet, opts, cb)
+  throw new Error(`Unknown type of chain ${chain.Type}`)
 }

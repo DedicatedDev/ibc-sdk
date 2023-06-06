@@ -253,6 +253,27 @@ program
     await commands.accounts({ ...program.opts(), name: name, ...opts })
   })
 
+function parseNumber(value: string): number {
+  const n = Number(value)
+  if (isNaN(n)) throw new InvalidArgumentError('Not a number')
+  return n
+}
+
+program
+  .command('events')
+  .description('Queries events from a chain, given the provided height ranges and prints them out in a readable way')
+  .argument('<chain-name>')
+  .option('-m, --min-height <min-height>', 'Get events starting from this height', parseNumber, 1)
+  .option('-M, --max-height <max-height>', 'Get events until this height', parseNumber)
+  .option('-H, --height <height>', 'Get events from this height', parseNumber)
+  .option('-x, --extended', 'Show the full content of the events instead of their type', false)
+  .allowExcessArguments(false)
+  .action(async (name, opts) => {
+    if (opts.minHeight && opts.maxHeight && opts.minHeight >= opts.maxHeight)
+      throw new Error(`max-height (${opts.maxHeight}) must be greater than min-height (${opts.minHeight})`)
+    await commands.events({ ...program.opts(), name: name, ...opts }, newLogger(program.opts().logLevel))
+  })
+
 process.stdout.on('error', (err) => err.code === 'EPIPE' ?? process.exit(0))
 process.stderr.on('error', (err) => err.code === 'EPIPE' ?? process.exit(0))
 
