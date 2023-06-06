@@ -51,19 +51,17 @@ export async function cleanupChainSets(runtime: ChainSetsRunObj) {
   const logger = utils.createLogger({ Level: 'debug', Colorize: true })
   for (const chain of runtime.ChainSets) {
     for (const node of chain.Nodes) {
-      if (runtime.Run.CleanupMode === 'all') {
-        logger.verbose(`cleaning up '${node.Label}' container for chain '${chain.Name}'...`)
-        // TODO: this should be chain-specific logic but we don't have a hold of running chain objects here
-        const image = imageByLabel(chain.Images, imageLabelFromString(node.Label))
-        if (image.Bin && image.Label !== ImageLabelTypes.Genesis) {
-          await $`docker container exec ${node.ContainerId} killall ${image.Bin}`
-        }
-        if (image.DataDir) {
-          await $`docker container exec ${node.ContainerId} rm -rf ${image.DataDir}`
-        }
+      logger.verbose(`cleaning up '${node.Label}' container for chain '${chain.Name}'...`)
+      // TODO: this should be chain-specific logic but we don't have a hold of running chain objects here
+      const image = imageByLabel(chain.Images, imageLabelFromString(node.Label))
+      if (image.Bin && image.Label !== ImageLabelTypes.Genesis) {
+        await $`docker container exec ${node.ContainerId} killall ${image.Bin}`
+      }
+      if (image.DataDir) {
+        await $`docker container exec ${node.ContainerId} rm -rf ${image.DataDir}`
       }
       if (runtime.Run.CleanupMode !== 'debug' && runtime.Run.CleanupMode !== 'reuse') {
-        logger.info(`Removing '${chain.Name}:${node.Label}' container...`)
+        logger.info(`removing '${chain.Name}:${node.Label}' container...`)
         await $`docker container stop ${node.ContainerId}`
         await $`docker container rm -f ${node.ContainerId}`
       }
