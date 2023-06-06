@@ -53,10 +53,10 @@ proto-gen:
 test-vibc-core-contracts:
 	cd tests/xdapp && npm install && npx hardhat test
 
-test-sdk: build-ibctl
+test: build-ibctl
 	npx ava
 
-test-all: test-sdk test-vibc-core-contracts
+test-all: test test-vibc-core-contracts
 
 clean-docker:
 	docker ps -a --format json | grep 'org.polymerlabs.runner=ibc-sdk' | jq .ID | xargs docker rm -f || true
