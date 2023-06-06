@@ -36,5 +36,4 @@ jobs:
         date
         whoami
         docker ps -a
-        ls -lR /tmp/ibctl-tests-* || true
         tail /tmp/*/run/*/* || true
