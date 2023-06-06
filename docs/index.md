@@ -1,17 +1,15 @@
 # IBC SDK
 
-![Tests](https://github.com/polymerdao/ibc-sdk/actions/workflows/test.yml/badge.svg?branch=main)
-
 The IBC SDK is a powerful NodeJS package designed to streamline cross-chain dapp (xdapp) development using the [Inter-Blockchain Communication (IBC) protocol](https://ibcprotocol.org/).
 
 ### Navigate the docs
 
-- [Polymer protocol](./docs/polymer/index.md)
-- [Quickstart tutorials](./docs/quickstart/index.md)
-- [Supported dev environments](./docs/dev-environment/index.md)
-- [ibctl CLI tool](./docs/ibctl/index.md)
+- [Polymer protocol](./polymer/index.md)
+- [Quickstart tutorials](./quickstart/index.md)
+- [Supported dev environments](./dev-environment/index.md)
+- [ibctl CLI tool](./ibctl/index.md)
 
-## Quick Start
+## Installation and quick Start
 
 Prerequisites:
 
@@ -46,7 +44,7 @@ Here's an overview of what the package offers:
 - **Account Funding**: Automatically funds developer accounts for testing and relaying purposes.
 - **Off-chain Relayers**: Starts off-chain relayer processes to facilitate cross-chain communication and have them monitor the right channels.
 - **IBC Connectivity**: Establishes IBC clients and connections (configurable) to prepare for cross-chain communication between xdapps.
-- **Virtual IBC integration**: Deploys the required [smart contracts on _vitual chains_](./docs/polymer/5-vibc.md) to establish quick and easy IBC integration.
+- **Virtual IBC integration**: Deploys the required [smart contracts on _vitual chains_](./polymer/5-vibc.md) to establish quick and easy IBC integration.
 
 🚧 The following feature is currently still being developed, updates will follow in a future release... 🚧
 
@@ -54,21 +52,21 @@ Here's an overview of what the package offers:
 
 ### Essential functionality
 
-- **CLI Commands**: easy-to-use [CLI tool `ibctl`](./docs/ibctl/index.md) to cover most use cases, and the ability to exec into the docker containers for more granular control
+- **CLI Commands**: easy-to-use [CLI tool `ibctl`](./ibctl/index.md) to cover most use cases, and the ability to exec into the docker containers for more granular control
 - **Providing API endpoints**: interact with the IBC SDK from your client environment
 
 🚧 The following feature is currently still being developed, updates will follow in a future release... 🚧
 
 - **Status Queries**: Provides convenient queries for monitoring the status of xdapp ports and messages.
 
-🔋 The guiding principle through all of this? _Batteries included, customization optional!_ 🔋
+> 🔋 The guiding principle through all of this? _Batteries included, customization at your service!_ 🔋
 
 ### Who uses this package?
 
 The IBC SDK is designed to cater to two primary user groups:
 
 1. **xDapp Developers**: Developers who utilize the IBC SDK to test their xdapps before releasing them on public testnets or mainnets.
-2. **Polymer Developers**: Developers working on the [Polymer Protocol](<(./docs/polymer/index.md)>) who rely on the IBC SDK to ensure compliance with specifications.
+2. **Polymer Developers**: Developers working on the [Polymer Protocol](./polymer/index.md) who rely on the IBC SDK to ensure compliance with specifications.
 
 ## Key Benefits
 
@@ -90,13 +88,13 @@ Tracking the status changes of IBC ports, channels, and xdapp smart contracts ty
 
 ### Production-Ready Capabilities
 
-The IBC SDK is not only valuable during development and testing but also offers essential features for production environments. xdapp developers can continue to utilize the SDK's query API to monitor the status of their smart contracts and IBC packages.
+The IBC SDK is not only valuable during local development and testing but also offers essential features for (public) testnet and production environments. xdapp developers can continue to utilize the SDK's query API to monitor the status of their smart contracts and IBC packages.
 
 ### IBC Dashboards
 
 🚧 This feature is currently still being developed, updates will follow in a future release... 🚧
 
-Furthermore, IBC developers can leverage the IBC SDK's query API to gather high-level data related to the [Polymer Protocol](./docs/polymer/index.md), IBC, and vIBC that's running under the hood. This aggregated data can be visualized in a dashboard, providing valuable insights into the traffic and performance of your cross-chain communication.
+Furthermore, IBC developers can leverage the IBC SDK's query API to gather high-level data related to the [Polymer Protocol](./polymer/index.md), IBC, and vIBC that's running under the hood. This aggregated data can be visualized in a dashboard, providing valuable insights into the traffic and performance of your cross-chain communication.
 
 ## Want to contribute or need support?
 
