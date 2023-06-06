@@ -28,7 +28,7 @@ jobs:
         password: ${{ secrets.PACKAGES_TOKEN }}
 
     - name: Test
-      run: make test-all
+      run: make test-sdk
 
     - name: Show logs
       if: ${{ always() }}

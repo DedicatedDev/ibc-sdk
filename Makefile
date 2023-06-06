@@ -51,10 +51,12 @@ proto-gen:
 		--ts_proto_out=./src/lib/cosmos/client/_generated $(PROTO_FILES)
 
 test-vibc-core-contracts:
-	cd tests/xdapp && npx hardhat test
+	cd tests/xdapp && npm install && npx hardhat test
 
-test-all: build-ibctl test-vibc-core-contracts
+test-sdk: build-ibctl
 	npx ava
+
+test-all: test-sdk test-vibc-core-contracts
 
 clean-docker:
 	docker ps -a --format json | grep 'org.polymerlabs.runner=ibc-sdk' | jq .ID | xargs docker rm -f || true
