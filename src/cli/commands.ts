@@ -349,7 +349,7 @@ export async function archiveLogs(opts: ArchiveOpts, log: winston.Logger) {
   components.push(...runtime.Relayers.map((r) => ({ name: r.Name, id: r.ContainerId })))
 
   const archive = new Promise(async () => {
-    const dir = fs.mkdtempSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logs'))
     const archive = archiver('tar', { gzip: true })
     const output = fs.createWriteStream(opts.output)
     archive.pipe(output)
