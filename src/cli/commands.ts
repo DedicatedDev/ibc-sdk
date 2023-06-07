@@ -194,6 +194,7 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
   }
 
   await cleanupChainSets(runtime)
+
   if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse') {
     log.info(`removing zkmint prover container...`)
     try {
