@@ -2,6 +2,7 @@ import winston from 'winston'
 import * as self from '../../lib/index'
 import { IbcExtension, logs, QueryClient, setupIbcExtension } from '@cosmjs/stargate'
 import { ChainSet, CosmosChainSet, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
+import { ethers } from 'ethers'
 
 export enum PacketState {
   Sent = 'sent',
@@ -136,8 +137,53 @@ async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEve
   })
 }
 
-async function evmEvents(_chain: EvmChainSet, _opts: EventsFilter, _cb: TxEventCb) {
-  throw new Error('not implemented')
+function doParseOne(param: ethers.utils.ParamType, value: any) {
+  if (ethers.BigNumber.isBigNumber(value)) return ethers.BigNumber.from(value).toString()
+  if (param.type === 'bytes32') return ethers.utils.parseBytes32String(value)
+  if (param.type === 'bytes') return ethers.utils.toUtf8String(value)
+  if (param.type === 'tuple') return doParse({}, param.components, value, 0)
+  return value
+}
+
+function doParse(kv: any, params: ethers.utils.ParamType[], args: ethers.utils.Result, index: number) {
+  for (const param of params) {
+    const value = args[index++]
+    kv[param.name] = param.type.endsWith('[]') ? value.map((v: any) => doParseOne(param, v)) : doParseOne(param, value)
+  }
+  return kv
+}
+
+function parse(event: ethers.utils.LogDescription) {
+  return doParse({}, event.eventFragment.inputs, event.args, 0)
+}
+
+async function evmEvents(chain: EvmChainSet, opts: EventsFilter, cb: TxEventCb) {
+  const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
+  const dispatcher = chain.Contracts.find((c) => c.Name === 'Dispatcher')
+  if (!dispatcher) throw new Error('dispatcher contract not found')
+
+  const contract = new ethers.Contract(dispatcher.Address, dispatcher.Abi!, provider)
+  const iface = new ethers.utils.Interface(dispatcher.Abi!)
+
+  const filter = { fromBlock: opts.minHeight, toBlock: opts.maxHeight }
+  if (opts.height) filter.fromBlock = filter.toBlock = opts.height
+
+  const logs = await contract.provider.getLogs(filter)
+  if (logs.length === 0) return
+
+  let event: TxEvent = { height: logs[0].blockNumber, kv: {} }
+  for (const l of logs) {
+    const parsed = iface.parseLog(l)
+    if (l.blockNumber === event.height) {
+      event.kv[parsed.name] = parse(parsed)
+      continue
+    }
+
+    cb(event)
+    event = { height: l.blockNumber, kv: {} }
+    event.kv[parsed.name] = parse(parsed)
+  }
+  cb(event)
 }
 
 export async function events(chain: ChainSet, opts: EventsFilter, cb: TxEventCb) {
