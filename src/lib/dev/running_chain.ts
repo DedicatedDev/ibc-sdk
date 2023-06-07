@@ -91,6 +91,10 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
     return container
   }
 
+  protected getContainerDataDir(label: ImageLabelTypes = ImageLabelTypes.Main): string {
+    return utils.path.join('/tmp', label.toString())
+  }
+
   protected async isReusingContainer(): Promise<boolean> {
     // if any container is not reused, then none are
     for (const container of this.containers.values()) {

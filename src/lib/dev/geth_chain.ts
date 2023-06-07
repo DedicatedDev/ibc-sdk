@@ -186,6 +186,7 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     utils.fs.writeFileSync(this.hostDirPath('jwt.hex'), RunningGethChain.JWTToken)
     const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
     // Based on https://github.com/rauljordan/eth-pos-devnet/blob/master/docker-compose.yml
+    const containerDataDir = this.getContainerDataDir()
     const rawCmds = [
       image.Bin!,
       '--nodiscover',
@@ -201,14 +202,14 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
       '--authrpc.jwtsecret',
       '/tmp/jwt.hex',
       '--datadir',
-      image.DataDir!,
+      containerDataDir,
       '--allow-insecure-unlock',
       '--unlock',
       RunningGethChain.signer,
       '--password',
-      utils.path.join(image.DataDir!, 'signerPwd'),
+      utils.path.join(containerDataDir, 'signerPwd'),
       '--keystore',
-      utils.path.join(image.DataDir!, 'keystore'),
+      utils.path.join(containerDataDir, 'keystore'),
       '--syncmode',
       'full',
       '--mine',
@@ -241,25 +242,24 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
 
     // Run `geth init` in container
-    const hostGenesisFilePath = utils.path.join(image.DataDir!.toString(), 'genesis.json')
+    const hostGenesisFilePath = utils.path.join(this.getContainerDataDir(), 'genesis.json')
     // await this.container.exec(['mkdir', hostGenesisFilePath])
     await this.getContainer(ImageLabelTypes.Main).exec([
       image.Bin!,
       'init',
       '--datadir',
-      image.DataDir!,
+      this.getContainerDataDir(),
       hostGenesisFilePath
     ])
   }
 
   private get dataDir(): string {
-    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
-    // TODO: remove this assumption since it's configurable
     const dataDirPrefix = '/tmp/'
-    if (!image.DataDir!.startsWith(dataDirPrefix)) {
+    const containerDataDir = this.getContainerDataDir()
+    if (!containerDataDir.startsWith(dataDirPrefix)) {
       throw new Error('prysm beacon chain data dir must be in /tmp')
     }
-    return utils.path.join(this.hostWd, image.DataDir!.substring(dataDirPrefix.length))
+    return utils.path.join(this.hostWd, containerDataDir.substring(dataDirPrefix.length))
   }
 
   private get keyStoreDir(): string {

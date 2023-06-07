@@ -1,6 +1,6 @@
-import { $, utils, Logger, zx } from './deps.js'
-import { NoneChainConfig, ChainConfig, imageByLabel, ImageLabelTypes } from './schemas.js'
-import { EndPoint, RunningChain, RunningChainBase, NodeAccounts } from './running_chain.js'
+import { $, Logger, utils, zx } from './deps.js'
+import { ChainConfig, imageByLabel, ImageLabelTypes, NoneChainConfig } from './schemas.js'
+import { EndPoint, NodeAccounts, RunningChain, RunningChainBase } from './running_chain.js'
 import { newContainer, runContainer } from './docker'
 import { RunningGethChain } from './geth_chain'
 
@@ -69,10 +69,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
 
   configFileName = 'config.yml'
 
-  containerConfigFilePath: string = utils.path.join(
-    imageByLabel(this.config.Images, ImageLabelTypes.Main).DataDir!,
-    this.configFileName
-  )
+  containerConfigFilePath: string = utils.path.join(this.getContainerDataDir(), this.configFileName)
 
   readonly rpcEndpoint = RunningPrysmChain.rpcEndpoint
 
@@ -132,18 +129,19 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       RunningGethChain.authRpcEndpoint.port
     }`
     const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
+    const containerDataDir = this.getContainerDataDir()
     const rawCmds = [
       image.Bin!,
-      `--datadir=${image.DataDir!}`,
+      `--datadir=${containerDataDir}`,
       '--min-sync-peers=0',
-      `--interop-genesis-state=${utils.path.join(image.DataDir!, 'genesis.ssz')}`,
+      `--interop-genesis-state=${utils.path.join(containerDataDir, 'genesis.ssz')}`,
       '--interop-eth1data-votes',
       '--bootstrap-node=',
       `--chain-config-file=${this.containerConfigFilePath}`,
       `--chain-id=${RunningGethChain.chainId.toString()}`,
       `--execution-endpoint=${executionContainer!}`,
       '--accept-terms-of-use',
-      `--jwt-secret=${utils.path.join(image.DataDir!, 'jwt.hex')}`,
+      `--jwt-secret=${utils.path.join(containerDataDir, 'jwt.hex')}`,
       '--rpc-host=0.0.0.0',
       '--grpc-gateway-host=0.0.0.0',
       '--suggested-fee-recipient=0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934',
@@ -157,10 +155,11 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
   async startValidatorDaemon() {
     const prysmContainer = await this.getRunObj()
     const image = imageByLabel(this.config.Images, ImageLabelTypes.Validator)
+    const containerDataDir = this.getContainerDataDir(ImageLabelTypes.Validator)
     const rawCmds = [
       image.Bin!,
       `--beacon-rpc-provider=${prysmContainer.Nodes[0].RpcContainer.split('//')[1]}`,
-      `--datadir=${image.DataDir}`,
+      `--datadir=${containerDataDir}`,
       '--accept-terms-of-use',
       '--interop-num-validators=36',
       '--interop-start-index=0',
@@ -192,7 +191,7 @@ SAFE_SLOTS_TO_UPDATE_JUSTIFIED: 0
 SECONDS_PER_ETH1_BLOCK: 3
 DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
 `
-    const prysmDataDir = imageByLabel(this.config.Images, ImageLabelTypes.Main).DataDir!
+    const prysmDataDir = this.getContainerDataDir()
 
     utils.fs.mkdirSync(this.dataDir)
     utils.fs.writeFileSync(this.configFile, config)
@@ -222,13 +221,12 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
   }
 
   private get dataDir(): string {
-    const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
-    // TODO: remove this assumption since it's configurable
     const dataDirPrefix = '/tmp/'
-    if (!image.DataDir!.startsWith(dataDirPrefix)) {
+    const containerDataDir = this.getContainerDataDir()
+    if (!containerDataDir.startsWith(dataDirPrefix)) {
       throw new Error('prysm beacon chain data dir must be in /tmp')
     }
-    return utils.path.join(this.hostWd, image.DataDir!.substring(dataDirPrefix.length))
+    return utils.path.join(this.hostWd, containerDataDir.substring(dataDirPrefix.length))
   }
 
   private get configFile(): string {

@@ -56,8 +56,7 @@ export const imageConfigSchema = z.object({
   Label: z.nativeEnum(ImageLabelTypes).optional().default(ImageLabelTypes.Main),
   Repository: z.string(),
   Tag: z.string(),
-  Bin: z.string().nullish(),
-  DataDir: z.string().nullish()
+  Bin: z.string().nullish()
 })
 
 export const ChainConfigSchema = (() => {
