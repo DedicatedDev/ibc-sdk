@@ -25,7 +25,7 @@ You've got the IBC SDK npm package installed. Now let's take care of a few other
 To build the binary, simply run the following command:
 
 ```sh
-make build-ibctl
+make
 ```
 
 > This will install the binary locally in `bin/ibctl`, if you want to omit the prefix when running the command, you can [add it to your PATH](https://zwbetz.com/how-to-add-a-binary-to-your-path-on-macos-linux-windows/).

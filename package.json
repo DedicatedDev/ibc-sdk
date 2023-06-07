@@ -17,17 +17,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "test": "run-s build test-with-ava",
-    "test-with-ava": "ava",
-    "test-debug": "TEST_LOG_LEVEL=debug run-s build test-with-ava",
-    "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
-    "build": "tsc -p tsconfig.json",
-    "build-binary": "npx esbuild src/cli/main.ts --bundle --platform=node --outfile=bin/ibctl",
-    "clean": "rm -rf dist build",
-    "clean-build": "run-s clean build",
-    "cli-debug": "ts-node src/bin/debug.ts",
-    "cli-relayer-debug": "ts-node src/bin/debug-relayer.ts",
-    "prepare": "run-s build"
+    "prepack": "rm -rf ./dist"
   },
   "author": "Polymer Labs",
   "license": "UNLICENSED",
@@ -47,7 +37,6 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^3.4.1",
     "eslint-plugin-promise": "^5.2.0",
-    "npm-run-all": "^4.1.5",
     "prettier": "2.6.0",
     "ts-node": "^10.7.0",
     "ts-proto": "^1.126.1",

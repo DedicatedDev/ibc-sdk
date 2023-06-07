@@ -4,7 +4,7 @@ build:
 	npx tsc -p tsconfig.json
 
 build-ibctl: build
-	npm --prefix . run build-binary
+	npx esbuild src/cli/main.ts --bundle --platform=node --outfile=bin/ibctl
 
 test-e2e: build-ibctl
 	npx ava src/tests/devnet/cli_e2e.spec.ts
@@ -63,4 +63,6 @@ clean-docker:
 	rm -rf ~/.ibc-sdk
 
 .PHONY: test test-e2e test-cli test-vibc-relayer-config test-evm-deploy
-.PHONY: clean package-contracts
+.PHONY: clean build-vibc-core-contracts build-ibctl
+
+.DEFAULT_GOAL := build-ibctl
