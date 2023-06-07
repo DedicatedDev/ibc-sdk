@@ -377,7 +377,7 @@ describe('IBC Core Smart Contract', function () {
 
   const sendNPacket = async (N: number) => {
     const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
-    for (let i = 0; i < N; i++) {
+    for (let i = 1; i <= N; i++) {
       const packet = getPacket(packets[0], i)
       await expect(
         mars
@@ -422,7 +422,7 @@ describe('IBC Core Smart Contract', function () {
         expect(escrowIncrease).to.equal(packet.fee.toBigInt())
       }
 
-      for (let i = 0; i < 3; i++) {
+      for (let i = 1; i <= 3; i++) {
         packet.sequence = i
         packet.fee = ethers.utils.parseEther('0.123').mul(i + 1)
         await assertSendPacket(packet)
@@ -516,16 +516,16 @@ describe('IBC Core Smart Contract', function () {
         }
       }
 
-      await assertAck(2)
+      await assertAck(3)
       // app-level ack error is still a successful ack at IBC level
-      await assertAck(1, '', { ackError: true })
+      await assertAck(2, '', { ackError: true })
       // processed ackPacket cannot be acked again!
-      await assertAck(2, 'Packet commitment not found')
+      await assertAck(3, 'Packet commitment not found')
       // cannot ack non-existing packet
       await assertAck(100, 'Packet commitment not found')
-      await assertAck(3, 'Receiver is not the original packet sender', { invalidReceiver: true })
-      await assertAck(3, 'Fail to prove ack', { invalidProof: true })
-      await assertAck(3)
+      await assertAck(4, 'Receiver is not the original packet sender', { invalidReceiver: true })
+      await assertAck(4, 'Fail to prove ack', { invalidProof: true })
+      await assertAck(4)
     })
   })
 
