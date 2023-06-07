@@ -1,5 +1,6 @@
 import { Writable } from 'stream'
 import { z } from 'zod'
+import { ProcessOutput } from 'zx-cjs'
 import { $, Logger, zx } from './deps.js'
 
 const stringPair = z.array(z.string()).length(2)
@@ -8,7 +9,7 @@ const containerSchema = z.object({
   imageRepoTag: z.string().min(1),
   args: z.array(z.string()).nullish().default([]),
   exposedPorts: z.array(z.string()).nullish().default([]),
-  /** Attached container volumns. Array of length-2 arrays, [[hostPath, containerPath]*] */
+  /** Attached container volumes. Array of length-2 arrays, [[hostPath, containerPath]*] */
   volumes: z.array(stringPair).nullish().default([]),
   detach: z.boolean().nullish().default(false),
   tty: z.boolean().nullish().default(false),
@@ -20,30 +21,10 @@ const containerSchema = z.object({
 
 export type containerConfig = z.input<typeof containerSchema>
 
-// TODO: support non-detach mode? In two steps: First create a container instance, then start it, ie. `docker container
-// create; docker container start`. Cannot use `docker run` directly
-/**
- * Create a new Docker container instance. Currently only supports Docker run detach mode, where container ID is printed
- * to stdout.
- * @param config
- * @param logger
- * @returns
- */
-export async function newContainer(
-  config: containerConfig,
-  logger: Logger,
-  reuse: boolean = false
-): Promise<Container> {
+function parseConfig(config: containerConfig): [containerConfig, string[]] {
   const parsed = containerSchema.parse(config)
-
-  if (reuse) {
-    try {
-      return await containerFromTag(parsed.imageRepoTag, logger)
-    } catch {
-      logger.info("couldn't find a running container. Will create a new one")
-    }
-  }
   const args = ['docker', 'container', 'run', '--log-driver', 'local', '--log-opt', 'mode=non-blocking']
+
   if (parsed.entrypoint) {
     args.push('--entrypoint', parsed.entrypoint)
   }
@@ -72,6 +53,44 @@ export async function newContainer(
   args.push(parsed.imageRepoTag)
   if (parsed.args) {
     args.push(...parsed.args)
+  }
+
+  return [parsed, args]
+}
+
+/**
+ * Runs a new Docker container and returns
+ * to stdout.
+ * @param config
+ * @param logger
+ * @returns
+ */
+export async function runContainer(config: containerConfig, logger: Logger): Promise<ProcessOutput> {
+  const [_, args] = parseConfig(config)
+  logger.verbose(`running container: ${args.map($.quote).join(' ')}`)
+  return await $`${args}`
+}
+
+/**
+ * Create a new Docker container instance. Currently only supports Docker run detach mode, where container ID is printed
+ * to stdout.
+ * @param config
+ * @param logger
+ * @returns
+ */
+export async function newContainer(
+  config: containerConfig,
+  logger: Logger,
+  reuse: boolean = false
+): Promise<Container> {
+  const [parsed, args] = parseConfig(config)
+
+  if (reuse) {
+    try {
+      return await containerFromTag(parsed.imageRepoTag, logger)
+    } catch {
+      logger.info("couldn't find a running container. Will create a new one")
+    }
   }
 
   logger.verbose(`creating container: ${args.map($.quote).join(' ')}`)

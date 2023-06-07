@@ -1,7 +1,7 @@
 import { $, utils, Logger, zx } from './deps.js'
 import { NoneChainConfig, ChainConfig, imageByLabel, ImageLabelTypes } from './schemas.js'
 import { EndPoint, RunningChain, RunningChainBase, NodeAccounts } from './running_chain.js'
-import { newContainer } from './docker.js'
+import { newContainer, runContainer } from './docker'
 import { RunningGethChain } from './geth_chain'
 
 export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
@@ -41,26 +41,6 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       reuse
     )
 
-    const genesisLogger = utils.createLogger({
-      Level: logger.level as any,
-      Transports: [utils.path.join(hostDir, 'genesisLog')]
-    })
-    const genesisContainer = await newContainer(
-      {
-        label: genesisImage.Label.toString(),
-        entrypoint: 'sh',
-        exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
-        imageRepoTag: `${genesisImage.Repository}:${genesisImage.Tag}`,
-        detach: true,
-        tty: true,
-        volumes: [[hostDir, '/tmp']],
-        publishAllPorts: true,
-        workDir: '/tmp'
-      },
-      genesisLogger,
-      reuse
-    )
-
     const validatorLogger = utils.createLogger({
       Level: logger.level as any,
       Transports: [utils.path.join(hostDir, 'validatorLog')]
@@ -83,7 +63,6 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
 
     const chain = new RunningPrysmChain(config as NoneChainConfig, hostDir, chainLogger)
     chain.setContainer(ImageLabelTypes.Main, mainContainer)
-    chain.setContainer(ImageLabelTypes.Genesis, genesisContainer)
     chain.setContainer(ImageLabelTypes.Validator, validatorContainer)
     return chain
   }
@@ -212,8 +191,7 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
     utils.fs.mkdirSync(this.hostDirPath(this.prysmDataDirName))
     utils.fs.writeFileSync(this.configFile, config)
 
-    const rawCmds = [
-      imageByLabel(this.config.Images, ImageLabelTypes.Genesis).Bin!,
+    const args = [
       'testnet',
       'generate-genesis',
       '--num-validators=36',
@@ -221,9 +199,20 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
       `--chain-config-file=${this.containerConfigFilePath}`
     ]
 
-    const cmds = ['sh', '-c', `${rawCmds.map($.quote).join(' ')} 1>${this.entrypointStdout} 2>${this.entrypointStderr}`]
-    utils.fs.writeFileSync(this.hostDirPath('genesis.d.cmd'), cmds.join(' '))
-    await this.getContainer(ImageLabelTypes.Genesis).exec(cmds)
+    const genesisImage = this.config.Images.find((i) => i.Label === ImageLabelTypes.Genesis)
+    if (!genesisImage) throw new Error('genesis image is undefined?')
+
+    await runContainer(
+      {
+        entrypoint: imageByLabel(this.config.Images, ImageLabelTypes.Genesis).Bin!,
+        exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
+        imageRepoTag: `${genesisImage.Repository}:${genesisImage.Tag}`,
+        volumes: [[this.hostWd, '/tmp']],
+        workDir: '/tmp',
+        args: args
+      },
+      this.logger
+    )
   }
 
   private get dataDir(): string {
