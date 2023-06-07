@@ -198,11 +198,10 @@ test('start eth node with labels and dependencies', async (t) => {
   const prysm = runtime.runObj.ChainSets[1]
   t.is(prysm.Name, 'eth2')
   t.is(prysm.Images[0].Label, ImageLabelTypes.Main)
-  t.is(prysm.Nodes[0].Label, ImageLabelTypes.Main.toString())
   t.is(prysm.Images[1].Label, ImageLabelTypes.Genesis)
-  t.is(prysm.Nodes[1].Label, ImageLabelTypes.Genesis.toString())
   t.is(prysm.Images[2].Label, ImageLabelTypes.Validator)
-  t.is(prysm.Nodes[2].Label, ImageLabelTypes.Validator.toString())
+  t.is(prysm.Nodes[0].Label, ImageLabelTypes.Main.toString())
+  t.is(prysm.Nodes[1].Label, ImageLabelTypes.Validator.toString())
 
   const provider = new ethers.providers.JsonRpcProvider(eth.Nodes[0].RpcHost)
   const wallet = new ethers.Wallet(eth.Accounts![0]['PrivateKey']).connect(provider)

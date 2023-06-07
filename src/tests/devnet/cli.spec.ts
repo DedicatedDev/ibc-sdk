@@ -104,7 +104,6 @@ test.serial('the start command starts stack', async (t) => {
   t.assert(out.exitCode === 0)
   const logs = [
     '', // so we can check the parent directory exists
-    'eth-consensus.genesis.log',
     'eth-consensus.main.log',
     'eth-consensus.validator.log',
     'eth-execution.main.log',
