@@ -24,7 +24,8 @@ To quickly get started with the IBC SDK, follow these steps:
 2. Run the `make` command in your terminal:
 
 ```bash
-echo "@polymerdao:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=TOKEN" >> ~/.npmrc
+echo "@polymerdao:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=$TOKEN" >> ~/.npmrc
 npm install -g @polymerdao/ibc-sdk
 ```
 
