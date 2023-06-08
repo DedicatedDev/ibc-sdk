@@ -290,7 +290,11 @@ export const images = {
   bsc: new DockerImage('ghcr.io/polymerdao/bsc', '1.1.10', 'BSC_DOCKER_IMAGE_TAG'),
   ethereum: new DockerImage('ethereum/client-go', 'v1.10.26', 'ETH_DOCKER_IMAGE_TAG'),
   eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-f881b4f', 'ETH_RELAYER_DOCKER_IMAGE_TAG'),
-  ibc_relayer: new DockerImage('ghcr.io/polymerdao/ts-relayer', 'sha-d0e9cc2', 'IBC_RELAYER_DOCKER_IMAGE_TAG'),
+  ibc_relayer: new DockerImage(
+    'ghcr.io/polymerdao/ts-relayer',
+    'v0.8.0-packet-data-hex-1',
+    'IBC_RELAYER_DOCKER_IMAGE_TAG'
+  ),
   polymer: new DockerImage('ghcr.io/polymerdao/polymer', 'sha-73490ed', 'POLYMER_DOCKER_IMAGE_TAG'),
   prysm_main: new DockerImage(
     'ghcr.io/polymerdao/prysm-beacon-chain',
@@ -309,6 +313,6 @@ export const images = {
     'PRYSM_GENESIS_DOCKER_IMAGE_TAG',
     'genesis'
   ),
-  vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'sha-0bda681', 'VIBC_RELAYER_DOCKER_IMAGE_TAG'),
+  vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'v0.0.1-rc1', 'VIBC_RELAYER_DOCKER_IMAGE_TAG'),
   wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-ibcx-noproof-1', 'WASM_DOCKER_IMAGE_TAG')
 }
