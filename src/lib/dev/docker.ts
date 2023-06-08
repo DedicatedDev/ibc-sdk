@@ -295,7 +295,7 @@ export const images = {
     'v0.8.0-packet-data-hex-1',
     'IBC_RELAYER_DOCKER_IMAGE_TAG'
   ),
-  polymer: new DockerImage('ghcr.io/polymerdao/polymer', 'sha-73490ed', 'POLYMER_DOCKER_IMAGE_TAG'),
+  polymer: new DockerImage('ghcr.io/polymerdao/polymer', 'v0.0.1-rc1', 'POLYMER_DOCKER_IMAGE_TAG'),
   prysm_main: new DockerImage(
     'ghcr.io/polymerdao/prysm-beacon-chain',
     prysmDefaultTag,
