@@ -19,7 +19,7 @@ Prerequisites:
 To quickly get started with the IBC SDK, follow these steps:
 
 1. Obtain a GitHub token to access the necessary containers.
-2. Run the `make` command in your terminal:
+2. Run the `npm install` command in your terminal:
 
 ```bash
 echo "@polymerdao:registry=https://npm.pkg.github.com" >> ~/.npmrc
