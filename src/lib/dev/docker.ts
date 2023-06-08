@@ -285,25 +285,30 @@ class DockerImage {
   }
 }
 
+const prysmDefaultTag = 'v4.0.3-light-client-1'
 export const images = {
-  polymer: new DockerImage('ghcr.io/polymerdao/polymer', 'sha-73490ed', 'POLYMER_DOCKER_IMAGE_TAG'),
   bsc: new DockerImage('ghcr.io/polymerdao/bsc', '1.1.10', 'BSC_DOCKER_IMAGE_TAG'),
   ethereum: new DockerImage('ethereum/client-go', 'v1.10.26', 'ETH_DOCKER_IMAGE_TAG'),
-  prysm_main: new DockerImage('ghcr.io/polymerdao/prysm-beacon-chain', 'sha-a3fdcdf', 'PRYSM_BEACON_DOCKER_IMAGE_TAG'),
+  eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-f881b4f', 'ETH_RELAYER_DOCKER_IMAGE_TAG'),
+  ibc_relayer: new DockerImage('ghcr.io/polymerdao/ts-relayer', 'sha-d0e9cc2', 'IBC_RELAYER_DOCKER_IMAGE_TAG'),
+  polymer: new DockerImage('ghcr.io/polymerdao/polymer', 'sha-73490ed', 'POLYMER_DOCKER_IMAGE_TAG'),
+  prysm_main: new DockerImage(
+    'ghcr.io/polymerdao/prysm-beacon-chain',
+    prysmDefaultTag,
+    'PRYSM_BEACON_DOCKER_IMAGE_TAG'
+  ),
   prysm_validator: new DockerImage(
     'ghcr.io/polymerdao/prysm-validator',
-    'sha-a3fdcdf',
+    prysmDefaultTag,
     'PRYSM_VALIDATOR_DOCKER_IMAGE_TAG',
     'validator'
   ),
   prysm_genesis: new DockerImage(
     'ghcr.io/polymerdao/prysm-prysmctl',
-    'sha-a3fdcdf',
+    prysmDefaultTag,
     'PRYSM_GENESIS_DOCKER_IMAGE_TAG',
     'genesis'
   ),
-  wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-rc.1-ibcx-noproof', 'WASM_DOCKER_IMAGE_TAG'),
-  eth_relayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'sha-f881b4f', 'ETH_RELAYER_DOCKER_IMAGE_TAG'),
   vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'sha-0bda681', 'VIBC_RELAYER_DOCKER_IMAGE_TAG'),
-  ibc_relayer: new DockerImage('ghcr.io/polymerdao/ts-relayer', 'sha-d0e9cc2', 'IBC_RELAYER_DOCKER_IMAGE_TAG')
+  wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-ibcx-noproof-1', 'WASM_DOCKER_IMAGE_TAG')
 }
