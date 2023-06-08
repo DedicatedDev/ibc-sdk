@@ -42,3 +42,4 @@ jobs:
         ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs eth-relayer
         ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs vibc-relayer
         ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs ibc-relayer
+        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" stop --all || true
