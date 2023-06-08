@@ -314,5 +314,5 @@ export const images = {
     'genesis'
   ),
   vibc_relayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'v0.0.1-rc1', 'VIBC_RELAYER_DOCKER_IMAGE_TAG'),
-  wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-ibcx-noproof-1', 'WASM_DOCKER_IMAGE_TAG')
+  wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-multihop-1', 'WASM_DOCKER_IMAGE_TAG')
 }
