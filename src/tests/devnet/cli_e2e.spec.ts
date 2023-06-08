@@ -247,7 +247,9 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
         t.assert(ackpacket[0] === true)
         // this is set by the CW contract
         console.log(ethers.utils.toUtf8String(ackpacket[1]))
-        t.assert(ethers.utils.toUtf8String(ackpacket[1]) === `{"ok":{"account":"","reply":"I don't understand"}}`)
+        t.assert(
+          ethers.utils.toUtf8String(ackpacket[1]) === `{"result":{"account":"account","reply":"I don't understand"}}`
+        )
         return true
       },
       20,
@@ -308,28 +310,27 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
       async () => {
         const query = `acknowledge_packet.packet_sequence EXISTS AND tx.height>=${h}`
         const result = await client.txSearchAll({ query: query })
-        const events: any[] = []
-
+        const events: any = {}
         result.txs.map(({ height, result }) => {
           h = Math.max(height, h)
           const rawLogs = logs.parseRawLog(result.log)
           for (const log of rawLogs) {
             log.events.forEach((e) => {
-              if (e.type !== 'acknowledge_packet') return
+              if (e.type !== 'acknowledge_packet' && e.type !== 'wasm') return
               const kv: any = {}
               e.attributes.forEach((e) => (kv[e.key] = e.value))
-              events.push(kv)
+              events[e.type] = kv
             })
           }
         })
         h++
-        if (events.length === 0) return false
-        const kv = events[0]
-        console.log(`got ack from WASM: ${JSON.stringify(kv)}`)
-        t.assert(kv.packet_dst_channel === c.polyChannel.channels[0].channel_id)
-        t.assert(kv.packet_src_channel === c.polyChannel.channels[0].counterparty.channel_id)
-        t.assert(kv.packet_dst_port === c.polyChannel.channels[0].port_id)
-        t.assert(kv.packet_src_port === c.polyChannel.channels[0].counterparty.port_id)
+        if (Object.keys(events).length === 0) return false
+        console.log(`got ack from WASM: ${JSON.stringify(events)}`)
+        t.assert(events.acknowledge_packet.packet_dst_channel === c.polyChannel.channels[0].channel_id)
+        t.assert(events.acknowledge_packet.packet_src_channel === c.polyChannel.channels[0].counterparty.channel_id)
+        t.assert(events.acknowledge_packet.packet_dst_port === c.polyChannel.channels[0].port_id)
+        t.assert(events.acknowledge_packet.packet_src_port === c.polyChannel.channels[0].counterparty.port_id)
+        t.assert(events.wasm.reply === 'got the message')
         return true
       },
       20,

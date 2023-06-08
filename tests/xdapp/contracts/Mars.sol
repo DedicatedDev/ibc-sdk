@@ -16,7 +16,7 @@ contract Mars is IbcReceiver, Ownable {
 
     function onRecvPacket(IbcPacket calldata packet) external returns (AckPacket memory ackPacket) {
         recvedPackets.push(packet);
-        return AckPacket(true, abi.encodePacked('ack-', packet.data));
+        return AckPacket(true, abi.encodePacked('{ "account": "account", "reply": "got the message" }'));
     }
 
     function onAcknowledgementPacket(IbcPacket calldata packet) external {
