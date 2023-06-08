@@ -11,9 +11,8 @@ import { EndpointInfo, Packet } from '../lib/dev/query'
 import { ChainSetsRunObj, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmChain } from '../lib/dev/schemas'
 import { containerFromId } from '../lib/dev/docker'
 import { ProcessOutput } from 'zx-cjs'
-import { ethers } from 'ethers'
 import archiver from 'archiver'
-import { cleanupChainSets } from '../lib/dev'
+import { cleanupChainSets, newJsonRpcProvider } from '../lib/dev'
 
 const configFile = 'config.yaml'
 
@@ -409,7 +408,7 @@ export async function tx(opts: WrapCommandsOpts & { tx: string }, log: winston.L
   }
 
   if (isEvmChain(chain.Type)) {
-    const eth = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
+    const eth = newJsonRpcProvider(chain.Nodes[0].RpcHost)
     const tx = await eth.getTransaction(opts.tx)
     process.stdout.write(opts.json ? JSON.stringify(tx) : utils.dumpYamlSafe(tx))
     return

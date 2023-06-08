@@ -2,6 +2,7 @@ import { logs } from '@cosmjs/stargate'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import anyTest, { TestFn } from 'ava'
 import { ethers } from 'ethers'
+import { newJsonRpcProvider } from '../../lib/dev'
 import { ProcessOutput } from 'zx-cjs'
 import { utils } from '../../lib'
 import { ChainConfig, RelayerRunObj, CosmosAccount, EvmChainSet } from '../../lib/dev/schemas'
@@ -277,7 +278,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   const out = await runCommand(t, 'exec', ...cmds)
   t.assert(out.exitCode === 0)
 
-  const provider = new ethers.providers.JsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
+  const provider = newJsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
   const contract = new ethers.Contract(c.dispatcher.Address, c.dispatcher.Abi, provider)
   t.assert(
     await utils.waitUntil(

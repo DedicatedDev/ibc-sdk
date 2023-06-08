@@ -1,6 +1,5 @@
 import * as self from '../../lib/index'
 import * as utils from '../../lib/utils/index'
-import * as ethers from 'ethers'
 import path from 'path'
 import anyTest, { TestFn } from 'ava'
 import { gethConfig } from './simple_geth_config'
@@ -25,7 +24,7 @@ test.skip('deploy contracts on runtime chains', async (t) => {
   runtime = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsDir, logger)
 
   const assertions = runtime.ChainSets.map(async (chain) => {
-    const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
+    const provider = self.dev.newJsonRpcProvider(chain.Nodes[0].RpcHost)
     for (const contract of chain.Contracts) {
       // verify contract is deployed at given address
       const code = await provider.getCode(contract.Address)

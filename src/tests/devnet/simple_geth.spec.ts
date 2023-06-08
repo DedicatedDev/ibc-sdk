@@ -39,7 +39,7 @@ test('start a geth chain from docker container', async (t) => {
 
     const url = chainNode.RpcHost
     logger.verbose(`[${evmChain.Name}] connection to url: ${url}`)
-    const ethClient = new ethers.providers.JsonRpcProvider(url)
+    const ethClient = self.dev.newJsonRpcProvider(url)
     const height = await ethClient.getBlockNumber()
 
     t.true(height >= 0)

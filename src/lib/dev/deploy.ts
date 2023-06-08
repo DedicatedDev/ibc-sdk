@@ -6,6 +6,7 @@ import { ChainSetsRunObj, CosmosChainSet, DeployedContract, EvmChainSet, isCosmo
 import { $, fs } from '../utils'
 import { Attribute, Event } from '@cosmjs/stargate'
 import { saveChainSetsRuntime } from './chainset'
+import { newJsonRpcProvider } from './ethers'
 
 async function deployVIBCCoreContractsOnChain(
   runtime: ChainSetsRunObj,
@@ -44,7 +45,7 @@ async function deployVIBCCoreContractsOnChain(
   log.verbose(`deployed ${contracts.length} contracts on ${chain.Name}`)
 
   // TODO create this dummy client on the core sc so future calls to verifyMembership work
-  const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
+  const provider = newJsonRpcProvider(chain.Nodes[0].RpcHost)
   const signer = new ethers.Wallet(chain.Accounts[0].PrivateKey!).connect(provider)
   const contract = new ethers.Contract(dispatcher.Address, dispatcher.Abi!, signer)
   const client = await contract.createClient({
@@ -88,7 +89,7 @@ async function deployEvmSmartContract(
   scpath: string,
   ...scargs: string[]
 ): Promise<DeployedContract> {
-  const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
+  const provider = newJsonRpcProvider(chain.Nodes[0].RpcHost)
 
   const deployer = chain.Accounts.find((a) => a.Address === account)
   if (!deployer) throw new Error(`Could not find account '${account}' on chain ${chain.Name}`)

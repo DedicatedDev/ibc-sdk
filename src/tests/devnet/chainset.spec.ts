@@ -1,6 +1,7 @@
 import anyTest, { TestFn } from 'ava'
 import { ethers } from 'ethers'
 import os from 'os'
+import { newJsonRpcProvider } from '../../lib/dev'
 import { utils } from '../../lib'
 import { RunningChainSets, runChainSets, cleanupChainSets } from '../../lib/dev/chainset'
 import { ChainConfig, ImageLabelTypes } from '../../lib/dev/schemas'
@@ -205,7 +206,7 @@ test('start eth node with labels and dependencies', async (t) => {
   t.is(prysm.Nodes[0].Label, ImageLabelTypes.Main.toString())
   t.is(prysm.Nodes[1].Label, ImageLabelTypes.Validator.toString())
 
-  const provider = new ethers.providers.JsonRpcProvider(eth.Nodes[0].RpcHost)
+  const provider = newJsonRpcProvider(eth.Nodes[0].RpcHost)
   const wallet = new ethers.Wallet(eth.Accounts![0]['PrivateKey']).connect(provider)
 
   const receipt = await wallet.sendTransaction({

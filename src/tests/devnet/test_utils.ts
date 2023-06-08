@@ -38,7 +38,7 @@ export async function genEvmHeaders(
   evmRpcUrl: string,
   startBlock: number = 0
 ): Promise<{ blocks: any[]; height: number }> {
-  const provider = new ethers.providers.JsonRpcProvider(evmRpcUrl)
+  const provider = self.dev.newJsonRpcProvider(evmRpcUrl)
   const rawBlock = await provider.send('eth_getBlockByNumber', [ethers.utils.hexValue(startBlock), true])
   return {
     blocks: [rawBlock],
