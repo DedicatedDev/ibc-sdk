@@ -9,27 +9,37 @@ export interface ClientState {
   chainId: string;
   latestHeight?: Height;
   chainMemo: string;
+  consensusBootstrapBytes: Uint8Array;
+  lightClientStoreBytes: Uint8Array;
 }
 
 /** ConsensusState defines the consensus state from Altair. */
 export interface ConsensusState {
-  /** opaque data used for light client verification */
-  state: Uint8Array;
+  bytes: Uint8Array;
+  fromPlugin: boolean;
 }
 
 /**
- * Header defines the Altair client consensus Header. It encapsulates all the
- * information necessary to update from a trusted Altair ConsensusState.
+ * Header is the `ConsensusUpdate` message from ETH2 full nodes relayed by relayers.
+ *    - The name `Header` is used in order to be compatible general interface
+ *    - It encapsulates the `raw_header` which is light client update message from full nodes
+ *    - It also encapsulates the `trusted_height` which is the ETH1.block_number of attested_header
  */
 export interface Header {
-  /** opaque json bytes which must be unmarshalled into a valid signed EVM header */
+  /** light client update message from full nodes, assembled by relayers */
   rawHeader: Uint8Array;
-  /** trusted height that will be used to verify the `raw_header` */
+  /** trusted height which is the ETH1.block_number of attested_header */
   trustedHeight?: Height;
 }
 
 function createBaseClientState(): ClientState {
-  return { chainId: "", latestHeight: undefined, chainMemo: "" };
+  return {
+    chainId: "",
+    latestHeight: undefined,
+    chainMemo: "",
+    consensusBootstrapBytes: new Uint8Array(),
+    lightClientStoreBytes: new Uint8Array(),
+  };
 }
 
 export const ClientState = {
@@ -42,6 +52,12 @@ export const ClientState = {
     }
     if (message.chainMemo !== "") {
       writer.uint32(26).string(message.chainMemo);
+    }
+    if (message.consensusBootstrapBytes.length !== 0) {
+      writer.uint32(34).bytes(message.consensusBootstrapBytes);
+    }
+    if (message.lightClientStoreBytes.length !== 0) {
+      writer.uint32(42).bytes(message.lightClientStoreBytes);
     }
     return writer;
   },
@@ -62,6 +78,12 @@ export const ClientState = {
         case 3:
           message.chainMemo = reader.string();
           break;
+        case 4:
+          message.consensusBootstrapBytes = reader.bytes();
+          break;
+        case 5:
+          message.lightClientStoreBytes = reader.bytes();
+          break;
         default:
           reader.skipType(tag & 7);
           break;
@@ -75,6 +97,12 @@ export const ClientState = {
       chainId: isSet(object.chainId) ? String(object.chainId) : "",
       latestHeight: isSet(object.latestHeight) ? Height.fromJSON(object.latestHeight) : undefined,
       chainMemo: isSet(object.chainMemo) ? String(object.chainMemo) : "",
+      consensusBootstrapBytes: isSet(object.consensusBootstrapBytes)
+        ? bytesFromBase64(object.consensusBootstrapBytes)
+        : new Uint8Array(),
+      lightClientStoreBytes: isSet(object.lightClientStoreBytes)
+        ? bytesFromBase64(object.lightClientStoreBytes)
+        : new Uint8Array(),
     };
   },
 
@@ -84,6 +112,14 @@ export const ClientState = {
     message.latestHeight !== undefined &&
       (obj.latestHeight = message.latestHeight ? Height.toJSON(message.latestHeight) : undefined);
     message.chainMemo !== undefined && (obj.chainMemo = message.chainMemo);
+    message.consensusBootstrapBytes !== undefined &&
+      (obj.consensusBootstrapBytes = base64FromBytes(
+        message.consensusBootstrapBytes !== undefined ? message.consensusBootstrapBytes : new Uint8Array(),
+      ));
+    message.lightClientStoreBytes !== undefined &&
+      (obj.lightClientStoreBytes = base64FromBytes(
+        message.lightClientStoreBytes !== undefined ? message.lightClientStoreBytes : new Uint8Array(),
+      ));
     return obj;
   },
 
@@ -94,18 +130,23 @@ export const ClientState = {
       ? Height.fromPartial(object.latestHeight)
       : undefined;
     message.chainMemo = object.chainMemo ?? "";
+    message.consensusBootstrapBytes = object.consensusBootstrapBytes ?? new Uint8Array();
+    message.lightClientStoreBytes = object.lightClientStoreBytes ?? new Uint8Array();
     return message;
   },
 };
 
 function createBaseConsensusState(): ConsensusState {
-  return { state: new Uint8Array() };
+  return { bytes: new Uint8Array(), fromPlugin: false };
 }
 
 export const ConsensusState = {
   encode(message: ConsensusState, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.state.length !== 0) {
-      writer.uint32(10).bytes(message.state);
+    if (message.bytes.length !== 0) {
+      writer.uint32(10).bytes(message.bytes);
+    }
+    if (message.fromPlugin === true) {
+      writer.uint32(16).bool(message.fromPlugin);
     }
     return writer;
   },
@@ -118,7 +159,10 @@ export const ConsensusState = {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1:
-          message.state = reader.bytes();
+          message.bytes = reader.bytes();
+          break;
+        case 2:
+          message.fromPlugin = reader.bool();
           break;
         default:
           reader.skipType(tag & 7);
@@ -129,19 +173,24 @@ export const ConsensusState = {
   },
 
   fromJSON(object: any): ConsensusState {
-    return { state: isSet(object.state) ? bytesFromBase64(object.state) : new Uint8Array() };
+    return {
+      bytes: isSet(object.bytes) ? bytesFromBase64(object.bytes) : new Uint8Array(),
+      fromPlugin: isSet(object.fromPlugin) ? Boolean(object.fromPlugin) : false,
+    };
   },
 
   toJSON(message: ConsensusState): unknown {
     const obj: any = {};
-    message.state !== undefined &&
-      (obj.state = base64FromBytes(message.state !== undefined ? message.state : new Uint8Array()));
+    message.bytes !== undefined &&
+      (obj.bytes = base64FromBytes(message.bytes !== undefined ? message.bytes : new Uint8Array()));
+    message.fromPlugin !== undefined && (obj.fromPlugin = message.fromPlugin);
     return obj;
   },
 
   fromPartial<I extends Exact<DeepPartial<ConsensusState>, I>>(object: I): ConsensusState {
     const message = createBaseConsensusState();
-    message.state = object.state ?? new Uint8Array();
+    message.bytes = object.bytes ?? new Uint8Array();
+    message.fromPlugin = object.fromPlugin ?? false;
     return message;
   },
 };

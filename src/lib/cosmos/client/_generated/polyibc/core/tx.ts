@@ -2,7 +2,7 @@
 import Long from "long";
 import _m0 from "protobufjs/minimal";
 import { Any } from "../../google/protobuf/any";
-import { Channel, Packet } from "../../ibc/core/channel/v1/channel";
+import { Acknowledgement, Order, orderFromJSON, orderToJSON, Packet } from "../../ibc/core/channel/v1/channel";
 import { Height } from "./client";
 import { Proof } from "./proof";
 
@@ -50,23 +50,42 @@ export interface MsgUpdateClientResponse {
 }
 
 export interface MsgSendIbcPacket {
+  /** Relayer field */
   creator: string;
   /**
    * the standard ibc port is retrieved from the port registry
    * the standard ibc channelID
+   * Non-relayer field
    */
   channelID: string;
-  /** the standard ibc timeout */
+  /**
+   * the standard ibc timeout
+   * Non-relayer field
+   */
   timeoutTimestamp: string;
-  /** contract address on a remote vm (eg. EVM) */
+  /**
+   * contract address on a remote vm (eg. EVM)
+   * Non-relayer field
+   */
   remoteSenderAddress: Uint8Array;
-  /** opaque IBC packet payload */
+  /**
+   * opaque IBC packet payload
+   * Non-relayer field
+   */
   payload: Uint8Array;
-  /** Proof of the tx where the IBC packet originates */
+  /**
+   * Proof of the tx where the IBC packet originates
+   * Relayer field
+   */
   proof?: Proof;
+  /** Relayer field */
+  clientID: string;
 }
 
 export interface MsgSendIbcPacketResponse {
+  /** if request handling failed due to source chain invalid data, success is false and error_message is set */
+  success: boolean;
+  errorMessage: string;
 }
 
 export interface MsgAcknowledgement {
@@ -85,6 +104,22 @@ export interface MsgAcknowledgement {
 }
 
 export interface MsgAcknowledgementResponse {
+}
+
+export interface MsgRegisterPort {
+  /** creator address */
+  creator: string;
+  /** contract addresss on a remote vm (eg. EVM) */
+  remoteSenderAddress: Uint8Array;
+  /** proof of tx where IBC packet originates */
+  proof?: Proof;
+  /** light client id */
+  clientID: string;
+}
+
+export interface MsgRegisterPortResponse {
+  /** the created portID */
+  portId: string;
 }
 
 export interface MsgCreateVibcClient {
@@ -117,34 +152,46 @@ export interface MsgCreateVibcConnectionResponse {
  * ChanOpenTry
  */
 export interface MsgOpenIBCChannel {
-  /** vibc port must conform to poly-IBC port naming convention */
+  /**
+   * vibc port must conform to poly-IBC port naming convention
+   * Non-relayer field
+   */
   portId: string;
-  channel?: Channel;
+  /** Non-relayer field */
+  version: string;
+  /** Non-relayer field */
+  ordering: Order;
+  /** Non-relayer field */
+  counterpartyPortId: string;
+  /** Non-relayer field */
   counterpartyVersion: string;
   /**
-   * proof of ChanOpenInit queried from a Cosmos chain (Polymer chain or others)
-   * should be nil if this is first channel handshake step
+   * list of connection identifiers, in order, along which packets sent on
+   * this channel will travel
+   * Non-relayer field
    */
-  proofInit: Uint8Array;
-  /**
-   * proof height of ChanOpenInit at which the proof is queried
-   * should be nil if this is first channel handshake step
-   */
-  proofInitHeight?: Height;
-  /** id of the native client that represents a remote virtual chain */
+  connectionHops: string[];
+  /** Relayer field */
   nativeClientId: string;
   /**
    * Proof from a virtual chain that proves a user contract did call
    * PolymerCoreSC with exact method name and params
+   * Relayer field
    */
   virtualProof?: Proof;
-  /** Relayer address */
+  /**
+   * Relayer address
+   * Relayer field
+   */
   creator: string;
 }
 
 export interface MsgOpenIBCChannelResponse {
   channelId: string;
   version: string;
+  /** if request handling failed due to source chain invalid data, success is false and error_message is set */
+  success: boolean;
+  errorMessage: string;
 }
 
 /**
@@ -152,21 +199,50 @@ export interface MsgOpenIBCChannelResponse {
  * ChanOpenConfirm
  */
 export interface MsgConnectIBCChannel {
-  /** vibc port must conform to poly-IBC port naming convention */
+  /**
+   * vibc port must conform to poly-IBC port naming convention
+   * Non-relayer field
+   */
   portId: string;
+  /** Non-relayer field */
   channelId: string;
+  /** Non-relayer field */
   counterpartyChannelId: string;
+  /** Non-relayer field */
   counterpartyVersion: string;
   /**
-   * proof of ChanOpenAck or ChanOpenConfirm queried from a Cosmos chain
-   * (Polymer chain or others)
+   * id of the native client that represents a remote virtual chain
+   * Relayer field
    */
-  proof: Uint8Array;
+  nativeClientId: string;
   /**
-   * proof height of ChanOpenAck or ChanOpenConfirm at which the proof is
-   * queried
+   * Proof from a virtual chain that proves a user contract did call
+   * PolymerCoreSC with exact method name and params
+   * Relayer field
    */
-  proofHeight?: Height;
+  virtualProof?: Proof;
+  /**
+   * Relayer address
+   * Relayer field
+   */
+  creator: string;
+}
+
+export interface MsgConnectIBCChannelResponse {
+  /** if request handling failed due to source chain invalid data, success is false and error_message is set */
+  success: boolean;
+  errorMessage: string;
+}
+
+/**
+ * MsgWriteAcknowledgement defines a message that is converted from a virtual
+ * chain tx/event when a user contract calls the `writeAcknowledgement` method
+ * on PolymerCoreSC in response to a received packet, either synchronously (same
+ * tx as receivePacket) or asynchronously (a separate tx after receivePacket).
+ */
+export interface MsgWriteAcknowledgement {
+  packet?: Packet;
+  acknowledgement?: Acknowledgement;
   /** id of the native client that represents a remote virtual chain */
   nativeClientId: string;
   /**
@@ -178,7 +254,10 @@ export interface MsgConnectIBCChannel {
   creator: string;
 }
 
-export interface MsgConnectIBCChannelResponse {
+export interface MsgWriteAcknowledgementResponse {
+  /** if request handling failed due to source chain invalid data, success is false and error_message is set */
+  success: boolean;
+  errorMessage: string;
 }
 
 function createBaseMsgCreateClient(): MsgCreateClient {
@@ -447,6 +526,7 @@ function createBaseMsgSendIbcPacket(): MsgSendIbcPacket {
     remoteSenderAddress: new Uint8Array(),
     payload: new Uint8Array(),
     proof: undefined,
+    clientID: "",
   };
 }
 
@@ -469,6 +549,9 @@ export const MsgSendIbcPacket = {
     }
     if (message.proof !== undefined) {
       Proof.encode(message.proof, writer.uint32(50).fork()).ldelim();
+    }
+    if (message.clientID !== "") {
+      writer.uint32(58).string(message.clientID);
     }
     return writer;
   },
@@ -498,6 +581,9 @@ export const MsgSendIbcPacket = {
         case 6:
           message.proof = Proof.decode(reader, reader.uint32());
           break;
+        case 7:
+          message.clientID = reader.string();
+          break;
         default:
           reader.skipType(tag & 7);
           break;
@@ -516,6 +602,7 @@ export const MsgSendIbcPacket = {
         : new Uint8Array(),
       payload: isSet(object.payload) ? bytesFromBase64(object.payload) : new Uint8Array(),
       proof: isSet(object.proof) ? Proof.fromJSON(object.proof) : undefined,
+      clientID: isSet(object.clientID) ? String(object.clientID) : "",
     };
   },
 
@@ -531,6 +618,7 @@ export const MsgSendIbcPacket = {
     message.payload !== undefined &&
       (obj.payload = base64FromBytes(message.payload !== undefined ? message.payload : new Uint8Array()));
     message.proof !== undefined && (obj.proof = message.proof ? Proof.toJSON(message.proof) : undefined);
+    message.clientID !== undefined && (obj.clientID = message.clientID);
     return obj;
   },
 
@@ -542,16 +630,23 @@ export const MsgSendIbcPacket = {
     message.remoteSenderAddress = object.remoteSenderAddress ?? new Uint8Array();
     message.payload = object.payload ?? new Uint8Array();
     message.proof = (object.proof !== undefined && object.proof !== null) ? Proof.fromPartial(object.proof) : undefined;
+    message.clientID = object.clientID ?? "";
     return message;
   },
 };
 
 function createBaseMsgSendIbcPacketResponse(): MsgSendIbcPacketResponse {
-  return {};
+  return { success: false, errorMessage: "" };
 }
 
 export const MsgSendIbcPacketResponse = {
-  encode(_: MsgSendIbcPacketResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+  encode(message: MsgSendIbcPacketResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.success === true) {
+      writer.uint32(8).bool(message.success);
+    }
+    if (message.errorMessage !== "") {
+      writer.uint32(18).string(message.errorMessage);
+    }
     return writer;
   },
 
@@ -562,6 +657,12 @@ export const MsgSendIbcPacketResponse = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
+        case 1:
+          message.success = reader.bool();
+          break;
+        case 2:
+          message.errorMessage = reader.string();
+          break;
         default:
           reader.skipType(tag & 7);
           break;
@@ -570,17 +671,24 @@ export const MsgSendIbcPacketResponse = {
     return message;
   },
 
-  fromJSON(_: any): MsgSendIbcPacketResponse {
-    return {};
+  fromJSON(object: any): MsgSendIbcPacketResponse {
+    return {
+      success: isSet(object.success) ? Boolean(object.success) : false,
+      errorMessage: isSet(object.errorMessage) ? String(object.errorMessage) : "",
+    };
   },
 
-  toJSON(_: MsgSendIbcPacketResponse): unknown {
+  toJSON(message: MsgSendIbcPacketResponse): unknown {
     const obj: any = {};
+    message.success !== undefined && (obj.success = message.success);
+    message.errorMessage !== undefined && (obj.errorMessage = message.errorMessage);
     return obj;
   },
 
-  fromPartial<I extends Exact<DeepPartial<MsgSendIbcPacketResponse>, I>>(_: I): MsgSendIbcPacketResponse {
+  fromPartial<I extends Exact<DeepPartial<MsgSendIbcPacketResponse>, I>>(object: I): MsgSendIbcPacketResponse {
     const message = createBaseMsgSendIbcPacketResponse();
+    message.success = object.success ?? false;
+    message.errorMessage = object.errorMessage ?? "";
     return message;
   },
 };
@@ -729,6 +837,134 @@ export const MsgAcknowledgementResponse = {
 
   fromPartial<I extends Exact<DeepPartial<MsgAcknowledgementResponse>, I>>(_: I): MsgAcknowledgementResponse {
     const message = createBaseMsgAcknowledgementResponse();
+    return message;
+  },
+};
+
+function createBaseMsgRegisterPort(): MsgRegisterPort {
+  return { creator: "", remoteSenderAddress: new Uint8Array(), proof: undefined, clientID: "" };
+}
+
+export const MsgRegisterPort = {
+  encode(message: MsgRegisterPort, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.creator !== "") {
+      writer.uint32(10).string(message.creator);
+    }
+    if (message.remoteSenderAddress.length !== 0) {
+      writer.uint32(18).bytes(message.remoteSenderAddress);
+    }
+    if (message.proof !== undefined) {
+      Proof.encode(message.proof, writer.uint32(26).fork()).ldelim();
+    }
+    if (message.clientID !== "") {
+      writer.uint32(34).string(message.clientID);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): MsgRegisterPort {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseMsgRegisterPort();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.creator = reader.string();
+          break;
+        case 2:
+          message.remoteSenderAddress = reader.bytes();
+          break;
+        case 3:
+          message.proof = Proof.decode(reader, reader.uint32());
+          break;
+        case 4:
+          message.clientID = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+
+  fromJSON(object: any): MsgRegisterPort {
+    return {
+      creator: isSet(object.creator) ? String(object.creator) : "",
+      remoteSenderAddress: isSet(object.remoteSenderAddress)
+        ? bytesFromBase64(object.remoteSenderAddress)
+        : new Uint8Array(),
+      proof: isSet(object.proof) ? Proof.fromJSON(object.proof) : undefined,
+      clientID: isSet(object.clientID) ? String(object.clientID) : "",
+    };
+  },
+
+  toJSON(message: MsgRegisterPort): unknown {
+    const obj: any = {};
+    message.creator !== undefined && (obj.creator = message.creator);
+    message.remoteSenderAddress !== undefined &&
+      (obj.remoteSenderAddress = base64FromBytes(
+        message.remoteSenderAddress !== undefined ? message.remoteSenderAddress : new Uint8Array(),
+      ));
+    message.proof !== undefined && (obj.proof = message.proof ? Proof.toJSON(message.proof) : undefined);
+    message.clientID !== undefined && (obj.clientID = message.clientID);
+    return obj;
+  },
+
+  fromPartial<I extends Exact<DeepPartial<MsgRegisterPort>, I>>(object: I): MsgRegisterPort {
+    const message = createBaseMsgRegisterPort();
+    message.creator = object.creator ?? "";
+    message.remoteSenderAddress = object.remoteSenderAddress ?? new Uint8Array();
+    message.proof = (object.proof !== undefined && object.proof !== null) ? Proof.fromPartial(object.proof) : undefined;
+    message.clientID = object.clientID ?? "";
+    return message;
+  },
+};
+
+function createBaseMsgRegisterPortResponse(): MsgRegisterPortResponse {
+  return { portId: "" };
+}
+
+export const MsgRegisterPortResponse = {
+  encode(message: MsgRegisterPortResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.portId !== "") {
+      writer.uint32(10).string(message.portId);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): MsgRegisterPortResponse {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseMsgRegisterPortResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.portId = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+
+  fromJSON(object: any): MsgRegisterPortResponse {
+    return { portId: isSet(object.portId) ? String(object.portId) : "" };
+  },
+
+  toJSON(message: MsgRegisterPortResponse): unknown {
+    const obj: any = {};
+    message.portId !== undefined && (obj.portId = message.portId);
+    return obj;
+  },
+
+  fromPartial<I extends Exact<DeepPartial<MsgRegisterPortResponse>, I>>(object: I): MsgRegisterPortResponse {
+    const message = createBaseMsgRegisterPortResponse();
+    message.portId = object.portId ?? "";
     return message;
   },
 };
@@ -949,10 +1185,11 @@ export const MsgCreateVibcConnectionResponse = {
 function createBaseMsgOpenIBCChannel(): MsgOpenIBCChannel {
   return {
     portId: "",
-    channel: undefined,
+    version: "",
+    ordering: 0,
+    counterpartyPortId: "",
     counterpartyVersion: "",
-    proofInit: new Uint8Array(),
-    proofInitHeight: undefined,
+    connectionHops: [],
     nativeClientId: "",
     virtualProof: undefined,
     creator: "",
@@ -964,26 +1201,29 @@ export const MsgOpenIBCChannel = {
     if (message.portId !== "") {
       writer.uint32(10).string(message.portId);
     }
-    if (message.channel !== undefined) {
-      Channel.encode(message.channel, writer.uint32(18).fork()).ldelim();
+    if (message.version !== "") {
+      writer.uint32(18).string(message.version);
+    }
+    if (message.ordering !== 0) {
+      writer.uint32(24).int32(message.ordering);
+    }
+    if (message.counterpartyPortId !== "") {
+      writer.uint32(34).string(message.counterpartyPortId);
     }
     if (message.counterpartyVersion !== "") {
-      writer.uint32(26).string(message.counterpartyVersion);
+      writer.uint32(42).string(message.counterpartyVersion);
     }
-    if (message.proofInit.length !== 0) {
-      writer.uint32(34).bytes(message.proofInit);
-    }
-    if (message.proofInitHeight !== undefined) {
-      Height.encode(message.proofInitHeight, writer.uint32(42).fork()).ldelim();
+    for (const v of message.connectionHops) {
+      writer.uint32(50).string(v!);
     }
     if (message.nativeClientId !== "") {
-      writer.uint32(50).string(message.nativeClientId);
+      writer.uint32(58).string(message.nativeClientId);
     }
     if (message.virtualProof !== undefined) {
-      Proof.encode(message.virtualProof, writer.uint32(58).fork()).ldelim();
+      Proof.encode(message.virtualProof, writer.uint32(66).fork()).ldelim();
     }
     if (message.creator !== "") {
-      writer.uint32(66).string(message.creator);
+      writer.uint32(74).string(message.creator);
     }
     return writer;
   },
@@ -999,24 +1239,27 @@ export const MsgOpenIBCChannel = {
           message.portId = reader.string();
           break;
         case 2:
-          message.channel = Channel.decode(reader, reader.uint32());
+          message.version = reader.string();
           break;
         case 3:
-          message.counterpartyVersion = reader.string();
+          message.ordering = reader.int32() as any;
           break;
         case 4:
-          message.proofInit = reader.bytes();
+          message.counterpartyPortId = reader.string();
           break;
         case 5:
-          message.proofInitHeight = Height.decode(reader, reader.uint32());
+          message.counterpartyVersion = reader.string();
           break;
         case 6:
-          message.nativeClientId = reader.string();
+          message.connectionHops.push(reader.string());
           break;
         case 7:
-          message.virtualProof = Proof.decode(reader, reader.uint32());
+          message.nativeClientId = reader.string();
           break;
         case 8:
+          message.virtualProof = Proof.decode(reader, reader.uint32());
+          break;
+        case 9:
           message.creator = reader.string();
           break;
         default:
@@ -1030,10 +1273,11 @@ export const MsgOpenIBCChannel = {
   fromJSON(object: any): MsgOpenIBCChannel {
     return {
       portId: isSet(object.portId) ? String(object.portId) : "",
-      channel: isSet(object.channel) ? Channel.fromJSON(object.channel) : undefined,
+      version: isSet(object.version) ? String(object.version) : "",
+      ordering: isSet(object.ordering) ? orderFromJSON(object.ordering) : 0,
+      counterpartyPortId: isSet(object.counterpartyPortId) ? String(object.counterpartyPortId) : "",
       counterpartyVersion: isSet(object.counterpartyVersion) ? String(object.counterpartyVersion) : "",
-      proofInit: isSet(object.proofInit) ? bytesFromBase64(object.proofInit) : new Uint8Array(),
-      proofInitHeight: isSet(object.proofInitHeight) ? Height.fromJSON(object.proofInitHeight) : undefined,
+      connectionHops: Array.isArray(object?.connectionHops) ? object.connectionHops.map((e: any) => String(e)) : [],
       nativeClientId: isSet(object.nativeClientId) ? String(object.nativeClientId) : "",
       virtualProof: isSet(object.virtualProof) ? Proof.fromJSON(object.virtualProof) : undefined,
       creator: isSet(object.creator) ? String(object.creator) : "",
@@ -1043,12 +1287,15 @@ export const MsgOpenIBCChannel = {
   toJSON(message: MsgOpenIBCChannel): unknown {
     const obj: any = {};
     message.portId !== undefined && (obj.portId = message.portId);
-    message.channel !== undefined && (obj.channel = message.channel ? Channel.toJSON(message.channel) : undefined);
+    message.version !== undefined && (obj.version = message.version);
+    message.ordering !== undefined && (obj.ordering = orderToJSON(message.ordering));
+    message.counterpartyPortId !== undefined && (obj.counterpartyPortId = message.counterpartyPortId);
     message.counterpartyVersion !== undefined && (obj.counterpartyVersion = message.counterpartyVersion);
-    message.proofInit !== undefined &&
-      (obj.proofInit = base64FromBytes(message.proofInit !== undefined ? message.proofInit : new Uint8Array()));
-    message.proofInitHeight !== undefined &&
-      (obj.proofInitHeight = message.proofInitHeight ? Height.toJSON(message.proofInitHeight) : undefined);
+    if (message.connectionHops) {
+      obj.connectionHops = message.connectionHops.map((e) => e);
+    } else {
+      obj.connectionHops = [];
+    }
     message.nativeClientId !== undefined && (obj.nativeClientId = message.nativeClientId);
     message.virtualProof !== undefined &&
       (obj.virtualProof = message.virtualProof ? Proof.toJSON(message.virtualProof) : undefined);
@@ -1059,14 +1306,11 @@ export const MsgOpenIBCChannel = {
   fromPartial<I extends Exact<DeepPartial<MsgOpenIBCChannel>, I>>(object: I): MsgOpenIBCChannel {
     const message = createBaseMsgOpenIBCChannel();
     message.portId = object.portId ?? "";
-    message.channel = (object.channel !== undefined && object.channel !== null)
-      ? Channel.fromPartial(object.channel)
-      : undefined;
+    message.version = object.version ?? "";
+    message.ordering = object.ordering ?? 0;
+    message.counterpartyPortId = object.counterpartyPortId ?? "";
     message.counterpartyVersion = object.counterpartyVersion ?? "";
-    message.proofInit = object.proofInit ?? new Uint8Array();
-    message.proofInitHeight = (object.proofInitHeight !== undefined && object.proofInitHeight !== null)
-      ? Height.fromPartial(object.proofInitHeight)
-      : undefined;
+    message.connectionHops = object.connectionHops?.map((e) => e) || [];
     message.nativeClientId = object.nativeClientId ?? "";
     message.virtualProof = (object.virtualProof !== undefined && object.virtualProof !== null)
       ? Proof.fromPartial(object.virtualProof)
@@ -1077,7 +1321,7 @@ export const MsgOpenIBCChannel = {
 };
 
 function createBaseMsgOpenIBCChannelResponse(): MsgOpenIBCChannelResponse {
-  return { channelId: "", version: "" };
+  return { channelId: "", version: "", success: false, errorMessage: "" };
 }
 
 export const MsgOpenIBCChannelResponse = {
@@ -1087,6 +1331,12 @@ export const MsgOpenIBCChannelResponse = {
     }
     if (message.version !== "") {
       writer.uint32(18).string(message.version);
+    }
+    if (message.success === true) {
+      writer.uint32(24).bool(message.success);
+    }
+    if (message.errorMessage !== "") {
+      writer.uint32(34).string(message.errorMessage);
     }
     return writer;
   },
@@ -1104,6 +1354,12 @@ export const MsgOpenIBCChannelResponse = {
         case 2:
           message.version = reader.string();
           break;
+        case 3:
+          message.success = reader.bool();
+          break;
+        case 4:
+          message.errorMessage = reader.string();
+          break;
         default:
           reader.skipType(tag & 7);
           break;
@@ -1116,6 +1372,8 @@ export const MsgOpenIBCChannelResponse = {
     return {
       channelId: isSet(object.channelId) ? String(object.channelId) : "",
       version: isSet(object.version) ? String(object.version) : "",
+      success: isSet(object.success) ? Boolean(object.success) : false,
+      errorMessage: isSet(object.errorMessage) ? String(object.errorMessage) : "",
     };
   },
 
@@ -1123,6 +1381,8 @@ export const MsgOpenIBCChannelResponse = {
     const obj: any = {};
     message.channelId !== undefined && (obj.channelId = message.channelId);
     message.version !== undefined && (obj.version = message.version);
+    message.success !== undefined && (obj.success = message.success);
+    message.errorMessage !== undefined && (obj.errorMessage = message.errorMessage);
     return obj;
   },
 
@@ -1130,6 +1390,8 @@ export const MsgOpenIBCChannelResponse = {
     const message = createBaseMsgOpenIBCChannelResponse();
     message.channelId = object.channelId ?? "";
     message.version = object.version ?? "";
+    message.success = object.success ?? false;
+    message.errorMessage = object.errorMessage ?? "";
     return message;
   },
 };
@@ -1140,8 +1402,6 @@ function createBaseMsgConnectIBCChannel(): MsgConnectIBCChannel {
     channelId: "",
     counterpartyChannelId: "",
     counterpartyVersion: "",
-    proof: new Uint8Array(),
-    proofHeight: undefined,
     nativeClientId: "",
     virtualProof: undefined,
     creator: "",
@@ -1162,20 +1422,14 @@ export const MsgConnectIBCChannel = {
     if (message.counterpartyVersion !== "") {
       writer.uint32(34).string(message.counterpartyVersion);
     }
-    if (message.proof.length !== 0) {
-      writer.uint32(42).bytes(message.proof);
-    }
-    if (message.proofHeight !== undefined) {
-      Height.encode(message.proofHeight, writer.uint32(50).fork()).ldelim();
-    }
     if (message.nativeClientId !== "") {
-      writer.uint32(58).string(message.nativeClientId);
+      writer.uint32(42).string(message.nativeClientId);
     }
     if (message.virtualProof !== undefined) {
-      Proof.encode(message.virtualProof, writer.uint32(66).fork()).ldelim();
+      Proof.encode(message.virtualProof, writer.uint32(50).fork()).ldelim();
     }
     if (message.creator !== "") {
-      writer.uint32(74).string(message.creator);
+      writer.uint32(58).string(message.creator);
     }
     return writer;
   },
@@ -1200,18 +1454,12 @@ export const MsgConnectIBCChannel = {
           message.counterpartyVersion = reader.string();
           break;
         case 5:
-          message.proof = reader.bytes();
-          break;
-        case 6:
-          message.proofHeight = Height.decode(reader, reader.uint32());
-          break;
-        case 7:
           message.nativeClientId = reader.string();
           break;
-        case 8:
+        case 6:
           message.virtualProof = Proof.decode(reader, reader.uint32());
           break;
-        case 9:
+        case 7:
           message.creator = reader.string();
           break;
         default:
@@ -1228,8 +1476,6 @@ export const MsgConnectIBCChannel = {
       channelId: isSet(object.channelId) ? String(object.channelId) : "",
       counterpartyChannelId: isSet(object.counterpartyChannelId) ? String(object.counterpartyChannelId) : "",
       counterpartyVersion: isSet(object.counterpartyVersion) ? String(object.counterpartyVersion) : "",
-      proof: isSet(object.proof) ? bytesFromBase64(object.proof) : new Uint8Array(),
-      proofHeight: isSet(object.proofHeight) ? Height.fromJSON(object.proofHeight) : undefined,
       nativeClientId: isSet(object.nativeClientId) ? String(object.nativeClientId) : "",
       virtualProof: isSet(object.virtualProof) ? Proof.fromJSON(object.virtualProof) : undefined,
       creator: isSet(object.creator) ? String(object.creator) : "",
@@ -1242,10 +1488,6 @@ export const MsgConnectIBCChannel = {
     message.channelId !== undefined && (obj.channelId = message.channelId);
     message.counterpartyChannelId !== undefined && (obj.counterpartyChannelId = message.counterpartyChannelId);
     message.counterpartyVersion !== undefined && (obj.counterpartyVersion = message.counterpartyVersion);
-    message.proof !== undefined &&
-      (obj.proof = base64FromBytes(message.proof !== undefined ? message.proof : new Uint8Array()));
-    message.proofHeight !== undefined &&
-      (obj.proofHeight = message.proofHeight ? Height.toJSON(message.proofHeight) : undefined);
     message.nativeClientId !== undefined && (obj.nativeClientId = message.nativeClientId);
     message.virtualProof !== undefined &&
       (obj.virtualProof = message.virtualProof ? Proof.toJSON(message.virtualProof) : undefined);
@@ -1259,10 +1501,6 @@ export const MsgConnectIBCChannel = {
     message.channelId = object.channelId ?? "";
     message.counterpartyChannelId = object.counterpartyChannelId ?? "";
     message.counterpartyVersion = object.counterpartyVersion ?? "";
-    message.proof = object.proof ?? new Uint8Array();
-    message.proofHeight = (object.proofHeight !== undefined && object.proofHeight !== null)
-      ? Height.fromPartial(object.proofHeight)
-      : undefined;
     message.nativeClientId = object.nativeClientId ?? "";
     message.virtualProof = (object.virtualProof !== undefined && object.virtualProof !== null)
       ? Proof.fromPartial(object.virtualProof)
@@ -1273,11 +1511,17 @@ export const MsgConnectIBCChannel = {
 };
 
 function createBaseMsgConnectIBCChannelResponse(): MsgConnectIBCChannelResponse {
-  return {};
+  return { success: false, errorMessage: "" };
 }
 
 export const MsgConnectIBCChannelResponse = {
-  encode(_: MsgConnectIBCChannelResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+  encode(message: MsgConnectIBCChannelResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.success === true) {
+      writer.uint32(8).bool(message.success);
+    }
+    if (message.errorMessage !== "") {
+      writer.uint32(18).string(message.errorMessage);
+    }
     return writer;
   },
 
@@ -1288,6 +1532,12 @@ export const MsgConnectIBCChannelResponse = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
+        case 1:
+          message.success = reader.bool();
+          break;
+        case 2:
+          message.errorMessage = reader.string();
+          break;
         default:
           reader.skipType(tag & 7);
           break;
@@ -1296,17 +1546,177 @@ export const MsgConnectIBCChannelResponse = {
     return message;
   },
 
-  fromJSON(_: any): MsgConnectIBCChannelResponse {
-    return {};
+  fromJSON(object: any): MsgConnectIBCChannelResponse {
+    return {
+      success: isSet(object.success) ? Boolean(object.success) : false,
+      errorMessage: isSet(object.errorMessage) ? String(object.errorMessage) : "",
+    };
   },
 
-  toJSON(_: MsgConnectIBCChannelResponse): unknown {
+  toJSON(message: MsgConnectIBCChannelResponse): unknown {
     const obj: any = {};
+    message.success !== undefined && (obj.success = message.success);
+    message.errorMessage !== undefined && (obj.errorMessage = message.errorMessage);
     return obj;
   },
 
-  fromPartial<I extends Exact<DeepPartial<MsgConnectIBCChannelResponse>, I>>(_: I): MsgConnectIBCChannelResponse {
+  fromPartial<I extends Exact<DeepPartial<MsgConnectIBCChannelResponse>, I>>(object: I): MsgConnectIBCChannelResponse {
     const message = createBaseMsgConnectIBCChannelResponse();
+    message.success = object.success ?? false;
+    message.errorMessage = object.errorMessage ?? "";
+    return message;
+  },
+};
+
+function createBaseMsgWriteAcknowledgement(): MsgWriteAcknowledgement {
+  return { packet: undefined, acknowledgement: undefined, nativeClientId: "", virtualProof: undefined, creator: "" };
+}
+
+export const MsgWriteAcknowledgement = {
+  encode(message: MsgWriteAcknowledgement, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.packet !== undefined) {
+      Packet.encode(message.packet, writer.uint32(10).fork()).ldelim();
+    }
+    if (message.acknowledgement !== undefined) {
+      Acknowledgement.encode(message.acknowledgement, writer.uint32(18).fork()).ldelim();
+    }
+    if (message.nativeClientId !== "") {
+      writer.uint32(26).string(message.nativeClientId);
+    }
+    if (message.virtualProof !== undefined) {
+      Proof.encode(message.virtualProof, writer.uint32(34).fork()).ldelim();
+    }
+    if (message.creator !== "") {
+      writer.uint32(42).string(message.creator);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): MsgWriteAcknowledgement {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseMsgWriteAcknowledgement();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.packet = Packet.decode(reader, reader.uint32());
+          break;
+        case 2:
+          message.acknowledgement = Acknowledgement.decode(reader, reader.uint32());
+          break;
+        case 3:
+          message.nativeClientId = reader.string();
+          break;
+        case 4:
+          message.virtualProof = Proof.decode(reader, reader.uint32());
+          break;
+        case 5:
+          message.creator = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+
+  fromJSON(object: any): MsgWriteAcknowledgement {
+    return {
+      packet: isSet(object.packet) ? Packet.fromJSON(object.packet) : undefined,
+      acknowledgement: isSet(object.acknowledgement) ? Acknowledgement.fromJSON(object.acknowledgement) : undefined,
+      nativeClientId: isSet(object.nativeClientId) ? String(object.nativeClientId) : "",
+      virtualProof: isSet(object.virtualProof) ? Proof.fromJSON(object.virtualProof) : undefined,
+      creator: isSet(object.creator) ? String(object.creator) : "",
+    };
+  },
+
+  toJSON(message: MsgWriteAcknowledgement): unknown {
+    const obj: any = {};
+    message.packet !== undefined && (obj.packet = message.packet ? Packet.toJSON(message.packet) : undefined);
+    message.acknowledgement !== undefined &&
+      (obj.acknowledgement = message.acknowledgement ? Acknowledgement.toJSON(message.acknowledgement) : undefined);
+    message.nativeClientId !== undefined && (obj.nativeClientId = message.nativeClientId);
+    message.virtualProof !== undefined &&
+      (obj.virtualProof = message.virtualProof ? Proof.toJSON(message.virtualProof) : undefined);
+    message.creator !== undefined && (obj.creator = message.creator);
+    return obj;
+  },
+
+  fromPartial<I extends Exact<DeepPartial<MsgWriteAcknowledgement>, I>>(object: I): MsgWriteAcknowledgement {
+    const message = createBaseMsgWriteAcknowledgement();
+    message.packet = (object.packet !== undefined && object.packet !== null)
+      ? Packet.fromPartial(object.packet)
+      : undefined;
+    message.acknowledgement = (object.acknowledgement !== undefined && object.acknowledgement !== null)
+      ? Acknowledgement.fromPartial(object.acknowledgement)
+      : undefined;
+    message.nativeClientId = object.nativeClientId ?? "";
+    message.virtualProof = (object.virtualProof !== undefined && object.virtualProof !== null)
+      ? Proof.fromPartial(object.virtualProof)
+      : undefined;
+    message.creator = object.creator ?? "";
+    return message;
+  },
+};
+
+function createBaseMsgWriteAcknowledgementResponse(): MsgWriteAcknowledgementResponse {
+  return { success: false, errorMessage: "" };
+}
+
+export const MsgWriteAcknowledgementResponse = {
+  encode(message: MsgWriteAcknowledgementResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.success === true) {
+      writer.uint32(8).bool(message.success);
+    }
+    if (message.errorMessage !== "") {
+      writer.uint32(18).string(message.errorMessage);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): MsgWriteAcknowledgementResponse {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseMsgWriteAcknowledgementResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.success = reader.bool();
+          break;
+        case 2:
+          message.errorMessage = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+
+  fromJSON(object: any): MsgWriteAcknowledgementResponse {
+    return {
+      success: isSet(object.success) ? Boolean(object.success) : false,
+      errorMessage: isSet(object.errorMessage) ? String(object.errorMessage) : "",
+    };
+  },
+
+  toJSON(message: MsgWriteAcknowledgementResponse): unknown {
+    const obj: any = {};
+    message.success !== undefined && (obj.success = message.success);
+    message.errorMessage !== undefined && (obj.errorMessage = message.errorMessage);
+    return obj;
+  },
+
+  fromPartial<I extends Exact<DeepPartial<MsgWriteAcknowledgementResponse>, I>>(
+    object: I,
+  ): MsgWriteAcknowledgementResponse {
+    const message = createBaseMsgWriteAcknowledgementResponse();
+    message.success = object.success ?? false;
+    message.errorMessage = object.errorMessage ?? "";
     return message;
   },
 };
@@ -1322,8 +1732,8 @@ export interface Msg {
   UpdateClient(request: MsgUpdateClient): Promise<MsgUpdateClientResponse>;
   /** SendPolyIbcPkt defines an RPC handler method for MsgSendIbcPacket */
   SendIbcPacket(request: MsgSendIbcPacket): Promise<MsgSendIbcPacketResponse>;
-  /** AcknowledgePacket defines an RPC handler method for MscIbcPacket */
-  Acknowledgement(request: MsgAcknowledgement): Promise<MsgAcknowledgementResponse>;
+  /** RegisterPort defines an RPC handler method for MsgRegisterPort */
+  RegisterPort(request: MsgRegisterPort): Promise<MsgRegisterPortResponse>;
   /**
    * CreateVibcClient creates a virtual IBC client that wraps an existing native
    * client
@@ -1345,6 +1755,12 @@ export interface Msg {
    * state.
    */
   ConnectIBCChannel(request: MsgConnectIBCChannel): Promise<MsgConnectIBCChannelResponse>;
+  /**
+   * WriteAcknowledgement writes an acknowledgement to the specified channel.
+   * Relayer calls this method after receiving an acknowledgement from
+   * PolymerCoreSC on a virtual chain.
+   */
+  WriteAcknowledgement(request: MsgWriteAcknowledgement): Promise<MsgWriteAcknowledgementResponse>;
 }
 
 export class MsgClientImpl implements Msg {
@@ -1356,11 +1772,12 @@ export class MsgClientImpl implements Msg {
     this.CreateClient = this.CreateClient.bind(this);
     this.UpdateClient = this.UpdateClient.bind(this);
     this.SendIbcPacket = this.SendIbcPacket.bind(this);
-    this.Acknowledgement = this.Acknowledgement.bind(this);
+    this.RegisterPort = this.RegisterPort.bind(this);
     this.CreateVibcClient = this.CreateVibcClient.bind(this);
     this.CreateVibcConnection = this.CreateVibcConnection.bind(this);
     this.OpenIBCChannel = this.OpenIBCChannel.bind(this);
     this.ConnectIBCChannel = this.ConnectIBCChannel.bind(this);
+    this.WriteAcknowledgement = this.WriteAcknowledgement.bind(this);
   }
   CreateClient(request: MsgCreateClient): Promise<MsgCreateClientResponse> {
     const data = MsgCreateClient.encode(request).finish();
@@ -1380,10 +1797,10 @@ export class MsgClientImpl implements Msg {
     return promise.then((data) => MsgSendIbcPacketResponse.decode(new _m0.Reader(data)));
   }
 
-  Acknowledgement(request: MsgAcknowledgement): Promise<MsgAcknowledgementResponse> {
-    const data = MsgAcknowledgement.encode(request).finish();
-    const promise = this.rpc.request(this.service, "Acknowledgement", data);
-    return promise.then((data) => MsgAcknowledgementResponse.decode(new _m0.Reader(data)));
+  RegisterPort(request: MsgRegisterPort): Promise<MsgRegisterPortResponse> {
+    const data = MsgRegisterPort.encode(request).finish();
+    const promise = this.rpc.request(this.service, "RegisterPort", data);
+    return promise.then((data) => MsgRegisterPortResponse.decode(new _m0.Reader(data)));
   }
 
   CreateVibcClient(request: MsgCreateVibcClient): Promise<MsgCreateVibcClientResponse> {
@@ -1408,6 +1825,12 @@ export class MsgClientImpl implements Msg {
     const data = MsgConnectIBCChannel.encode(request).finish();
     const promise = this.rpc.request(this.service, "ConnectIBCChannel", data);
     return promise.then((data) => MsgConnectIBCChannelResponse.decode(new _m0.Reader(data)));
+  }
+
+  WriteAcknowledgement(request: MsgWriteAcknowledgement): Promise<MsgWriteAcknowledgementResponse> {
+    const data = MsgWriteAcknowledgement.encode(request).finish();
+    const promise = this.rpc.request(this.service, "WriteAcknowledgement", data);
+    return promise.then((data) => MsgWriteAcknowledgementResponse.decode(new _m0.Reader(data)));
   }
 }
 

@@ -23,6 +23,7 @@ export * as transfer from 'cosmjs-types/ibc/applications/transfer/v1/tx'
 
 const txMsgTypesRegistry = {
   '/polyibc.core.MsgSendIbcPacket': tx.MsgSendIbcPacket,
+  '/polyibc.core.MsgRegisterPort': tx.MsgRegisterPort,
   '/polyibc.core.MsgUpdateClient': tx.MsgUpdateClient,
   '/polyibc.core.MsgCreateClient': tx.MsgCreateClient,
   '/polyibc.core.MsgAcknowledgement': tx.MsgAcknowledgement,
@@ -50,6 +51,7 @@ interface txMsgEncodeObject<T extends keyof typeof txMsgTypesRegistry & string> 
 
 export interface MsgCreateClientEncodeObject extends txMsgEncodeObject<'/polyibc.core.MsgCreateClient'> {}
 export interface MsgSendIbcPacketEncodeObject extends txMsgEncodeObject<'/polyibc.core.MsgSendIbcPacket'> {}
+export interface MsgRegisterPortEncodeObject extends txMsgEncodeObject<'/polyibc.core.MsgRegisterPort'> {}
 export interface MsgUpdateClientEncodeObject extends txMsgEncodeObject<'/polyibc.core.MsgUpdateClient'> {}
 export interface MsgAcknowledgementEncodeObject extends txMsgEncodeObject<'/polyibc.core.MsgAcknowledgement'> {}
 export interface MsgCreateVibcClientEncodeObject extends txMsgEncodeObject<'/polyibc.core.MsgCreateVibcClient'> {}

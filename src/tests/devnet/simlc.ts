@@ -129,15 +129,16 @@ export class SimLightClient {
       value: {
         creator: this.sender.Address,
         channelID: channelID,
+        timeoutTimestamp: timeout,
         remoteSenderAddress: enc.encode(randomAddress('cosmos')),
         payload: enc.encode(payload),
-        timeoutTimestamp: timeout,
         proof: {
           proof: enc.encode('hash:abc'),
           key: new Uint8Array(Array(8).fill(0)),
           value: this.header,
           height: { revisionNumber: '0', revisionHeight: '0' }
-        }
+        },
+        clientID: this.clientID
       }
     }
     const res = await this.signer.signAndBroadcast(this.sender.Address, [msg], 'auto')

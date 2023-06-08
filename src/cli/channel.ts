@@ -3,7 +3,6 @@ import { ChainSetsRunObj, CosmosAccount } from '../lib/dev/schemas'
 import * as self from '../lib/index.js'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { DeliverTxResponse, SigningStargateClient } from '@cosmjs/stargate'
-import { TextEncoder } from 'util'
 import Long from 'long'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import { VIBCRelayer } from 'src/lib/dev/vibc_relayer'
@@ -22,17 +21,6 @@ async function createSignerClient(
     self.cosmos.client.signerOpts()
   )
   return [queryClient, signerClient]
-}
-
-function proof(): any {
-  return {
-    proof: new TextEncoder().encode('hash:abc'),
-    key: new Uint8Array(Array(8).fill(0)),
-    value: new TextEncoder().encode(
-      JSON.stringify({ raw: Buffer.from('abc').toString('base64'), type: 2, height: 0, revision: 0 })
-    ),
-    height: { revisionNumber: '0', revisionHeight: '0' }
-  }
 }
 
 function flat(name: string, res: DeliverTxResponse) {
@@ -165,34 +153,53 @@ export async function channelHandshake(
   }
   log.info(`ChanOpenInit on ${dst.chain.Name}: done`)
 
+  // Currently do not use vIBC OpenIbcChannel / ConnectIbcChannel endpoints, due to `ts-relayer` isn't multihop aware.
+  // We directly setup the multi-hop channel on Polymer. In order to do so, we need to register port first.
+
+  // RegisterPort: on Polymer
+  {
+    log.info(`executing RegisterPort on ${src.chain.Name}`)
+    const msg: self.cosmos.client.polyibc.MsgRegisterPortEncodeObject = {
+      typeUrl: '/polyibc.core.MsgRegisterPort',
+      value: {
+        remoteSenderAddress: Buffer.from(src.address.toLowerCase().slice(2), 'hex'),
+        creator: srcAccount.Address,
+        clientID: lc
+      }
+    }
+    await waitForBlocks(srcQuery)
+    const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
+    log.debug('register_port', res)
+    log.info(`RegisterPort on ${src.chain.Name}: done`)
+  }
+
   // ChanOpenTry: on Polymer
   let opentry: self.cosmos.client.polyibc.MsgOpenIBCChannelResponse
   {
     log.info(`executing ChanOpenTry on ${src.chain.Name}`)
-    const msg: self.cosmos.client.polyibc.MsgOpenIBCChannelEncodeObject = {
-      typeUrl: '/polyibc.core.MsgOpenIBCChannel',
+
+    const msg: self.cosmos.client.polyibc.MsgChannelOpenTryEncodeObject = {
+      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenTry',
       value: {
-        nativeClientId: lc,
-        creator: srcAccount.Address,
         portId: portEth2,
-        channel: self.cosmos.client.polyibc.channel.Channel.fromPartial({
-          version: src.version,
+        previousChannelId: '',
+        signer: srcAccount.Address,
+        channel: {
+          state: self.cosmos.client.polyibc.channel.State.STATE_TRYOPEN,
           ordering: self.cosmos.client.polyibc.channel.Order.ORDER_UNORDERED,
           connectionHops: [vConnection.connection_id, ibcconnections.srcConnection],
           counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
             channelId: openinit.channel_id,
             portId: openinit.port_id
           }),
-          state: self.cosmos.client.polyibc.channel.State.STATE_TRYOPEN
-        }),
-
+          version: src.version
+        },
         counterpartyVersion: dst.version,
         proofInit: new Uint8Array(Array(8).fill(0)),
-        proofInitHeight: self.cosmos.client.polyibc.client.Height.fromPartial({
-          revisionHeight: '100',
-          revisionNumber: '0'
-        }),
-        virtualProof: proof()
+        proofHeight: {
+          revisionHeight: Long.fromNumber(100),
+          revisionNumber: Long.fromNumber(0)
+        }
       }
     }
     await waitForBlocks(srcQuery)
@@ -231,22 +238,18 @@ export async function channelHandshake(
   let openconfirm: self.cosmos.client.polyibc.MsgConnectIBCChannelResponse
   {
     log.info(`executing ChanOpenConfirm on ${src.chain.Name}`)
-    const msg: self.cosmos.client.polyibc.MsgConnectIBCChannelEncodeObject = {
-      typeUrl: '/polyibc.core.MsgConnectIBCChannel',
+
+    const msg: self.cosmos.client.polyibc.MsgChannelOpenConfirmEncodeObject = {
+      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenConfirm',
       value: {
         portId: portEth2,
-        creator: srcAccount.Address,
+        signer: srcAccount.Address,
         channelId: opentry.channel_id,
-        // leave these two commented out to force the ChanOpenConfirm
-        counterpartyChannelId: '',
-        counterpartyVersion: '',
-        proof: new Uint8Array(Array(8).fill(0)),
-        proofHeight: self.cosmos.client.polyibc.client.Height.fromPartial({
-          revisionHeight: '100',
-          revisionNumber: '0'
-        }),
-        nativeClientId: lc,
-        virtualProof: proof()
+        proofAck: new Uint8Array(Array(8).fill(0)),
+        proofHeight: {
+          revisionHeight: Long.fromNumber(100),
+          revisionNumber: Long.fromNumber(0)
+        }
       }
     }
     await waitForBlocks(srcQuery)
@@ -254,7 +257,7 @@ export async function channelHandshake(
     openconfirm = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_confirm', res))
   }
 
-  const vibcruntime = runtime.Relayers.find((r) => r.Name == 'vibc-relayer')
+  const vibcruntime = runtime.Relayers.find((r) => r.Name === 'vibc-relayer')
   if (vibcruntime) {
     const relayer = await VIBCRelayer.reuse(vibcruntime, log)
     // this is counter intuitive but the original source was replaced by polymer
