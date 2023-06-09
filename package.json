@@ -1,6 +1,6 @@
 {
   "name": "@polymerdao/ibc-sdk",
-  "version": "0.0.1-rc6",
+  "version": "0.0.1-rc7",
   "description": "IBC Control Command",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
