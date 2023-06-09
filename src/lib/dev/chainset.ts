@@ -46,8 +46,7 @@ export async function runChainSets(
  * - Remove working directories recursively.
  * @param runtime The chain set runtime
  */
-export async function cleanupChainSets(runtime: ChainSetsRunObj) {
-  const logger = utils.createLogger({ Level: 'debug', Colorize: true })
+export async function cleanupChainSets(runtime: ChainSetsRunObj, logger: winston.Logger) {
   for (const chain of runtime.ChainSets) {
     for (const node of chain.Nodes) {
       logger.verbose(`cleaning up '${node.Label}' container for chain '${chain.Name}'...`)

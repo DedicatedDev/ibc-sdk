@@ -217,5 +217,5 @@ test('start eth node with labels and dependencies', async (t) => {
   const tx = await provider.getTransaction(receipt.hash)
   t.truthy(tx)
 
-  await cleanupChainSets(runtime.runObj)
+  await cleanupChainSets(runtime.runObj, t.context.logger)
 })

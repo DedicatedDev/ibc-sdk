@@ -192,7 +192,7 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
     await $`docker container rm -f ${relayer.ContainerId}`
   }
 
-  await cleanupChainSets(runtime)
+  await cleanupChainSets(runtime, log)
 
   if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse') {
     log.info(`removing zkmint prover container...`)

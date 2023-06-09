@@ -58,5 +58,5 @@ test('start a geth chain from docker container', async (t) => {
   }
 
   // after clean up, folders should be cleaned up and containers are stopped
-  await self.dev.cleanupChainSets(runObj)
+  await self.dev.cleanupChainSets(runObj, logger)
 })

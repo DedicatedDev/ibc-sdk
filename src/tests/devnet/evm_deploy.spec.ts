@@ -35,5 +35,5 @@ test.skip('deploy contracts on runtime chains', async (t) => {
   })
   await Promise.all(assertions)
   // after clean up, folders should be cleaned up and containers are stopped
-  await self.dev.cleanupChainSets(runtime)
+  await self.dev.cleanupChainSets(runtime, logger)
 })
