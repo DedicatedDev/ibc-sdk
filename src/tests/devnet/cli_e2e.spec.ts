@@ -247,9 +247,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
         t.assert(ackpacket[0] === true)
         // this is set by the CW contract
         console.log(ethers.utils.toUtf8String(ackpacket[1]))
-        t.assert(
-          ethers.utils.toUtf8String(ackpacket[1]) === `{"result":{"account":"account","reply":"I don't understand"}}`
-        )
+        t.assert(ethers.utils.toUtf8String(ackpacket[1]) === `{"ok":{"account":"account","reply":"Got the message!"}}`)
         return true
       },
       20,
@@ -265,7 +263,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
 //  - Receive the message on ethereum
 async function testMessagesFromWasmToEth(t: any, c: any) {
   const msg = JSON.stringify({
-    send_msgs: {
+    send_msg: {
       channel_id: c.wasmChannel.channels[0].channel_id,
       msg: 'Hello from WASM'
     }
