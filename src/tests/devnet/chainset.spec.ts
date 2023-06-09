@@ -3,7 +3,7 @@ import { ethers } from 'ethers'
 import os from 'os'
 import { newJsonRpcProvider } from '../../lib/dev'
 import { utils } from '../../lib'
-import { RunningChainSets, runChainSets, cleanupChainSets } from '../../lib/dev/chainset'
+import { RunningChainSets, runChainSets, cleanupRuntime } from '../../lib/dev/chainset'
 import { ChainConfig, ImageLabelTypes } from '../../lib/dev/schemas'
 import { gethConfig } from './simple_geth_config'
 
@@ -217,5 +217,5 @@ test('start eth node with labels and dependencies', async (t) => {
   const tx = await provider.getTransaction(receipt.hash)
   t.truthy(tx)
 
-  await cleanupChainSets(runtime.runObj, t.context.logger)
+  await cleanupRuntime(runtime.runObj, t.context.logger)
 })

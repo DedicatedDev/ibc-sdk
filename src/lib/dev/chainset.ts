@@ -1,19 +1,18 @@
 import { RunningBSCChain } from './bsc_chain'
-import { $, Logger, utils, winston } from './deps.js'
+import { Logger, utils, winston } from './deps.js'
 import { RunningGethChain } from './geth_chain.js'
 import {
   ChainConfig,
   ChainSetsRunConfig,
   chainSetsRunConfigSchema,
   ChainSetsRunObj,
-  imageByLabel,
-  ImageLabelTypes,
   runningChainSetsSchema
 } from './schemas.js'
 import { RunningCosmosChain } from './cosmos_chain.js'
 import { NodeAccounts, RunningChain, RunningChainCreator } from './running_chain.js'
 import { fs } from '../utils'
 import { RunningPrysmChain } from './prysm_chain'
+import { containerFromId } from './docker'
 
 /**
  * Start ChainSets defined in the config.
@@ -42,27 +41,40 @@ export async function runChainSets(
 
 /**
  * Clean up resources the running chainsets are using, including:
- * - Stop and remove docker containers where chain nodes are running.
+ * - Stop and remove docker containers where chain nodes and relayers are running.
  * - Remove working directories recursively.
  * @param runtime The chain set runtime
  */
-export async function cleanupChainSets(runtime: ChainSetsRunObj, logger: winston.Logger) {
-  for (const chain of runtime.ChainSets) {
-    for (const node of chain.Nodes) {
-      logger.verbose(`cleaning up '${node.Label}' container for chain '${chain.Name}'...`)
-      // TODO: this should be chain-specific logic but we don't have a hold of running chain objects here
-      const image = imageByLabel(chain.Images, node.Label as ImageLabelTypes)
-      if (image.Bin && image.Label !== ImageLabelTypes.Genesis) {
-        await $`docker container exec ${node.ContainerId} killall ${image.Bin}`
-      }
-      await $`docker container exec ${node.ContainerId} rm -rf /tmp/${node.Label}`
-      if (runtime.Run.CleanupMode !== 'debug' && runtime.Run.CleanupMode !== 'reuse') {
-        logger.info(`removing '${chain.Name}:${node.Label}' container...`)
-        await $`docker container stop ${node.ContainerId}`
-        await $`docker container rm -f ${node.ContainerId}`
+export async function cleanupRuntime(runtime: ChainSetsRunObj, logger: winston.Logger) {
+  const mode = runtime.Run.CleanupMode
+
+  if (mode === 'reuse') {
+    logger.verbose('CleanupMode is "reuse". Nothing to do.')
+    return
+  }
+
+  if (mode !== 'debug') {
+    const components = runtime.ChainSets.reduce((acc: any[], c: any) => {
+      c.Nodes.map((n: any) => acc.push({ name: `${c.Name}:${n.Label}`, id: n.ContainerId }))
+      return acc
+    }, [])
+    runtime.Relayers.forEach((r: any) => components.push({ name: r.Name, id: r.ContainerId }))
+
+    if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse') {
+      components.push({ name: 'prover', id: runtime.Prover.ContainerId })
+    }
+
+    for (const c of components) {
+      try {
+        logger.info(`removing container '${c.name}' ...`)
+        await (await containerFromId(c.id, logger)).kill()
+      } catch {
+        logger.warning(`could not remove container '${c.name}'`)
       }
     }
   }
+
+  if (mode === 'all') utils.rmDir(runtime.Run.WorkingDir)
 }
 
 export function saveChainSetsRuntime(runtime: ChainSetsRunObj): ChainSetsRunObj {

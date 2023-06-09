@@ -12,7 +12,7 @@ import { ChainSetsRunObj, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmCha
 import { containerFromId } from '../lib/dev/docker'
 import { ProcessOutput } from 'zx-cjs'
 import archiver from 'archiver'
-import { cleanupChainSets, newJsonRpcProvider } from '../lib/dev'
+import { cleanupRuntime, newJsonRpcProvider } from '../lib/dev'
 
 const configFile = 'config.yaml'
 
@@ -183,28 +183,11 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
     runtime = loadWorkspace(opts.workspace)
   } catch {
     log.warn('Looks like you have already stopped the workspace?')
-    removeAll()
-    return
+    return removeAll()
   }
 
-  for (const relayer of runtime.Relayers) {
-    log.info(`removing '${relayer.Name}' container...`)
-    await $`docker container rm -f ${relayer.ContainerId}`
-  }
-
-  await cleanupChainSets(runtime, log)
-
-  if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse') {
-    log.info(`removing zkmint prover container...`)
-    try {
-      await $`docker container rm -f ${runtime.Prover.ContainerId}`
-    } catch (e) {
-      log.warn(`could not remove zkmint prover container: ${e}`)
-    }
-  }
-
-  fs.rmSync(runtime.Run.WorkingDir, { force: true, recursive: true })
-
+  runtime.Run.CleanupMode = 'all'
+  await cleanupRuntime(runtime, log)
   removeAll()
 }
 
