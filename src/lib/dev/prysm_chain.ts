@@ -69,7 +69,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
 
   configFileName = 'config.yml'
 
-  containerConfigFilePath: string = utils.path.join(this.getContainerDataDir(), this.configFileName)
+  containerConfigFilePath: string = utils.path.join(RunningChainBase.getContainerDataDir(), this.configFileName)
 
   readonly rpcEndpoint = RunningPrysmChain.rpcEndpoint
 
@@ -129,7 +129,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       RunningGethChain.authRpcEndpoint.port
     }`
     const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
-    const containerDataDir = this.getContainerDataDir()
+    const containerDataDir = RunningChainBase.getContainerDataDir()
     const rawCmds = [
       image.Bin!,
       `--datadir=${containerDataDir}`,
@@ -155,7 +155,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
   async startValidatorDaemon() {
     const prysmContainer = await this.getRunObj()
     const image = imageByLabel(this.config.Images, ImageLabelTypes.Validator)
-    const containerDataDir = this.getContainerDataDir(ImageLabelTypes.Validator)
+    const containerDataDir = RunningChainBase.getContainerDataDir(ImageLabelTypes.Validator)
     const rawCmds = [
       image.Bin!,
       `--beacon-rpc-provider=${prysmContainer.Nodes[0].RpcContainer.split('//')[1]}`,
@@ -191,7 +191,7 @@ SAFE_SLOTS_TO_UPDATE_JUSTIFIED: 0
 SECONDS_PER_ETH1_BLOCK: 3
 DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
 `
-    const prysmDataDir = this.getContainerDataDir()
+    const prysmDataDir = RunningChainBase.getContainerDataDir()
 
     utils.fs.mkdirSync(this.dataDir)
     utils.fs.writeFileSync(this.configFile, config)
@@ -222,7 +222,7 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
 
   private get dataDir(): string {
     const dataDirPrefix = '/tmp/'
-    const containerDataDir = this.getContainerDataDir()
+    const containerDataDir = RunningChainBase.getContainerDataDir()
     if (!containerDataDir.startsWith(dataDirPrefix)) {
       throw new Error('prysm beacon chain data dir must be in /tmp')
     }

@@ -91,7 +91,7 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
     return container
   }
 
-  protected getContainerDataDir(label: ImageLabelTypes = ImageLabelTypes.Main): string {
+  static getContainerDataDir(label: ImageLabelTypes = ImageLabelTypes.Main): string {
     return utils.path.join('/tmp', label.toString())
   }
 

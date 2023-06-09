@@ -186,7 +186,7 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     utils.fs.writeFileSync(this.hostDirPath('jwt.hex'), RunningGethChain.JWTToken)
     const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
     // Based on https://github.com/rauljordan/eth-pos-devnet/blob/master/docker-compose.yml
-    const containerDataDir = this.getContainerDataDir()
+    const containerDataDir = RunningChainBase.getContainerDataDir()
     const rawCmds = [
       image.Bin!,
       '--nodiscover',
@@ -242,20 +242,20 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     const image = imageByLabel(this.config.Images, ImageLabelTypes.Main)
 
     // Run `geth init` in container
-    const hostGenesisFilePath = utils.path.join(this.getContainerDataDir(), 'genesis.json')
+    const hostGenesisFilePath = utils.path.join(RunningChainBase.getContainerDataDir(), 'genesis.json')
     // await this.container.exec(['mkdir', hostGenesisFilePath])
     await this.getContainer(ImageLabelTypes.Main).exec([
       image.Bin!,
       'init',
       '--datadir',
-      this.getContainerDataDir(),
+      RunningChainBase.getContainerDataDir(),
       hostGenesisFilePath
     ])
   }
 
   private get dataDir(): string {
     const dataDirPrefix = '/tmp/'
-    const containerDataDir = this.getContainerDataDir()
+    const containerDataDir = RunningChainBase.getContainerDataDir()
     if (!containerDataDir.startsWith(dataDirPrefix)) {
       throw new Error('prysm beacon chain data dir must be in /tmp')
     }

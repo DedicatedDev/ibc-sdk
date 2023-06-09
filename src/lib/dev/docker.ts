@@ -16,10 +16,16 @@ const containerSchema = z.object({
   workDir: z.string().nullish(),
   entrypoint: z.string().nullish(),
   publishAllPorts: z.boolean().nullish().default(true),
+  binaries: z.array(z.string()).nullish().default([]),
+  remove: z.array(z.string()).nullish().default([]),
   label: z.string().nullish().default('main')
 })
 
 export type containerConfig = z.input<typeof containerSchema>
+
+function metadata(config: containerConfig): string {
+  return JSON.stringify({ binaries: config.binaries, remove: config.remove })
+}
 
 function parseConfig(config: containerConfig): [containerConfig, string[]] {
   const parsed = containerSchema.parse(config)
@@ -47,9 +53,10 @@ function parseConfig(config: containerConfig): [containerConfig, string[]] {
     args.push('--tty')
   }
   if (parsed.label) {
-    args.push('--label', 'label=' + parsed.label)
+    args.push('--label', 'org.polymerlabs.label=' + parsed.label)
   }
   args.push('--label', 'org.polymerlabs.runner=ibc-sdk')
+  args.push('--label', 'org.polymerlabs.metadata=' + metadata(parsed))
   args.push(parsed.imageRepoTag)
   if (parsed.args) {
     args.push(...parsed.args)
@@ -149,9 +156,6 @@ export class Container {
   }
 
   async getPortMap(): Promise<Map<string, string>> {
-    // sample output
-    //  docker inspect containerId --format='{{(json .NetworkSettings.Ports) }}'
-    // {"1318/tcp":[{"HostIp":"0.0.0.0","HostPort":"55394"}],"26657/tcp":[{"HostIp":"0.0.0.0","HostPort":"55393"}]}
     const args = ['docker', 'inspect', this.containerId, `--format={{(json .NetworkSettings.Ports) }}`]
     const out = await $`${args}`
     const parsed = JSON.parse(out.stdout.trim())
@@ -205,8 +209,8 @@ export class Container {
     return out.stdout.split('\n').shift() || ''
   }
 
-  async getLabel(): Promise<string> {
-    const args = ['docker', 'inspect', this.containerId, '--format={{ .Config.Labels.label }}']
+  async getLabel(label: string): Promise<string> {
+    const args = ['docker', 'inspect', this.containerId, `--format={{ index .Config.Labels "${label}" }}`]
     const out = await zx.nothrow($`${args}`)
     return out.stdout.split('\n').shift() || ''
   }
@@ -266,6 +270,14 @@ export class Container {
     logs.stdout.on('data', (chunk: any) => cleaner(config.stdout, chunk))
     logs.stderr.on('data', (chunk: any) => cleaner(config.stderr, chunk))
     return logs
+  }
+
+  async kill() {
+    const metadatastr = await this.getLabel('org.polymerlabs.metadata')
+    const metadata = JSON.parse(metadatastr)
+    if (metadata.binaries.length > 0) await this.exec(['killall', ...metadata.binaries])
+    if (metadata.remove.length > 0) await this.exec(['rm', '-rf', ...metadata.remove])
+    await $`docker container rm -f ${this.containerId}`
   }
 }
 
