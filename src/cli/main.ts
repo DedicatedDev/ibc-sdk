@@ -83,7 +83,8 @@ program
   .command('stop')
   .description('Stop the stack defined in the workspace')
   .allowExcessArguments(false)
-  .option('-a, --all', 'Remove the entire workspace, including the configuration file')
+  .option('-c, --clean', 'Removes stale containers created by previous executions.')
+  .option('-a, --all', 'Removes the entire workspace, including the configuration file. Implies `--clean`')
   .action(async (opts) => await commands.stop({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
 
 function parseChannelEnpoint(value: string) {

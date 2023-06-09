@@ -132,6 +132,24 @@ export async function containerFromId(id: string, logger: Logger): Promise<Conta
   return await reuseContainer([`id=${id}`], logger)
 }
 
+export async function removeStaleContainers(log: Logger) {
+  const args = ['docker', 'ps', '--filter=label=org.polymerlabs.runner=ibc-sdk', '--format={{ .ID }}']
+  const out = await zx.nothrow($`${args}`)
+  if (out.exitCode !== 0) {
+    log.warn(`could not remove stale containers: ${out.stderr.trim()}`)
+    return
+  }
+  const containers = out.stdout.trim()
+  if (containers.length === 0) {
+    log.info('no stale containers were found')
+    return
+  }
+  for (const c of containers.split('\n')) {
+    log.verbose(`removing stale container: ${c}`)
+    await $`docker container rm -f ${c}`
+  }
+}
+
 export type ExecStdinCallback = (stdin: Writable) => void
 
 export type LogsConfiguration = {

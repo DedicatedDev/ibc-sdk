@@ -9,7 +9,7 @@ import * as self from '../lib/index.js'
 import { channelHandshake } from './channel'
 import { EndpointInfo, Packet, TxEvent } from '../lib/dev/query'
 import { ChainSetsRunObj, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmChain } from '../lib/dev/schemas'
-import { containerFromId } from '../lib/dev/docker'
+import { containerFromId, removeStaleContainers } from '../lib/dev/docker'
 import { ProcessOutput } from 'zx-cjs'
 import archiver from 'archiver'
 import { cleanupRuntime, newJsonRpcProvider } from '../lib/dev'
@@ -168,11 +168,16 @@ export async function show(opts: any) {
 type StopOpts = {
   workspace: string
   prover: boolean
+  clean: boolean
   all: boolean
 }
 
 export async function stop(opts: StopOpts, log: winston.Logger) {
-  const removeAll = () => {
+  const removeAll = async () => {
+    fs.rmSync(path.join(opts.workspace, 'run'), { force: true, recursive: true })
+    if (!opts.all && !opts.clean) return
+    log.info('removing stale containers')
+    await removeStaleContainers(log)
     if (!opts.all) return
     log.info('removing the entire workspace')
     fs.rmSync(opts.workspace, { force: true, recursive: true })
@@ -183,12 +188,12 @@ export async function stop(opts: StopOpts, log: winston.Logger) {
     runtime = loadWorkspace(opts.workspace)
   } catch {
     log.warn('Looks like you have already stopped the workspace?')
-    return removeAll()
+    return await removeAll()
   }
 
   runtime.Run.CleanupMode = 'all'
   await cleanupRuntime(runtime, log)
-  removeAll()
+  await removeAll()
 }
 
 type ExecOpts = {
