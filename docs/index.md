@@ -20,7 +20,7 @@ To quickly get started with the IBC SDK, follow these steps:
 
 1. Obtain a GitHub token to access the necessary containers.
 
-Create a GitHub personal access token to authenticate to the Container registry, please refer to the [GitHub docs] for more info.
+Create a GitHub personal access token to authenticate to the Container registry, please refer to the [GitHub docs](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-in-a-github-actions-workflow) for more info.
 
 Make sure to select at least the `read:packages` scope when creating the token.
 
