@@ -133,6 +133,8 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
         tty: true,
         publishAllPorts: true,
         volumes: [[hostDir, '/tmp']],
+        binaries: [image.Bin!],
+        remove: [RunningChainBase.getContainerDataDir()],
         workDir: '/tmp'
       },
       chainLogger,
@@ -243,7 +245,6 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
 
     // Run `geth init` in container
     const hostGenesisFilePath = utils.path.join(RunningChainBase.getContainerDataDir(), 'genesis.json')
-    // await this.container.exec(['mkdir', hostGenesisFilePath])
     await this.getContainer(ImageLabelTypes.Main).exec([
       image.Bin!,
       'init',

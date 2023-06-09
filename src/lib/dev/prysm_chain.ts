@@ -35,6 +35,8 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
         publishAllPorts: true,
         tty: true,
         volumes: [[hostDir, '/tmp']],
+        binaries: [mainImage.Bin!],
+        remove: [RunningChainBase.getContainerDataDir()],
         workDir: '/tmp'
       },
       chainLogger,
@@ -55,6 +57,8 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
         tty: true,
         volumes: [[hostDir, '/tmp']],
         publishAllPorts: true,
+        binaries: [validatorImage.Bin!],
+        remove: [RunningChainBase.getContainerDataDir(validatorImage.Label)],
         workDir: '/tmp'
       },
       validatorLogger,

@@ -6,6 +6,7 @@ import { newContainer } from './docker.js'
 
 export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')
+  static containerGethDataDir = '/tmp/gethDataDir'
 
   static async newNode(config: ChainConfig, hostDir: string, reuse: boolean, logger: Logger): Promise<RunningChain> {
     // create a new logger based off the ChainSets' logger
@@ -23,6 +24,8 @@ export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
         detach: true,
         tty: true,
         volumes: [[hostDir, '/tmp']],
+        binaries: [image.Bin!],
+        remove: [RunningBSCChain.containerGethDataDir],
         workDir: '/tmp'
       },
       chainLogger,
@@ -34,7 +37,6 @@ export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
     return chain
   }
 
-  containerGethDataDir: string = '/tmp/gethDataDir'
   readonly rpcEndpoint = RunningBSCChain.rpcEndpoint
   protected override accounts?: ReturnType<typeof generateEvmAccounts>
 
@@ -85,11 +87,11 @@ export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
       '--http.addr',
       this.rpcEndpoint.host,
       '--datadir',
-      this.containerGethDataDir,
+      RunningBSCChain.containerGethDataDir,
       '--password',
-      utils.path.join(this.containerGethDataDir, 'signerPwd'),
+      utils.path.join(RunningBSCChain.containerGethDataDir, 'signerPwd'),
       '--keystore',
-      utils.path.join(this.containerGethDataDir, 'keystore'),
+      utils.path.join(RunningBSCChain.containerGethDataDir, 'keystore'),
       '--dev'
     ]
 
@@ -148,13 +150,13 @@ export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
     utils.fs.writeFileSync(this.genesisFile, JSON.stringify(genesis))
 
     // Run `geth init` in container
-    const hostGenesisFilePath = utils.path.join(this.containerGethDataDir, 'genesis.json')
+    const hostGenesisFilePath = utils.path.join(RunningBSCChain.containerGethDataDir, 'genesis.json')
     // await this.container.exec(['mkdir', hostGenesisFilePath])
     await this.getContainer(ImageLabelTypes.Main).exec([
       imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!,
       'init',
       '--datadir',
-      this.containerGethDataDir,
+      RunningBSCChain.containerGethDataDir,
       hostGenesisFilePath
     ])
   }
