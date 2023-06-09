@@ -83,9 +83,10 @@ program
   .command('stop')
   .description('Stop the stack defined in the workspace')
   .allowExcessArguments(false)
-  .option('-c, --clean', 'Removes stale containers created by previous executions.')
   .option('-a, --all', 'Removes the entire workspace, including the configuration file. Implies `--clean`')
   .action(async (opts) => await commands.stop({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
+// TODO: figure out a better way to do this without stepping outside the boundary of -w
+// .option('-c, --clean', 'Removes stale containers created by previous executions.')
 
 function parseChannelEnpoint(value: string) {
   const args = value.split(':')
