@@ -164,20 +164,6 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
 
   const dispatcher = new ethers.Contract(c.dispatcher.Address, c.dispatcher.Abi, signer)
 
-  // TODO: call this so the contract stores the channel id in one of its internal mappings.
-  // Otherwise, the next call to sendPacket() will fail with a 'Channel not owned by sender' error
-  const connect = await dispatcher.connectIbcChannel(
-    c.receiver.Address,
-    ethers.utils.formatBytes32String(c.polyChannel.channels[0].channel_id),
-    c.polyChannel.channels[0].connection_hops,
-    0,
-    c.polyChannel.channels[0].counterparty.port_id,
-    ethers.utils.formatBytes32String(c.polyChannel.channels[0].counterparty.channel_id),
-    ethers.utils.formatBytes32String('1.0'),
-    { proofHeight: 0, proof: ethers.utils.toUtf8Bytes('1') }
-  )
-  await connect.wait()
-
   console.log('Sending message from ETH to WASM...')
   const receiver = new ethers.Contract(c.receiver.Address, c.receiver.Abi, signer)
   const response = await receiver.greet(

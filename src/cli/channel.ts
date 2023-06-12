@@ -6,6 +6,8 @@ import { DeliverTxResponse, SigningStargateClient } from '@cosmjs/stargate'
 import Long from 'long'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import { VIBCRelayer } from 'src/lib/dev/vibc_relayer'
+import { ethers } from 'ethers'
+import { EvmAccount } from 'src/lib/dev/accounts_config'
 
 async function createSignerClient(
   sender: CosmosAccount,
@@ -257,6 +259,17 @@ export async function channelHandshake(
     openconfirm = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_confirm', res))
   }
 
+  // TODO: let's get rid of this once the real channel handshake is in place
+  await setupChannel(
+    runtime,
+    origSrc,
+    src.address,
+    openack.channel_id,
+    openconfirm.channel_id,
+    openack.connection_id,
+    openack.counterparty_port_id!
+  )
+
   const vibcruntime = runtime.Relayers.find((r) => r.Name === 'vibc-relayer')
   if (vibcruntime) {
     const relayer = await VIBCRelayer.reuse(vibcruntime, log)
@@ -269,4 +282,36 @@ export async function channelHandshake(
   log.info(`ChanOpenConfirm on ${src.chain.Name}: done`)
   log.info(`channel id on ${src.chain.Name}: ${openack.channel_id}`)
   log.info(`channel id on ${dst.chain.Name}: ${openconfirm.channel_id}`)
+}
+
+// TODO: do all this so the contract stores the channel id in one of its internal mappings.
+// Otherwise, the next call to sendPacket() will fail with a 'Channel not owned by sender' error
+async function setupChannel(
+  runtime: ChainSetsRunObj,
+  chainName: string,
+  receiverAddress: string,
+  srcChannel: string,
+  dstChannel: string,
+  connectionHops: string,
+  counterpartPortId: string
+) {
+  const chain = runtime.ChainSets.find((c) => c.Name === chainName)!
+  const dispatcher = chain.Contracts.find((c: any) => c.Name === 'Dispatcher')!
+  // Do not use account[0] since that's reserved for the vibc relayer
+  const account = chain.Accounts![1] as EvmAccount
+
+  const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
+  const signer = new ethers.Wallet(account.PrivateKey!).connect(provider)
+  const contract = new ethers.Contract(dispatcher.Address, dispatcher.Abi!, signer)
+  const connect = await contract.connectIbcChannel(
+    receiverAddress,
+    ethers.utils.formatBytes32String(srcChannel),
+    connectionHops.split('.'),
+    0,
+    counterpartPortId,
+    ethers.utils.formatBytes32String(dstChannel),
+    ethers.utils.formatBytes32String('1.0'),
+    { proofHeight: 0, proof: ethers.utils.toUtf8Bytes('1') }
+  )
+  await connect.wait()
 }
