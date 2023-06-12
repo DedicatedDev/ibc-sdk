@@ -1,8 +1,10 @@
-import winston from 'winston'
 import * as self from '../../lib/index'
 import { IbcExtension, logs, QueryClient, setupIbcExtension } from '@cosmjs/stargate'
 import { ChainSet, CosmosChainSet, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
 import { ethers } from 'ethers'
+import { getLogger } from '../../lib/utils/logger'
+
+const log = getLogger()
 
 export enum PacketState {
   Sent = 'sent',
@@ -78,8 +80,7 @@ export async function tracePackets(
   hostA: string,
   hostB: string,
   chainA: EndpointInfo,
-  chainB: EndpointInfo,
-  log: winston.Logger
+  chainB: EndpointInfo
 ): Promise<Packet[]> {
   const clientA = await getClient(hostA)
   const clientB = await getClient(hostB)

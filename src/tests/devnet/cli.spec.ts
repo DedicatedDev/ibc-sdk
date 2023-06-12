@@ -1,8 +1,11 @@
 import anyTest, { TestFn } from 'ava'
+import { getTestingLogger } from '../../lib/utils/logger'
 import { ProcessOutput } from 'zx-cjs'
 import { utils } from '../../lib'
 import { runningChainSetsSchema } from '../../lib/dev/schemas'
 import { fs, path, $ } from '../../lib/utils'
+
+getTestingLogger()
 
 const test = anyTest as TestFn<{
   workspace: string
@@ -11,7 +14,6 @@ const test = anyTest as TestFn<{
 
 test.before(async (t) => {
   t.context.cli = path.resolve(__dirname, '..', '..', '..', 'bin', 'ibctl')
-  $.verbose = process.env.TEST_LOG_LEVEL === 'verbose'
 })
 
 test.beforeEach((t) => {

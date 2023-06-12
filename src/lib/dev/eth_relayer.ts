@@ -1,12 +1,14 @@
 import { z } from 'zod'
 import { utils } from './deps'
 import { Container, containerFromId, newContainer, images } from './docker'
-import * as winston from 'winston'
 import { ChainSetsRunObj, RelayerRunObj } from './schemas'
 import path from 'path'
 import { $, ProcessOutput } from 'zx-cjs'
 import { fs } from '../utils'
 import { Writable } from 'stream'
+import { getLogger } from '../utils/logger'
+
+const log = getLogger()
 
 export const EthRelayerConfigSchema = z.object({
   consensusHostUrl: z.string().min(1),
@@ -27,18 +29,16 @@ export type EthRelayerConfig = z.infer<typeof EthRelayerConfigSchema>
 export class EthRelayer {
   container: Container
   config: EthRelayerConfig
-  logger: winston.Logger
   containerDir: string
   private readonly cmdPrefix = '/relayer/eth-relayer'
 
-  private constructor(container: Container, config: EthRelayerConfig, containerDir: string, logger: winston.Logger) {
+  private constructor(container: Container, config: EthRelayerConfig, containerDir: string) {
     this.container = container
     this.containerDir = containerDir
     this.config = config
-    this.logger = logger
   }
 
-  static async create(runObj: ChainSetsRunObj, paths: string[], logger: winston.Logger): Promise<EthRelayer> {
+  static async create(runObj: ChainSetsRunObj, paths: string[]): Promise<EthRelayer> {
     const [src, dst] = paths
 
     const eth1 = runObj.ChainSets.find((c) => c.Name === src)
@@ -67,21 +67,14 @@ export class EthRelayer {
     }
 
     const containerDir = utils.ensureDir(utils.path.join(runObj.Run.WorkingDir, 'eth-relayer'))
-    const relayerLogger = utils.createLogger({
-      Level: logger.level as any,
-      Transports: [utils.path.join(containerDir, 'log')]
+    const container = await newContainer({
+      entrypoint: 'sh',
+      imageRepoTag: images.eth_relayer.full(),
+      detach: true,
+      tty: true,
+      workDir: '/tmp',
+      volumes: [[containerDir, '/tmp']]
     })
-    const container = await newContainer(
-      {
-        entrypoint: 'sh',
-        imageRepoTag: images.eth_relayer.full(),
-        detach: true,
-        tty: true,
-        workDir: '/tmp',
-        volumes: [[containerDir, '/tmp']]
-      },
-      relayerLogger
-    )
 
     // make the vIBC SC ABI available to the relayer
     fs.writeFileSync(path.join(containerDir, 'abi.json'), config.ibcCoreAbi, { encoding: 'utf-8' })
@@ -105,13 +98,13 @@ export class EthRelayer {
       fs.writeFileSync(path.join(polyDir, 'altair.json'), JSON.stringify(lcConfig), { encoding: 'utf-8' })
     }
 
-    logger.verbose(`host dir: ${containerDir}`)
-    return new EthRelayer(container, config, containerDir, relayerLogger)
+    log.verbose(`host dir: ${containerDir}`)
+    return new EthRelayer(container, config, containerDir)
   }
 
   async waitForPoS() {
     let found = false
-    const eth = await containerFromId(this.config.ethcontainer, this.logger)
+    const eth = await containerFromId(this.config.ethcontainer)
 
     const stream = new Writable({
       write: (chunk: any, _enc: BufferEncoding, cb: (err?: Error) => void) => {
@@ -163,7 +156,7 @@ export class EthRelayer {
       // Even after eth has entered the PoS stage, the relayer can't create the LC just yet.
       // So, the following command retries every 10 seconds
       const cmds = [...rawCmds, '--create-client-mode'].map($.quote).join(' ')
-      this.logger.info(`Creating Altair Light Client with commands: ${cmds}`)
+      log.info(`Creating Altair Light Client with commands: ${cmds}`)
       await this.container.exec([
         'sh',
         '-c',
@@ -173,7 +166,7 @@ export class EthRelayer {
 
     {
       const cmds = rawCmds.map($.quote).join(' ')
-      this.logger.info(`starting relayer with commands: ${cmds}`)
+      log.info(`starting relayer with commands: ${cmds}`)
       return await this.container.exec(['sh', '-c', `${cmds} 1>/proc/1/fd/1 2>/proc/1/fd/2`], true, true)
     }
   }

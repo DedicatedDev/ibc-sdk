@@ -5,7 +5,9 @@ import { toBech32, toBase64, fromHex } from '@cosmjs/encoding'
 import { TextEncoder } from 'util'
 import { toAny } from '../../lib/cosmos/client'
 import { createSignerClient } from './test_utils'
-import winston from 'winston'
+import { getLogger } from '../../lib/utils/logger'
+
+const log = getLogger()
 
 export function randomAddress(prefix: string): string {
   return toBech32(prefix, Random.getBytes(20))
@@ -58,7 +60,6 @@ async function createLightClient(
 }
 
 export class SimLightClient {
-  logger: winston.Logger
   signer: SigningStargateClient
   header: Uint8Array
   sender: any
@@ -83,12 +84,12 @@ export class SimLightClient {
     return undefined
   }
 
-  public static async connect(config: any, logger: winston.Logger, reuse: boolean = true): Promise<SimLightClient> {
+  public static async connect(config: any, reuse: boolean = true): Promise<SimLightClient> {
     const chain = self.dev.schemas.chainSetSchema.cosmos.parse(config)
     const sender = chain.Accounts.find((a) => a.Name === 'relayer')
     if (!sender) throw new Error('cannot find relayer account')
     console.log(sender)
-    const signerClient = await createSignerClient(sender, chain.Nodes[0].RpcHost, logger)
+    const signerClient = await createSignerClient(sender, chain.Nodes[0].RpcHost)
 
     const header = new TextEncoder().encode(
       JSON.stringify({ raw: Buffer.from('abc').toString('base64'), type: 2, height: 0, revision: 0 })
@@ -103,22 +104,14 @@ export class SimLightClient {
       return await createLightClient(chainId, signerClient, sender.Address, header)
     })()
 
-    return new SimLightClient(signerClient, chainId, clientID, sender, header, logger)
+    return new SimLightClient(signerClient, chainId, clientID, sender, header)
   }
 
-  private constructor(
-    signer: SigningStargateClient,
-    chainID: string,
-    clientID: string,
-    sender: any,
-    header: any,
-    logger: winston.Logger
-  ) {
+  private constructor(signer: SigningStargateClient, chainID: string, clientID: string, sender: any, header: any) {
     this.signer = signer
     this.chainID = chainID
     this.clientID = clientID
     this.sender = sender
-    this.logger = logger
     this.header = header
   }
 
@@ -165,7 +158,7 @@ export class SimLightClient {
         )
       )
     }
-    this.logger.verbose(`ack: ${JSON.stringify(ack, null, 4)}`)
+    log.verbose(`ack: ${JSON.stringify(ack, null, 4)}`)
 
     const msg: self.cosmos.client.polyibc.MsgAcknowledgementEncodeObject = {
       typeUrl: '/polyibc.core.MsgAcknowledgement',

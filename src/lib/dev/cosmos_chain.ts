@@ -1,21 +1,19 @@
-import { $, utils, Logger, clone } from './deps.js'
+import { $, utils, clone } from './deps.js'
 import { ChainConfig, CosmosChainConfig, imageByLabel, ImageLabelTypes } from './schemas.js'
 import { AccountsConfig, CosmosAccount, CosmosAccounts, CosmosAccountsConfig } from './accounts_config'
 import { EndPoint, RunningChain, RunningChainBase } from './running_chain.js'
 import { newContainer } from './docker.js'
 import { Writable } from 'stream'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
+import { getLogger } from '../../lib/utils/logger'
+
+const log = getLogger()
 
 export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
   static readonly rpcEndpoint = new EndPoint('tcp', '0.0.0.0', '26657')
   static readonly grpcEndpoint = new EndPoint('tcp', '0.0.0.0', '9090')
 
-  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean, logger: Logger): Promise<RunningChain> {
-    // create a new logger based off the ChainSets' logger
-    const chainLogger = utils.createLogger({
-      Level: logger.level as any,
-      Transports: [utils.path.join(hostDir, 'log')]
-    })
+  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean): Promise<RunningChain> {
     const image = imageByLabel(config.Images, ImageLabelTypes.Main)
     const container = await newContainer(
       {
@@ -29,11 +27,10 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
         publishAllPorts: true,
         workDir: '/tmp'
       },
-      chainLogger,
       reuse
     )
 
-    const chain = new RunningCosmosChain(config as CosmosChainConfig, hostDir, chainLogger)
+    const chain = new RunningCosmosChain(config as CosmosChainConfig, hostDir)
     chain.setContainer(ImageLabelTypes.Main, container)
     return chain
   }
@@ -70,7 +67,7 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
   }
 
   private async initGenesis() {
-    this.logger.info(`init chain db and configs`)
+    log.debug(`init chain db and configs`)
     await this.getContainer(ImageLabelTypes.Main).exec([
       imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!,
       'init',
@@ -90,7 +87,7 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
     `
     await this.getContainer(ImageLabelTypes.Main)
       .exec(['sh', '-c', script])
-      .catch(() => this.logger.warn(`Could not change blocktime on ${this.config.Name} chain`))
+      .catch(() => log.warn(`Could not change blocktime on ${this.config.Name} chain`))
   }
 
   private async addNewAccount(account: CosmosAccount) {
@@ -127,9 +124,7 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
     } else {
       throw new Error('could not add new account')
     }
-    this.logger.info(
-      `created new account [${parsed.name}] with address [${parsed.address}] and mnemonic [${parsed.mnemonic}]`
-    )
+    log.debug(`created new account [${parsed.name}] with address [${parsed.address}] and mnemonic [${parsed.mnemonic}]`)
     const newAccount = clone(account)
 
     newAccount.Mnemonic = parsed.mnemonic

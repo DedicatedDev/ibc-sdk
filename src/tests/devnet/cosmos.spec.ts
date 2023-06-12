@@ -6,19 +6,14 @@ import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { TextEncoder } from 'util'
 import { toAny } from '../../lib/cosmos/client'
 import { images } from '../../lib/dev/docker'
+import { getTestingLogger } from '../../lib/utils/logger'
+
+const log = getTestingLogger()
 
 const cosmos = self.cosmos
 const { utils } = self
 
-const test = anyTest as TestFn<{
-  logger: self.utils.Logger
-}>
-
-test.before((t) => {
-  const logLevel: any = process.env.TEST_LOG_LEVEL ?? 'debug'
-  const logger = utils.createLogger({ Level: logLevel, Colorize: true })
-  t.context = { logger }
-})
+const test = anyTest as TestFn<{}>
 
 const Relayer = {
   address: 'polymer158z04naus5r3vcanureh7u0ngs5q4l0g5yw8xv',
@@ -58,31 +53,15 @@ ChainSets:
 
 Run:
   WorkingDir: "/tmp/test-chainsets/run-*"
-  # valid modes: ['all', 'debug', 'log'], default 'all'
   CleanupMode: all
-  Logger:
-    # valid levels: [deubg, info, warn, error]
-    Level: debug
-    # Colorize: false
-    # Transports can take a single str with the default log love above
-    # Transports: 'log'
-    Transports:
-      - 'log' # will use default level
-      - FileName: critial.log
-        Level: warn
-      # add console logger for debugging
-      - FileName: '-'
-        Level: verbose
 `
 
 test('start a comos chain from docker container', async (t) => {
-  const logger = t.context.logger
-
   const rawConfig = utils.readYaml(CosmosChainSetConfig)
   t.truthy(rawConfig)
-  logger.verbose(utils.dumpYaml(rawConfig))
+  log.verbose(utils.dumpYaml(rawConfig))
 
-  const { runObj, configObj } = await self.dev.runChainSets(rawConfig, logger)
+  const { runObj, configObj } = await self.dev.runChainSets(rawConfig)
   utils.ignoreUnused(runObj, configObj)
 
   // ensure we're get a cosmos chain
@@ -122,7 +101,7 @@ test('start a comos chain from docker container', async (t) => {
   // Test cli commands based client
   const testWithCli = async () => {
     // create a chain client from chain set
-    const client = self.cosmos.cliClient.CosmosChainClient.fromRunningContainer(chain, logger)
+    const client = self.cosmos.cliClient.CosmosChainClient.fromRunningContainer(chain)
 
     assertChainStatus(await client.balance(Relayer.address))
 
@@ -135,7 +114,7 @@ test('start a comos chain from docker container', async (t) => {
   // The account `sender` must have an mnemonic.
   const createSignerClient = async (sender: typeof chain.Accounts[0]) => {
     const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(sender.Mnemonic!, { prefix: 'polymer' })
-    logger.verbose(`sender address: ${sender.Address}, mnemonic: ${sender.Mnemonic}`)
+    log.verbose(`sender address: ${sender.Address}, mnemonic: ${sender.Mnemonic}`)
     const signerClient = await cosmos.client.SigningStargateClient.createWithSigner(
       await self.cosmos.client.newTendermintClient(chainRpc),
       offlineSigner,
@@ -146,7 +125,7 @@ test('start a comos chain from docker container', async (t) => {
 
   const testTransfer = async () => {
     const sender = chain.Accounts[0]
-    logger.verbose(`sender address: ${sender.Address}, mnemonic: ${sender.Mnemonic}`)
+    log.verbose(`sender address: ${sender.Address}, mnemonic: ${sender.Mnemonic}`)
     const signerClient = await createSignerClient(sender)
     const transferMsg: MsgSendEncodeObject = {
       typeUrl: '/cosmos.bank.v1beta1.MsgSend',
@@ -157,7 +136,7 @@ test('start a comos chain from docker container', async (t) => {
       }
     }
     const txResp = await signerClient.signAndBroadcast(sender.Address, [transferMsg], 'auto')
-    logger.info(`txResp: \n${utils.dumpYamlSafe(txResp)}`)
+    log.info(`txResp: \n${utils.dumpYamlSafe(txResp)}`)
     const newBalance = await queryClient.bank.balance(Relayer.address, 'token')
     t.deepEqual(newBalance.amount, '1234667')
   }
@@ -198,12 +177,12 @@ test('start a comos chain from docker container', async (t) => {
     t.deepEqual(createdClients.clientStates.length, 0)
 
     const txResp = await signerClient.signAndBroadcast(sender.Address, [createClientMsg], 'auto')
-    logger.info(`CreateClient txResp: \n${utils.dumpYamlSafe(txResp)}`)
+    log.info(`CreateClient txResp: \n${utils.dumpYamlSafe(txResp)}`)
 
     // query created client
     createdClients = await queryClient.polyibc.ClientStates({})
     t.deepEqual(createdClients.clientStates.length, 1)
-    logger.verbose(`clients: \n${utils.dumpYamlSafe(createdClients)}`)
+    log.verbose(`clients: \n${utils.dumpYamlSafe(createdClients)}`)
   }
 
   await Promise.all([testWithComsjs(), testWithCli(), testPolyibcQuery()])

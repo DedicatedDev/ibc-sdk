@@ -120,22 +120,4 @@ Run:
     # Determines what happens to the runtime files when the workspace is stopped.
     # Can be one of: all, debug or log. It defaults to all
     CleanupMode: debug
-
-    # Section to configure how the logger behaves.
-    Logger:
-
-      # The log level. Can be one of: debug, info, warn or error. It defaults to info
-      Level: info
-
-      # Whether the ouput is colorized or not.
-      Colorize: true
-
-      # Where the logs are going to.
-      Transports:
-        - 'log' # will use default level
-        - FileName: critical.log
-          Level: warn
-          # add console logger for debugging
-        - FileName: '-'
-          Level: info
 `

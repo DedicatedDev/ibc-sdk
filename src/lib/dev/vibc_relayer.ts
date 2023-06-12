@@ -1,27 +1,23 @@
 import { images, newContainer, containerConfig, Container, containerFromId } from './docker'
 import * as utils from '../utils/index.js'
-import winston from 'winston'
 import { ProcessOutput } from 'zx-cjs'
 import { ChainSetsRunObj, isCosmosChain, isEvmChain, RelayerRunObj } from './schemas'
 import { CosmosAccount, EvmAccount } from './accounts_config'
+import { getLogger } from '../utils/logger'
+
+const log = getLogger()
 
 export class VIBCRelayer {
   container: Container
-  logger: winston.Logger
 
   private readonly binary = '/vibc-relayer/vibc-relayer'
 
-  private constructor(container: Container, logger: winston.Logger) {
-    this.logger = logger
+  private constructor(container: Container) {
     this.container = container
   }
 
-  static async create(workDir: string, logger: winston.Logger): Promise<VIBCRelayer> {
+  static async create(workDir: string): Promise<VIBCRelayer> {
     const containerDir = utils.ensureDir(utils.path.join(workDir, 'vibc-relayer'))
-    const relayerLogger = utils.createLogger({
-      Level: logger.level as any,
-      Transports: [utils.path.join(containerDir, 'log')]
-    })
     const relayerDockerConfig: containerConfig = {
       imageRepoTag: images.vibc_relayer.full(),
       detach: true,
@@ -30,14 +26,14 @@ export class VIBCRelayer {
       entrypoint: 'sh',
       volumes: [[containerDir, '/tmp']]
     }
-    const container = await newContainer(relayerDockerConfig, relayerLogger)
-    logger.verbose(`host dir: ${containerDir}`)
-    return new VIBCRelayer(container, relayerLogger)
+    const container = await newContainer(relayerDockerConfig)
+    log.verbose(`host dir: ${containerDir}`)
+    return new VIBCRelayer(container)
   }
 
-  static async reuse(runtime: RelayerRunObj, logger: winston.Logger): Promise<VIBCRelayer> {
-    const container = await containerFromId(runtime.ContainerId, logger)
-    return new VIBCRelayer(container, logger)
+  static async reuse(runtime: RelayerRunObj): Promise<VIBCRelayer> {
+    const container = await containerFromId(runtime.ContainerId)
+    return new VIBCRelayer(container)
   }
 
   async exec(commands: string[], tty = false, detach = false): Promise<ProcessOutput> {
@@ -75,14 +71,14 @@ export class VIBCRelayer {
         continue
       }
 
-      this.logger.verbose(`adding chain ${chain.Name} to vibc-relayer`)
+      log.verbose(`adding chain ${chain.Name} to vibc-relayer`)
       await this.exec([this.binary, 'chains', 'add', ...Object.entries(args).flat()]).catch((e) => {
-        this.logger.error(e)
+        log.error(e)
         throw new Error(e)
       })
 
       await this.exec([this.binary, 'config', 'set', 'global.polling-idle-time', '10000']).catch((e) => {
-        this.logger.error(e)
+        log.error(e)
         throw new Error(e)
       })
     }
@@ -90,9 +86,9 @@ export class VIBCRelayer {
     for (const path of paths) {
       const [src, dst] = path
       const name = `${src}-${dst}`
-      this.logger.verbose(`adding path ${name} to vibc-relayer`)
+      log.verbose(`adding path ${name} to vibc-relayer`)
       await this.exec([this.binary, 'paths', 'add', src, dst, name]).catch((e) => {
-        this.logger.error(e)
+        log.error(e)
         throw new Error(e)
       })
     }
@@ -101,14 +97,14 @@ export class VIBCRelayer {
   async update(srcChain: string, dstChain: string, srcChannel: string, dstChannel: string) {
     const args = [`${srcChain}-${dstChain}`, '--src-channel', srcChannel, '--dst-channel', dstChannel]
     await this.exec([this.binary, 'paths', 'update', ...args]).catch((e) => {
-      this.logger.error(e)
+      log.error(e)
       throw new Error(e)
     })
   }
 
   async start(): Promise<ProcessOutput> {
     const start = this.exec(['sh', '-c', `${this.binary} start 1>/proc/1/fd/1 2>/proc/1/fd/2`], true, true)
-    this.logger.info('vibc-relayer started')
+    log.info('vibc-relayer started')
     return start
   }
 

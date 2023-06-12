@@ -1,19 +1,17 @@
-import { ethers, $, utils, Logger, zx } from './deps.js'
+import { ethers, $, utils, zx } from './deps.js'
 import { AccountsConfig, generateEvmAccounts } from './accounts_config.js'
 import { ChainConfig, EvmChainConfig, imageByLabel, ImageLabelTypes } from './schemas.js'
 import { EndPoint, RunningChain, RunningChainBase } from './running_chain.js'
 import { newContainer } from './docker.js'
+import { getLogger } from '../utils/logger'
+
+getLogger()
 
 export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')
   static containerGethDataDir = '/tmp/gethDataDir'
 
-  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean, logger: Logger): Promise<RunningChain> {
-    // create a new logger based off the ChainSets' logger
-    const chainLogger = utils.createLogger({
-      Level: logger.level as any,
-      Transports: [utils.path.join(hostDir, 'log')]
-    })
+  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean): Promise<RunningChain> {
     const image = imageByLabel(config.Images, ImageLabelTypes.Main)
     const container = await newContainer(
       {
@@ -28,11 +26,10 @@ export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
         remove: [RunningBSCChain.containerGethDataDir],
         workDir: '/tmp'
       },
-      chainLogger,
       reuse
     )
 
-    const chain = new RunningBSCChain(config as EvmChainConfig, hostDir, chainLogger)
+    const chain = new RunningBSCChain(config as EvmChainConfig, hostDir)
     chain.setContainer(ImageLabelTypes.Main, container)
     return chain
   }

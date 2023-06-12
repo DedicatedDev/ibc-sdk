@@ -1,8 +1,11 @@
 import { clone, utils } from './deps.js'
-import { Logger, path } from '../utils/index.js'
+import { path } from '../utils/index.js'
 import { Container } from './docker.js'
 import { Accounts } from './accounts_config.js'
 import { ChainConfig, ChainSetsRunObj, ImageLabelTypes, RunningNodeConfig } from './schemas.js'
+import { getLogger } from '../utils/logger'
+
+const log = getLogger()
 
 export type NodeAccounts = ChainSetsRunObj['ChainSets'][number]
 
@@ -11,12 +14,7 @@ export interface RunningChain {
   getRunObj(): Promise<NodeAccounts>
 }
 
-export type RunningChainCreator = (
-  config: ChainConfig,
-  hostDir: string,
-  reuse: boolean,
-  logger: Logger
-) => Promise<RunningChain>
+export type RunningChainCreator = (config: ChainConfig, hostDir: string, reuse: boolean) => Promise<RunningChain>
 
 export class EndPoint {
   readonly protocol: string
@@ -58,7 +56,6 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
   /**  should set rpcEndpoint to the default chain rpc endpoint,
   eg. http://0.0.0.0:8545 for Geth; tcp://0.0.0.0:26657 for Cosmos chain */
   abstract rpcEndpoint: EndPoint
-  protected logger: Logger
   protected config: ConfigType
   private containers: Map<ImageLabelTypes, Container>
   private runObj?: NodeAccounts
@@ -70,11 +67,10 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
   protected readonly entrypointStdout = '/proc/1/fd/1'
   protected readonly entrypointStderr = '/proc/1/fd/2'
 
-  constructor(config: ConfigType, wd: string, logger: Logger) {
+  constructor(config: ConfigType, wd: string) {
     this.containers = new Map()
     this.config = config
     this.hostWd = wd
-    this.logger = logger
   }
 
   abstract start(dependencyRuntime: NodeAccounts[]): Promise<void>
@@ -99,18 +95,18 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
     // if any container is not reused, then none are
     for (const container of this.containers.values()) {
       if (container.reused) continue
-      this.logger.info(`Will not reuse containers because container ${container.containerId} is not reusing`)
+      log.debug(`Will not reuse containers because container ${container.containerId} is not reusing`)
       return false
     }
     const reusedWd = await this.getContainer(ImageLabelTypes.Main).getMountPath()
     if (!utils.fs.existsSync(reusedWd)) {
-      this.logger.info(`previous wd '${reusedWd}' does not exist`)
+      log.debug(`previous wd '${reusedWd}' does not exist`)
       return false
     }
     utils.fs.rmSync(this.hostWd, { recursive: true })
     utils.fs.symlinkSync(reusedWd, this.hostWd, 'dir')
     this.hostWd = reusedWd
-    this.logger.info(`Reusing wd: '${this.hostWd}'`)
+    log.debug(`Reusing wd: '${this.hostWd}'`)
     return true
   }
 
@@ -168,12 +164,12 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
     const accountsFile = utils.path.join(this.hostWd, 'accounts.json')
     try {
       this.accounts = JSON.parse(utils.fs.readFileSync(accountsFile, 'utf-8'))
-      this.logger.info(`Accounts loaded from ${accountsFile}`)
+      log.debug(`Accounts loaded from ${accountsFile}`)
     } catch {
-      this.logger.info(`Could not load accounts. Will generate them`)
+      log.debug(`Could not load accounts. Will generate them`)
       this.accounts = await this.generateAccounts(this.config.Accounts!)
       utils.fs.writeFileSync(accountsFile, JSON.stringify(this.accounts))
-      this.logger.info(`Accounts generated`)
+      log.debug(`Accounts generated`)
     }
   }
 }

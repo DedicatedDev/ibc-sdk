@@ -1,21 +1,17 @@
-import { $, Logger, utils, zx } from './deps.js'
+import { $, utils, zx } from './deps.js'
 import { ChainConfig, imageByLabel, ImageLabelTypes, NoneChainConfig } from './schemas.js'
 import { EndPoint, NodeAccounts, RunningChain, RunningChainBase } from './running_chain.js'
 import { newContainer, runContainer } from './docker'
 import { RunningGethChain } from './geth_chain'
+import { getLogger } from '../utils/logger'
+
+const log = getLogger()
 
 export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '4000')
   static readonly grpcEndpoint = new EndPoint('http', '0.0.0.0', '3500')
 
-  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean, logger: Logger): Promise<RunningChain> {
-    // create a new logger based off the ChainSets' logger
-
-    const chainLogger = utils.createLogger({
-      Level: logger.level as any,
-      Transports: [utils.path.join(hostDir, 'log')]
-    })
-
+  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean): Promise<RunningChain> {
     reuse = false // TODO: implement reuse container
     const mainImage = config.Images.find((i) => i.Label === ImageLabelTypes.Main)
     const genesisImage = config.Images.find((i) => i.Label === ImageLabelTypes.Genesis)
@@ -39,14 +35,9 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
         remove: [RunningChainBase.getContainerDataDir()],
         workDir: '/tmp'
       },
-      chainLogger,
       reuse
     )
 
-    const validatorLogger = utils.createLogger({
-      Level: logger.level as any,
-      Transports: [utils.path.join(hostDir, 'validatorLog')]
-    })
     const validatorContainer = await newContainer(
       {
         label: validatorImage.Label.toString(),
@@ -61,11 +52,10 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
         remove: [RunningChainBase.getContainerDataDir(validatorImage.Label)],
         workDir: '/tmp'
       },
-      validatorLogger,
       reuse
     )
 
-    const chain = new RunningPrysmChain(config as NoneChainConfig, hostDir, chainLogger)
+    const chain = new RunningPrysmChain(config as NoneChainConfig, hostDir)
     chain.setContainer(ImageLabelTypes.Main, mainContainer)
     chain.setContainer(ImageLabelTypes.Validator, validatorContainer)
     return chain
@@ -100,7 +90,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
 
   protected async isChainReady(): Promise<boolean> {
     const runObj: any = await this.getRunObj()
-    this.logger.info(`Verifying prysm readiness at ${runObj.Nodes[0].RpcHost}`)
+    log.debug(`verifying prysm readiness at ${runObj.Nodes[0].RpcHost}`)
     await utils.waitUntil(
       async () => {
         const out = await zx.nothrow($`curl -sf ${runObj.Nodes[0].RpcHost}`)
@@ -211,17 +201,14 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
     const genesisImage = this.config.Images.find((i) => i.Label === ImageLabelTypes.Genesis)
     if (!genesisImage) throw new Error('genesis image is undefined?')
 
-    await runContainer(
-      {
-        entrypoint: imageByLabel(this.config.Images, ImageLabelTypes.Genesis).Bin!,
-        exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
-        imageRepoTag: `${genesisImage.Repository}:${genesisImage.Tag}`,
-        volumes: [[this.hostWd, '/tmp']],
-        workDir: '/tmp',
-        args: args
-      },
-      this.logger
-    )
+    await runContainer({
+      entrypoint: imageByLabel(this.config.Images, ImageLabelTypes.Genesis).Bin!,
+      exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
+      imageRepoTag: `${genesisImage.Repository}:${genesisImage.Tag}`,
+      volumes: [[this.hostWd, '/tmp']],
+      workDir: '/tmp',
+      args: args
+    })
   }
 
   private get dataDir(): string {

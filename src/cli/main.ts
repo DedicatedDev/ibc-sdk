@@ -1,34 +1,14 @@
 #!/usr/bin/env node
 
 import { Command, InvalidArgumentError, Option } from 'commander'
-import * as winston from 'winston'
 import { EndpointInfo } from '../lib/dev/query'
 import * as commands from './commands'
 import path from 'path'
 import { homedir } from 'os'
 import { version } from '../.package.json'
+import { getLogger, levels } from '../lib/utils/logger'
 
-function newLogger(level: string) {
-  const timestampFormat = 'HH:mm:ss.SSS'
-  return winston.createLogger({
-    level: level,
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.timestamp({
-        format: timestampFormat
-      }),
-      winston.format.splat(),
-      winston.format.simple(),
-      winston.format.printf(
-        (info) =>
-          `[${info.timestamp} ${info.level}]: ${info.message}` + (info.splat !== undefined ? `${info.splat}` : ' ')
-      )
-    ),
-    transports: new winston.transports.Console({
-      stderrLevels: ['error', 'warn', 'info', 'verbose']
-    })
-  })
-}
+const log = getLogger()
 
 const nameDescription =
   'The name can be of the format `name:label` like the one in the `show` output. ' +
@@ -51,11 +31,10 @@ const defaultWorkspace = path.join(homedir(), '.ibc-sdk')
 const program = new Command()
   .helpOption('-h, --help', 'Display help command')
   .description('IBC SDK control')
-  .addOption(
-    new Option('-l, --log-level <level>', 'Log level').choices(['error', 'warn', 'info', 'verbose']).default('info')
-  )
+  .addOption(new Option('-l, --log-level <level>', 'Log level').choices(levels).default('info'))
   .addOption(new Option('-w, --workspace <workspace>', 'Working directory').default(defaultWorkspace, defaultWorkspace))
   .version(version)
+  .hook('preAction', (cmd) => (log.level = cmd.opts().logLevel))
 
 const useZkMintOption = new Option('--use-zk-mint', 'Use ZK minting').default(false)
 
@@ -63,7 +42,7 @@ program
   .command('init')
   .description('Initializes the workspace')
   .allowExcessArguments(false)
-  .action(async (opts) => await commands.init({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
+  .action(async (opts) => await commands.init({ ...program.opts(), ...opts }))
 
 program
   .command('start')
@@ -71,7 +50,7 @@ program
   .addOption(connectionOption)
   .addOption(useZkMintOption)
   .allowExcessArguments(false)
-  .action(async (opts) => await commands.start({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
+  .action(async (opts) => await commands.start({ ...program.opts(), ...opts }))
 
 program
   .command('show')
@@ -84,7 +63,7 @@ program
   .description('Stop the stack defined in the workspace')
   .allowExcessArguments(false)
   .option('-a, --all', 'Removes the entire workspace, including the configuration file. Implies `--clean`')
-  .action(async (opts) => await commands.stop({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel)))
+  .action(async (opts) => await commands.stop({ ...program.opts(), ...opts }))
 // TODO: figure out a better way to do this without stepping outside the boundary of -w
 // .option('-c, --clean', 'Removes stale containers created by previous executions.')
 
@@ -107,7 +86,7 @@ program
   .action(async (a, b, opts) => {
     const endpointA = parseChannelEnpoint(a)
     const endpointB = parseChannelEnpoint(b)
-    await commands.channel({ ...program.opts(), endpointA, endpointB, ...opts }, newLogger(program.opts().logLevel))
+    await commands.channel({ ...program.opts(), endpointA, endpointB, ...opts })
   })
 
 program
@@ -117,7 +96,7 @@ program
   .allowExcessArguments(false)
   .action(async (opts) => {
     if (opts.length === 0) throw new Error('Name (name:label) is required')
-    await commands.exec({ ...program.opts(), name: opts.shift(), args: opts }, newLogger(program.opts().logLevel))
+    await commands.exec({ ...program.opts(), name: opts.shift(), args: opts })
   })
 
 program
@@ -128,7 +107,7 @@ program
   .arguments('<chain-name> <account> <smart-contract-path> [args...]')
   .allowExcessArguments(false)
   .action(async (chain, account, scpath, scargs) => {
-    await commands.deploy({ ...program.opts(), chain, account, scpath, scargs }, newLogger(program.opts().logLevel))
+    await commands.deploy({ ...program.opts(), chain, account, scpath, scargs })
   })
 
 program
@@ -137,7 +116,7 @@ program
   .option('-o, --output <output>', 'Output file', 'logs.tar.gz')
   .allowExcessArguments(false)
   .action(async (opts) => {
-    await commands.archiveLogs({ ...program.opts(), ...opts }, newLogger(program.opts().logLevel))
+    await commands.archiveLogs({ ...program.opts(), ...opts })
   })
 
 program
@@ -164,7 +143,7 @@ program
 
   .allowExcessArguments(false)
   .action(async (name, opts) => {
-    await commands.logs({ ...program.opts(), name: name, ...opts }, newLogger(program.opts().logLevel))
+    await commands.logs({ ...program.opts(), name: name, ...opts })
   })
 
 function parseEndpointInfo(value: string): EndpointInfo {
@@ -190,10 +169,7 @@ program
   .action(async (a, b, opts) => {
     const endpointA = parseEndpointInfo(a)
     const endpointB = parseEndpointInfo(b)
-    await commands.tracePackets(
-      { ...program.opts(), endpointA, endpointB, ...opts },
-      newLogger(program.opts().logLevel)
-    )
+    await commands.tracePackets({ ...program.opts(), endpointA, endpointB, ...opts })
   })
 
 program
@@ -205,7 +181,7 @@ program
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
-    await commands.channels({ ...program.opts(), name: name, ...opts }, newLogger(program.opts().logLevel))
+    await commands.channels({ ...program.opts(), name: name, ...opts })
   })
 
 program
@@ -217,7 +193,7 @@ program
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
-    await commands.connections({ ...program.opts(), name: name, ...opts }, newLogger(program.opts().logLevel))
+    await commands.connections({ ...program.opts(), name: name, ...opts })
   })
 
 program
@@ -229,7 +205,7 @@ program
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
-    await commands.clients({ ...program.opts(), name: name, ...opts }, newLogger(program.opts().logLevel))
+    await commands.clients({ ...program.opts(), name: name, ...opts })
   })
 
 program
@@ -240,7 +216,7 @@ program
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, tx, opts) => {
-    await commands.tx({ ...program.opts(), name: name, tx: tx, ...opts }, newLogger(program.opts().logLevel))
+    await commands.tx({ ...program.opts(), name: name, tx: tx, ...opts })
   })
 
 program
@@ -273,7 +249,7 @@ program
   .action(async (name, opts) => {
     if (opts.minHeight && opts.maxHeight && opts.minHeight >= opts.maxHeight)
       throw new Error(`max-height (${opts.maxHeight}) must be greater than min-height (${opts.minHeight})`)
-    await commands.events({ ...program.opts(), name: name, ...opts }, newLogger(program.opts().logLevel))
+    await commands.events({ ...program.opts(), name: name, ...opts })
   })
 
 process.stdout.on('error', (err) => err.code === 'EPIPE' ?? process.exit(0))
@@ -283,6 +259,6 @@ program
   .parseAsync()
   .then(() => process.exit())
   .catch((error: Error) => {
-    newLogger('error').error(error.message)
+    log.error(error.message)
     process.exit(1)
   })

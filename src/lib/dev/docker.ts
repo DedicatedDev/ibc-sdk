@@ -1,7 +1,9 @@
 import { Writable } from 'stream'
 import { z } from 'zod'
-import { ProcessOutput } from 'zx-cjs'
-import { $, Logger, zx } from './deps.js'
+import { $, nothrow, ProcessOutput } from 'zx-cjs'
+import { getLogger } from '../../lib/utils/logger'
+
+const log = getLogger()
 
 const stringPair = z.array(z.string()).length(2)
 
@@ -69,12 +71,11 @@ function parseConfig(config: containerConfig): [containerConfig, string[]] {
  * Runs a new Docker container and returns
  * to stdout.
  * @param config
- * @param logger
  * @returns
  */
-export async function runContainer(config: containerConfig, logger: Logger): Promise<ProcessOutput> {
+export async function runContainer(config: containerConfig): Promise<ProcessOutput> {
   const [_, args] = parseConfig(config)
-  logger.verbose(`running container: ${args.map($.quote).join(' ')}`)
+  log.debug(`running container: ${args.map($.quote).join(' ')}`)
   return await $`${args}`
 }
 
@@ -82,25 +83,20 @@ export async function runContainer(config: containerConfig, logger: Logger): Pro
  * Create a new Docker container instance. Currently only supports Docker run detach mode, where container ID is printed
  * to stdout.
  * @param config
- * @param logger
  * @returns
  */
-export async function newContainer(
-  config: containerConfig,
-  logger: Logger,
-  reuse: boolean = false
-): Promise<Container> {
+export async function newContainer(config: containerConfig, reuse: boolean = false): Promise<Container> {
   const [parsed, args] = parseConfig(config)
 
   if (reuse) {
     try {
-      return await containerFromTag(parsed.imageRepoTag, logger)
+      return await containerFromTag(parsed.imageRepoTag)
     } catch {
-      logger.info("couldn't find a running container. Will create a new one")
+      log.debug("couldn't find a running container. Will create a new one")
     }
   }
 
-  logger.verbose(`creating container: ${args.map($.quote).join(' ')}`)
+  log.debug(`creating container: ${args.map($.quote).join(' ')}`)
   const process = $`${args}`
   process.child?.unref()
   const out = await process
@@ -108,11 +104,11 @@ export async function newContainer(
   if (containerId.length < 2) {
     throw new Error(`didn't get a valid container ID with args: ${args.map($.quote).join(' ')}`)
   }
-  logger.verbose(`created container with ${parsed.imageRepoTag}`)
-  return new Container(containerId, logger)
+  log.debug(`created container with ${parsed.imageRepoTag}`)
+  return new Container(containerId)
 }
 
-async function reuseContainer(filters: string[], logger: Logger): Promise<Container> {
+async function reuseContainer(filters: string[]): Promise<Container> {
   const args = ['docker', 'container', 'ls', '--latest', '--quiet', '--filter', 'status=running']
   for (const filter of filters) args.push('--filter', filter)
 
@@ -121,31 +117,31 @@ async function reuseContainer(filters: string[], logger: Logger): Promise<Contai
   if (containerId.length < 2) {
     throw new Error(`didn't get a valid container ID with args: ${args.map($.quote).join(' ')}`)
   }
-  return new Container(containerId, logger, true)
+  return new Container(containerId, true)
 }
 
-export async function containerFromTag(imageRepoTag: string, logger: Logger): Promise<Container> {
-  return await reuseContainer([`ancestor=${imageRepoTag}`], logger)
+export async function containerFromTag(imageRepoTag: string): Promise<Container> {
+  return await reuseContainer([`ancestor=${imageRepoTag}`])
 }
 
-export async function containerFromId(id: string, logger: Logger): Promise<Container> {
-  return await reuseContainer([`id=${id}`], logger)
+export async function containerFromId(id: string): Promise<Container> {
+  return await reuseContainer([`id=${id}`])
 }
 
-export async function removeStaleContainers(log: Logger) {
+export async function removeStaleContainers() {
   const args = ['docker', 'ps', '--filter=label=org.polymerlabs.runner=ibc-sdk', '--format={{ .ID }}']
-  const out = await zx.nothrow($`${args}`)
+  const out = await nothrow($`${args}`)
   if (out.exitCode !== 0) {
     log.warn(`could not remove stale containers: ${out.stderr.trim()}`)
     return
   }
   const containers = out.stdout.trim()
   if (containers.length === 0) {
-    log.info('no stale containers were found')
+    log.debug('no stale containers were found')
     return
   }
   for (const c of containers.split('\n')) {
-    log.verbose(`removing stale container: ${c}`)
+    log.debug(`removing stale container: ${c}`)
     await $`docker container rm -f ${c}`
   }
 }
@@ -164,12 +160,10 @@ export type LogsConfiguration = {
 
 export class Container {
   readonly containerId: string
-  readonly logger: Logger
   readonly reused: boolean
 
-  constructor(containerId: string, logger: Logger, reused: boolean = false) {
+  constructor(containerId: string, reused: boolean = false) {
     this.containerId = containerId.substring(0, 12)
-    this.logger = logger
     this.reused = reused
   }
 
@@ -223,19 +217,19 @@ export class Container {
    */
   async getMountPath(): Promise<string> {
     const args = ['docker', 'inspect', this.containerId, '--format={{range .Mounts}}{{.Source}}{{end}}']
-    const out = await zx.nothrow($`${args}`)
+    const out = await nothrow($`${args}`)
     return out.stdout.split('\n').shift() || ''
   }
 
   async getLabel(label: string): Promise<string> {
     const args = ['docker', 'inspect', this.containerId, `--format={{ index .Config.Labels "${label}" }}`]
-    const out = await zx.nothrow($`${args}`)
+    const out = await nothrow($`${args}`)
     return out.stdout.split('\n').shift() || ''
   }
 
   async isHealthy(): Promise<boolean> {
     const args = ['docker', 'inspect', this.containerId, '--format={{ .State.Health.Status }}']
-    const out = await zx.nothrow($`${args}`)
+    const out = await nothrow($`${args}`)
     return out.stdout.trim() === 'healthy'
   }
 
@@ -255,16 +249,16 @@ export class Container {
     if (detach) allArgs.push('--detach')
     allArgs.push(this.containerId)
     allArgs.push(...cmds)
-    this.logger.verbose(allArgs.map($.quote).join(' '))
+    log.debug(allArgs.map($.quote).join(' '))
     try {
       const proc = $`${allArgs}`
       if (typeof stdincb !== 'undefined') stdincb(proc.stdin)
       const out = await proc
-      this.logger.verbose(`stdout: ${out.stdout}`)
-      this.logger.verbose(`stderr: ${out.stderr}`)
+      log.debug(`stdout: ${out.stdout}`)
+      log.debug(`stderr: ${out.stderr}`)
       return out
     } catch (e) {
-      this.logger.error(allArgs.map($.quote).join(' '))
+      log.error(allArgs.map($.quote).join(' '))
       throw e
     }
   }

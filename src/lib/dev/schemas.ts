@@ -1,4 +1,3 @@
-import { loggerSchema } from '../utils/index.js'
 import { z } from 'zod'
 import { AccountsConfigSchema, AccountsSchema } from './accounts_config.js'
 export {
@@ -83,8 +82,7 @@ export const chainSetsRunConfigSchema = z.object({
   ChainSets: z.array(ChainConfigSchema.all),
   Run: z.object({
     WorkingDir: z.string(),
-    CleanupMode: z.enum(['all', 'debug', 'log', 'reuse']).nullish().default('all'),
-    Logger: loggerSchema
+    CleanupMode: z.enum(['all', 'debug', 'log', 'reuse']).nullish().default('all')
   })
 })
 

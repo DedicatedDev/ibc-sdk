@@ -7,6 +7,5 @@ export { ethers } from 'ethers'
 
 $.verbose = false
 export { $ }
-export { Logger } from '../utils/index.js'
 export { clone }
 export { winston }

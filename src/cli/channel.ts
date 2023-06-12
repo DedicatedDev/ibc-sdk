@@ -1,4 +1,3 @@
-import winston from 'winston'
 import { ChainSetsRunObj, CosmosAccount } from '../lib/dev/schemas'
 import * as self from '../lib/index.js'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
@@ -8,6 +7,9 @@ import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import { VIBCRelayer } from 'src/lib/dev/vibc_relayer'
 import { ethers } from 'ethers'
 import { EvmAccount } from 'src/lib/dev/accounts_config'
+import { getLogger } from '../lib/utils/logger'
+
+const log = getLogger()
 
 async function createSignerClient(
   sender: CosmosAccount,
@@ -51,8 +53,7 @@ export async function channelHandshake(
   runtime: ChainSetsRunObj,
   origSrc: string,
   src: EndpointInfo,
-  dst: EndpointInfo,
-  log: winston.Logger
+  dst: EndpointInfo
 ) {
   const srcAccount = src.chain.Accounts.find((a) => a.Name === 'relayer')
   if (!srcAccount) throw new Error(`Could not find relayer account in '${src.chain.Name}' chain`)
@@ -272,7 +273,7 @@ export async function channelHandshake(
 
   const vibcruntime = runtime.Relayers.find((r) => r.Name === 'vibc-relayer')
   if (vibcruntime) {
-    const relayer = await VIBCRelayer.reuse(vibcruntime, log)
+    const relayer = await VIBCRelayer.reuse(vibcruntime)
     // this is counter intuitive but the original source was replaced by polymer
     // so we want to setup the path between polymer and the original source.
     await relayer.update(src.chain.Name, origSrc, openack.channel_id, openconfirm.channel_id)

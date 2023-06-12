@@ -1,4 +1,4 @@
-import { ethers, $, utils, Logger, zx } from './deps.js'
+import { ethers, $, utils, zx } from './deps.js'
 import { AccountsConfig, generateEvmAccounts } from './accounts_config.js'
 import { ChainConfig, EvmChainConfig, imageByLabel, ImageLabelTypes } from './schemas.js'
 import { EndPoint, RunningChain, RunningChainBase } from './running_chain.js'
@@ -116,12 +116,7 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     }
   }
 
-  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean, logger: Logger): Promise<RunningChain> {
-    // create a new logger based off the ChainSets' logger
-    const chainLogger = utils.createLogger({
-      Level: logger.level as any,
-      Transports: [utils.path.join(hostDir, 'log')]
-    })
+  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean): Promise<RunningChain> {
     const image = imageByLabel(config.Images, ImageLabelTypes.Main)
     const container = await newContainer(
       {
@@ -137,11 +132,10 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
         remove: [RunningChainBase.getContainerDataDir()],
         workDir: '/tmp'
       },
-      chainLogger,
       reuse && false // TODO Implement reuse container
     )
 
-    const chain = new RunningGethChain(config as EvmChainConfig, hostDir, chainLogger)
+    const chain = new RunningGethChain(config as EvmChainConfig, hostDir)
     chain.setContainer(ImageLabelTypes.Main, container)
     return chain
   }

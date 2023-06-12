@@ -47,10 +47,7 @@ export async function testAsyncLogger() {
   }
   const rootLogger = createLogger({
     Level: 'debug',
-    Transports: [
-      '-',
-      { FileName: path.join(testDir, 'root.log'), Level: 'info' }
-    ]
+    Transports: ['-', { FileName: path.join(testDir, 'root.log'), Level: 'info' }]
   })
   const batches = [1, 2, 3, 4, 5].map(async (batch) => {
     const loggerFile = path.join(testDir, `batch-${batch}.log`)
@@ -68,11 +65,7 @@ export async function testAsyncLogger() {
     })
 
     const results = await Promise.all(promises)
-    logger.info(
-      `=> all results Batch-${batch} ${results.join(' ')}\t${
-        logger.transports[0].filename
-      }`
-    )
+    logger.info(`=> all results Batch-${batch} ${results.join(' ')}\t${logger.transports[0].filename}`)
     await Promise.all(promises)
   })
 
@@ -83,10 +76,7 @@ export async function testAsyncLogger() {
 const createBatchLogger = (rootLogger, batch) => {
   return createLogger({
     Level: rootLogger.level,
-    Transports: [
-      { FileName: path.join(testDir, `batch-${batch}.log`), Level: 'info' },
-      '-'
-    ]
+    Transports: [{ FileName: path.join(testDir, `batch-${batch}.log`), Level: 'info' }, '-']
   })
 }
 

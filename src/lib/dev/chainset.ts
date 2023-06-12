@@ -1,5 +1,5 @@
 import { RunningBSCChain } from './bsc_chain'
-import { Logger, utils, winston } from './deps.js'
+import { utils } from './deps'
 import { RunningGethChain } from './geth_chain.js'
 import {
   ChainConfig,
@@ -13,6 +13,9 @@ import { NodeAccounts, RunningChain, RunningChainCreator } from './running_chain
 import { fs } from '../utils'
 import { RunningPrysmChain } from './prysm_chain'
 import { containerFromId } from './docker'
+import { getLogger } from '../utils/logger'
+
+const log = getLogger()
 
 /**
  * Start ChainSets defined in the config.
@@ -26,14 +29,13 @@ Returned `runObj` contains info of containers, pre-loaded accounts, and host wor
 `configObj` typed ChainSetsRunConfig
  */
 export async function runChainSets(
-  config: string | object,
-  logger: winston.Logger
+  config: string | object
 ): Promise<{ runObj: ChainSetsRunObj; configObj: ChainSetsRunConfig }> {
   const configObj = typeof config === 'object' ? config : utils.readYaml(config)
   // TODO: improve zod's error handling to return more meaningful messages when the
   // configuration file is invalid
   const parsedConfig = chainSetsRunConfigSchema.parse(configObj)
-  const runTemplate = new ChainSetsRunTemplate(parsedConfig, logger)
+  const runTemplate = new ChainSetsRunTemplate(parsedConfig)
 
   const runObj = await runTemplate.run()
   return { runObj, configObj: parsedConfig }
@@ -45,11 +47,11 @@ export async function runChainSets(
  * - Remove working directories recursively.
  * @param runtime The chain set runtime
  */
-export async function cleanupRuntime(runtime: ChainSetsRunObj, logger: winston.Logger) {
+export async function cleanupRuntime(runtime: ChainSetsRunObj) {
   const mode = runtime.Run.CleanupMode
 
   if (mode === 'reuse') {
-    logger.verbose('CleanupMode is "reuse". Nothing to do.')
+    log.verbose('CleanupMode is "reuse". Nothing to do.')
     return
   }
 
@@ -66,10 +68,10 @@ export async function cleanupRuntime(runtime: ChainSetsRunObj, logger: winston.L
 
     for (const c of components) {
       try {
-        logger.info(`removing container '${c.name}' ...`)
-        await (await containerFromId(c.id, logger)).kill()
+        log.info(`removing container '${c.name}' ...`)
+        await (await containerFromId(c.id)).kill()
       } catch {
-        logger.warning(`could not remove container '${c.name}'`)
+        log.warning(`could not remove container '${c.name}'`)
       }
     }
   }
@@ -95,14 +97,10 @@ export function getChainSetsRuntimeFile(wd: string): string {
 class ChainSetsRunTemplate {
   readonly config: ChainSetsRunConfig
   wd = ''
-  logger: winston.Logger
 
-  constructor(config: ChainSetsRunConfig, logger: winston.Logger) {
+  constructor(config: ChainSetsRunConfig) {
     this.config = config
-
     this.wd = utils.expandUserHomeDir(this.generateWD(new Date(), this.config.Run.WorkingDir))
-
-    this.logger = logger
   }
 
   // Start all chains in a ready state.
@@ -114,7 +112,7 @@ class ChainSetsRunTemplate {
       throw new Error(`Workdir '${this.wd}' already in use`)
     }
 
-    const running = new RunningChainSets(this.config, this.wd, this.logger)
+    const running = new RunningChainSets(this.config, this.wd)
     await running.run()
     return saveChainSetsRuntime(await running.getChainSetsRunObj())
   }
@@ -145,12 +143,10 @@ export class RunningChainSets {
   readonly chainSet: Map<string, RunningChain> = new Map()
   readonly config: ChainSetsRunConfig
   wd: string
-  logger: Logger
 
-  constructor(config: ChainSetsRunConfig, wd: string, logger: Logger) {
+  constructor(config: ChainSetsRunConfig, wd: string) {
     this.config = config
     this.wd = utils.ensureDir(wd)
-    this.logger = logger
   }
 
   // This constructs a "pseudo reverse dependency tree" in the form of a list of list
@@ -237,15 +233,15 @@ export class RunningChainSets {
   async run() {
     const chainSetsConfig = this.resolveDependencies()
 
-    this.logger.info(`initializing containers for ${this.config.ChainSets.length} chains`)
+    log.info(`initializing containers for ${this.config.ChainSets.length} chains`)
     let dependencyRuntime: NodeAccounts[] = []
     for (const chainConfigGroup of chainSetsConfig) {
       const promises = chainConfigGroup.map(async (chainConfig) => {
-        this.logger.info(`initializing ${chainConfig.Name}`)
+        log.info(`initializing ${chainConfig.Name}`)
         const runningChain = await this.createRunningChain(chainConfig)
         await runningChain.start(dependencyRuntime)
         this.chainSet.set(chainConfig.Name, runningChain)
-        this.logger.info(`chain: ${chainConfig.Name} started`)
+        log.info(`chain: ${chainConfig.Name} started`)
         return await runningChain.getRunObj()
       })
       dependencyRuntime = await Promise.all(promises)
@@ -292,7 +288,7 @@ export class RunningChainSets {
         ).join(', ')}]`
       )
     }
-    this.logger.verbose(`creating chain of type ${chainConfig.Type}`)
-    return await ChainConstructor(chainConfig, containerDir, this.config.Run.CleanupMode === 'reuse', this.logger)
+    log.verbose(`creating chain of type ${chainConfig.Type}`)
+    return await ChainConstructor(chainConfig, containerDir, this.config.Run.CleanupMode === 'reuse')
   }
 }

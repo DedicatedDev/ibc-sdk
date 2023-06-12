@@ -1,9 +1,11 @@
-import winston from 'winston'
 import { ChainSetsRunObj, isCosmosChain } from './schemas'
 import { CosmosAccount, CosmosAccounts } from './accounts_config.js'
 import { VIBCRelayer } from './vibc_relayer'
 import * as self from '../../lib/index.js'
 import { EthRelayer } from './eth_relayer.js'
+import { getLogger } from '../../lib/utils/logger'
+
+const log = getLogger()
 
 type Tuple = [string, string]
 
@@ -17,7 +19,7 @@ function findRelayerAccount(runtime: ChainSetsRunObj, src: string, dst: string):
   return undefined
 }
 
-async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: Tuple, log: winston.Logger) {
+async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
   const [src, dst] = relayPath
   log.info(`starting ibc-relayer with path ${src} -> ${dst}`)
 
@@ -29,7 +31,7 @@ async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: Tuple, log: 
     throw new Error('Missing relayer account or mnemonic')
   }
   const relayerConfig = self.dev.newIbcRelayerConfig(chainRegistry, chainPair, { mnemonic: relayerAccount.Mnemonic })
-  const relayer = await self.dev.newIBCRelayer(runtime.Run.WorkingDir, `${src}-${dst}`, log)
+  const relayer = await self.dev.newIBCRelayer(runtime.Run.WorkingDir, `${src}-${dst}`)
   await relayer.init(relayerConfig).catch((reason) => {
     log.error(`Could not init ibc-relayer: ${reason}`)
     throw new Error(reason)
@@ -53,10 +55,10 @@ async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: Tuple, log: 
   log.info('ibc-relayer started')
 }
 
-async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[], log: winston.Logger) {
+async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) {
   log.info(`setting up vibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
 
-  const relayer = await VIBCRelayer.create(runtime.Run.WorkingDir, log)
+  const relayer = await VIBCRelayer.create(runtime.Run.WorkingDir)
   await relayer.setup(runtime, paths)
   runtime.Relayers.push(await relayer.runtime())
   self.dev.saveChainSetsRuntime(runtime)
@@ -64,9 +66,9 @@ async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[], log: w
   log.info('vibc-relayer set up')
 }
 
-async function setupEthRelayer(runtime: ChainSetsRunObj, paths: Tuple, log: winston.Logger) {
+async function setupEthRelayer(runtime: ChainSetsRunObj, paths: Tuple) {
   log.info(`starting eth-relayer with path ${paths[0]} -> ${paths[1]}`)
-  const relayer = await EthRelayer.create(runtime, paths, log)
+  const relayer = await EthRelayer.create(runtime, paths)
   const out = await relayer.run()
   if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
 
@@ -126,26 +128,22 @@ export function configurePaths(runtime: ChainSetsRunObj, connections: string[]):
   return { ibc: list(ibcPaths), vibc: list(vibcPaths), eth2: list(eth2Paths) }
 }
 
-export async function runRelayers(
-  runtime: ChainSetsRunObj,
-  connections: string[],
-  logger: winston.Logger
-): Promise<ChainSetsRunObj> {
+export async function runRelayers(runtime: ChainSetsRunObj, connections: string[]): Promise<ChainSetsRunObj> {
   const paths = configurePaths(runtime, connections)
   const promises: Promise<void>[] = []
 
   if (paths.vibc.length > 0) {
-    promises.push(setupVIbcRelayer(runtime, paths.vibc, logger))
+    promises.push(setupVIbcRelayer(runtime, paths.vibc))
   }
 
   // TODO: what happens if we have more than one path here? Is the eth2 relayer going to be able to handle it?
   if (paths.eth2.length > 0) {
-    promises.push(setupEthRelayer(runtime, paths.eth2[0], logger))
+    promises.push(setupEthRelayer(runtime, paths.eth2[0]))
   }
 
   // TODO: create one instance of the ibc-relayer per path because the ts-relayer sucks
   for (const path of paths.ibc) {
-    promises.push(setupIbcRelayer(runtime, path, logger))
+    promises.push(setupIbcRelayer(runtime, path))
   }
 
   await Promise.all(promises)

@@ -1,15 +1,11 @@
 import fs from 'fs'
 import yaml from 'js-yaml'
 import * as path from 'path'
-import * as winston from 'winston'
-
-import { Logger } from './logger.js'
 
 export { path, fs }
 export { $ } from 'zx-cjs'
 
 export { UrlResolver } from './url.js'
-export { Logger, createLogger, loggerSchema, LoggerConfig } from './logger.js'
 
 /** Expand the first ~ to the user home dir in a path. Throw and error if no $HOME env var is set */
 export function expandUserHomeDir(path: string): string {
@@ -109,27 +105,6 @@ export function dumpYamlSafe(obj): string {
 
 export async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-export function newConsoleLogger(logLevel: string = 'info', addDate = false): Logger {
-  const level = logLevel ?? 'info'
-  const timestampFormat = addDate ? 'YYYY-MM-DD HH:mm:ss' : 'HH:mm:ss'
-  return winston.createLogger({
-    level: level,
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.timestamp({
-        format: timestampFormat
-      }),
-      winston.format.splat(),
-      winston.format.simple(),
-      winston.format.printf(
-        (info) =>
-          `[${info.timestamp} ${info.level}]: ${info.message}` + (info.splat !== undefined ? `${info.splat}` : ' ')
-      )
-    ),
-    transports: new winston.transports.Console()
-  })
 }
 
 // ignore unused variables. this cancel the ts compiler errors for unused variables.

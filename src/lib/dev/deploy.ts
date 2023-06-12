@@ -1,5 +1,4 @@
 import { ethers } from 'ethers'
-import * as winston from 'winston'
 import { utils } from './deps'
 import path from 'path'
 import { ChainSetsRunObj, CosmosChainSet, DeployedContract, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
@@ -7,13 +6,11 @@ import { $, fs } from '../utils'
 import { Attribute, Event } from '@cosmjs/stargate'
 import { saveChainSetsRuntime } from './chainset'
 import { newJsonRpcProvider } from './ethers'
+import { getLogger } from '../utils/logger'
 
-async function deployVIBCCoreContractsOnChain(
-  runtime: ChainSetsRunObj,
-  contractsDir: string,
-  chain: EvmChainSet,
-  log: winston.Logger
-) {
+const log = getLogger()
+
+async function deployVIBCCoreContractsOnChain(runtime: ChainSetsRunObj, contractsDir: string, chain: EvmChainSet) {
   const contracts: DeployedContract[] = []
   const account = chain.Accounts[0].Address
 
@@ -61,13 +58,12 @@ async function deployVIBCCoreContractsOnChain(
  */
 export async function deployVIBCCoreContractsOnChainSets(
   runtime: ChainSetsRunObj,
-  contractsDir: string,
-  log: winston.Logger
+  contractsDir: string
 ): Promise<ChainSetsRunObj> {
   const promises: Promise<void>[] = []
   for (let chain of runtime.ChainSets) {
     if (isEvmChain(chain.Type)) {
-      promises.push(deployVIBCCoreContractsOnChain(runtime, contractsDir, chain as EvmChainSet, log))
+      promises.push(deployVIBCCoreContractsOnChain(runtime, contractsDir, chain as EvmChainSet))
     }
   }
   await Promise.all(promises)
@@ -228,8 +224,7 @@ export async function deploySmartContract(
   chainName: string,
   account: string,
   scpath: string,
-  scargs: string[],
-  log: winston.Logger
+  scargs: string[]
 ): Promise<DeployedContract> {
   const chain = runtime.ChainSets.find((c) => c.Name === chainName)
   if (!chain) throw new Error(`Could not find chain ${chainName} in chain sets`)

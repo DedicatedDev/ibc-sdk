@@ -6,16 +6,11 @@ import { utils } from '../../lib'
 import { RunningChainSets, runChainSets, cleanupRuntime } from '../../lib/dev/chainset'
 import { ChainConfig, ImageLabelTypes } from '../../lib/dev/schemas'
 import { gethConfig } from './simple_geth_config'
+import { getTestingLogger } from '../../lib/utils/logger'
 
-const test = anyTest as TestFn<{
-  logger: utils.Logger
-}>
+getTestingLogger()
 
-test.before((t) => {
-  const logLevel: any = process.env.TEST_LOG_LEVEL ?? 'debug'
-  const logger = utils.createLogger({ Level: logLevel })
-  t.context = { logger }
-})
+const test = anyTest as TestFn<{}>
 
 function is(x: ChainConfig[][], y: string[][]): boolean {
   if (x.length !== y.length) return false
@@ -35,7 +30,7 @@ ChainSets:
   - Name: A
 `
   const config = utils.readYamlText(baseConfig)
-  const tree = new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies()
+  const tree = new RunningChainSets(config, os.tmpdir()).resolveDependencies()
   t.assert(is(tree, [['A', 'B']]))
 })
 
@@ -48,7 +43,7 @@ ChainSets:
   - Name: A
 `
   const config = utils.readYamlText(baseConfig)
-  const tree = new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies()
+  const tree = new RunningChainSets(config, os.tmpdir()).resolveDependencies()
   t.assert(is(tree, [['A'], ['B']]))
 })
 
@@ -61,7 +56,7 @@ ChainSets:
     DependsOn: A
 `
   const config = utils.readYamlText(baseConfig)
-  const tree = new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies()
+  const tree = new RunningChainSets(config, os.tmpdir()).resolveDependencies()
   t.assert(is(tree, [['A'], ['B']]))
 })
 
@@ -76,7 +71,7 @@ ChainSets:
   - Name: A
 `
   const config = utils.readYamlText(baseConfig)
-  const tree = new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies()
+  const tree = new RunningChainSets(config, os.tmpdir()).resolveDependencies()
   t.assert(is(tree, [['A'], ['B'], ['C']]))
 })
 
@@ -94,7 +89,7 @@ ChainSets:
   - Name: A
 `
   const config = utils.readYamlText(baseConfig)
-  const tree = new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies()
+  const tree = new RunningChainSets(config, os.tmpdir()).resolveDependencies()
   t.assert(is(tree, [['A'], ['B', 'C'], ['D']]))
 })
 
@@ -115,7 +110,7 @@ ChainSets:
     DependsOn: E
 `
   const config = utils.readYamlText(baseConfig)
-  const tree = new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies()
+  const tree = new RunningChainSets(config, os.tmpdir()).resolveDependencies()
   t.assert(
     is(tree, [
       ['A', 'D'],
@@ -138,7 +133,7 @@ ChainSets:
   // after the first two rules, the tree would look like this: nil -> D,  E -> F
   // so by the time it gets to link D -> E it's gotta merge the current two branches into one
   const config = utils.readYamlText(baseConfig)
-  const tree = new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies()
+  const tree = new RunningChainSets(config, os.tmpdir()).resolveDependencies()
   t.assert(is(tree, [['D'], ['E'], ['F']]))
 })
 
@@ -153,7 +148,7 @@ ChainSets:
     DependsOn: B
 `
   const config = utils.readYamlText(baseConfig)
-  const err = t.throws(() => new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies())
+  const err = t.throws(() => new RunningChainSets(config, os.tmpdir()).resolveDependencies())
   t.is(err?.message, 'Circular dependency')
 })
 
@@ -171,7 +166,7 @@ ChainSets:
     DependsOn: A
 `
   const config = utils.readYamlText(baseConfig)
-  const err = t.throws(() => new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies())
+  const err = t.throws(() => new RunningChainSets(config, os.tmpdir()).resolveDependencies())
   t.is(err?.message, 'Circular dependency')
 })
 
@@ -182,14 +177,14 @@ ChainSets:
     DependsOn: B
 `
   const config = utils.readYamlText(baseConfig)
-  const err = t.throws(() => new RunningChainSets(config, os.tmpdir(), t.context.logger).resolveDependencies())
+  const err = t.throws(() => new RunningChainSets(config, os.tmpdir()).resolveDependencies())
   t.is(err?.message, 'Unknown chain id B')
 })
 
 test('start eth node with labels and dependencies', async (t) => {
   const config = utils.readYamlText(gethConfig)
   config.ChainSets = config.ChainSets.filter((c: any) => c.Type !== 'bsc')
-  const runtime = await runChainSets(config, t.context.logger)
+  const runtime = await runChainSets(config)
   t.truthy(runtime)
 
   t.assert(runtime.runObj.ChainSets.length === 2)
@@ -217,5 +212,5 @@ test('start eth node with labels and dependencies', async (t) => {
   const tx = await provider.getTransaction(receipt.hash)
   t.truthy(tx)
 
-  await cleanupRuntime(runtime.runObj, t.context.logger)
+  await cleanupRuntime(runtime.runObj)
 })

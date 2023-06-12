@@ -1,27 +1,18 @@
-/* eslint-disable camelcase */
-import { utils, Container, CosmosChainSet } from './deps'
-
-// type LocalChainCmdClientConfig = {
-//   chainBinary: string
-//   homeDir: string
-//   rpc: string
-// }
+import { Container, CosmosChainSet } from './deps'
 
 export class CosmosChainClient {
-  static fromRunningContainer(chain: CosmosChainSet, logger: utils.Logger): CosmosChainClient {
-    return new CosmosChainClient(chain, logger)
+  static fromRunningContainer(chain: CosmosChainSet): CosmosChainClient {
+    return new CosmosChainClient(chain)
   }
-
-  // static fromHostCLI(config: LocalChainCmdClientConfig, logger: utils.Logger): CosmosChainClient {}
 
   chain: CosmosChainSet
   chainBinary: string
   container: Container
 
-  constructor(chain: CosmosChainSet, logger: utils.Logger) {
+  constructor(chain: CosmosChainSet) {
     this.chain = chain
     this.chainBinary = chain.Images[0].Bin!
-    this.container = new Container(chain.Nodes[0].ContainerId, logger)
+    this.container = new Container(chain.Nodes[0].ContainerId)
   }
 
   async query(args: string[]) {

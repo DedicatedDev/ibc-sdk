@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { utils } from './deps'
 import { Container, newContainer, images } from './docker'
 import { ChainSetsRunObj, RelayerRunObj } from './schemas'
-import * as winston from 'winston'
 
 export const CosmosChainRegistryItemSchema = z.object({
   name: z.string().min(1),
@@ -62,19 +61,16 @@ export function newIbcRelayerConfig(
   return { chainRegistry, chainPair, relayerAccount }
 }
 
-export async function newIBCRelayer(workDir: string, id: string, log: winston.Logger): Promise<IBCRelayer> {
+export async function newIBCRelayer(workDir: string, id: string): Promise<IBCRelayer> {
   const containerDir = utils.ensureDir(utils.path.join(workDir, `ibc-relayer-${id}`))
-  const container = await newContainer(
-    {
-      entrypoint: 'sh',
-      imageRepoTag: images.ibc_relayer.full(),
-      detach: true,
-      tty: true,
-      workDir: '/tmp',
-      volumes: [[containerDir, '/tmp']]
-    },
-    log
-  )
+  const container = await newContainer({
+    entrypoint: 'sh',
+    imageRepoTag: images.ibc_relayer.full(),
+    detach: true,
+    tty: true,
+    workDir: '/tmp',
+    volumes: [[containerDir, '/tmp']]
+  })
   // TODO: will change to generic relayer implementation once we support more than one relayers
   // use confio-ts-relayer for now
   const cmdPrefixes = ['/ts-relayer/poly-ibc-relayer', 'confio-ts-relayer']

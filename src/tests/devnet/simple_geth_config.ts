@@ -40,12 +40,4 @@ ChainSets:
 Run:
   WorkingDir: "/tmp/test-chainsets/run-*"
   CleanupMode: all
-  Logger:
-    Level: debug
-    Transports:
-      - 'log' # will use default level
-      - FileName: critical.log
-        Level: warn
-      - FileName: '-'
-        Level: verbose
 `

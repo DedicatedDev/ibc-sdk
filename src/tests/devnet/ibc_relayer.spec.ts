@@ -1,14 +1,13 @@
 import * as self from '../../lib/index.js'
 import * as utils from '../../lib/utils/index.js'
-
 import anyTest, { TestFn } from 'ava'
 import { ChainSetsRunObj } from '../../lib/dev/schemas.js'
-import winston from 'winston'
 import { images } from '../../lib/dev/docker'
+import { getTestingLogger } from '../../lib/utils/logger'
 
-const test = anyTest as TestFn<{
-  logger: utils.Logger
-}>
+getTestingLogger()
+
+const test = anyTest as TestFn<{}>
 
 const mnemonic =
   'wait team asthma refuse situate crush kidney nature ' +
@@ -22,35 +21,15 @@ ChainSets:
 const configSufix = `
 Run:
   WorkingDir: "/tmp/test-chainsets/run-*"
-  # valid modes: ['all', 'debug', 'log'], default 'all'
   CleanupMode: debug
-  Logger:
-    # valid levels: [deubg, info, warn, error]
-    Level: debug
-    # Colorize: false
-    # Transports can take a single str with the default log love above
-    # Transports: 'log'
-    Transports:
-      - 'log' # will use default level
-      - FileName: critial.log
-        Level: warn
-      # add console logger for debugging
-      - FileName: '-'
-        Level: verbose
 `
 
-test.before((t) => {
-  const logLevel: any = process.env.TEST_LOG_LEVEL ?? 'debug'
-  const logger = utils.createLogger({ Level: logLevel, Colorize: true })
-  t.context = { logger }
-})
-
-async function createIBCconnections(runObj: ChainSetsRunObj, src: string, dst: string, logger: winston.Logger) {
+async function createIBCconnections(runObj: ChainSetsRunObj, src: string, dst: string) {
   const chainRegistry = self.dev.newChainRegistry(runObj, [src, dst], true)
   const chainPair = { src: { name: src }, dest: { name: dst } }
   const relayerAccount = { mnemonic: mnemonic }
   const relayerConfig = self.dev.newIbcRelayerConfig(chainRegistry, chainPair, relayerAccount)
-  const relayer = await self.dev.newIBCRelayer(runObj.Run.WorkingDir, src + dst, logger)
+  const relayer = await self.dev.newIBCRelayer(runObj.Run.WorkingDir, src + dst)
   await relayer.init(relayerConfig)
   await relayer.connect()
   return await relayer.getConnections()
@@ -58,11 +37,11 @@ async function createIBCconnections(runObj: ChainSetsRunObj, src: string, dst: s
 
 const ibcConnectionsTest = test.macro(async (t, config: string) => {
   const rawConfig = utils.readYaml(config)
-  const { runObj, configObj: _ } = await self.dev.runChainSets(rawConfig, t.context.logger)
+  const { runObj, configObj: _ } = await self.dev.runChainSets(rawConfig)
   t.truthy(runObj)
 
   const chain = runObj.ChainSets[0] as self.dev.schemas.CosmosChainSet
-  const conns = await createIBCconnections(runObj, chain.Name, chain.Name, t.context.logger)
+  const conns = await createIBCconnections(runObj, chain.Name, chain.Name)
   t.truthy(conns)
 })
 
@@ -145,12 +124,12 @@ test(
 
 const ibcConnectionsTest2 = test.macro(async (t, config: string) => {
   const rawConfig = configPrefix + config + configSufix
-  const { runObj, configObj: _ } = await self.dev.runChainSets(rawConfig, t.context.logger)
+  const { runObj, configObj: _ } = await self.dev.runChainSets(rawConfig)
   t.truthy(runObj)
 
   const chain0 = runObj.ChainSets[0] as self.dev.schemas.CosmosChainSet
   const chain1 = runObj.ChainSets[1] as self.dev.schemas.CosmosChainSet
-  const conns = await createIBCconnections(runObj, chain0.Name, chain1.Name, t.context.logger)
+  const conns = await createIBCconnections(runObj, chain0.Name, chain1.Name)
   t.truthy(conns)
 })
 

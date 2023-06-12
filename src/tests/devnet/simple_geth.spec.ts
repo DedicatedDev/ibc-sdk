@@ -5,27 +5,20 @@ import * as utils from '../../lib/utils/index.js'
 import * as ethers from 'ethers'
 import anyTest, { TestFn } from 'ava'
 import { gethConfig } from './simple_geth_config'
+import { getTestingLogger } from '../../lib/utils/logger'
 
-const test = anyTest as TestFn<{
-  logger: utils.Logger
-}>
+const log = getTestingLogger()
 
-test.before((t) => {
-  const logLevel: any = process.env.TEST_LOG_LEVEL ?? 'debug'
-  const logger = utils.createLogger({ Level: logLevel })
-  t.context = { logger }
-})
+const test = anyTest as TestFn<{}>
 
 test('start a geth chain from docker container', async (t) => {
-  const logger = t.context.logger
-
   const rawConfig = utils.readYaml(gethConfig)
   t.truthy(rawConfig)
   // override test config
   const configOverride = { chains: ['eth', 'polygon'], cleanupMode: 'debug' }
   rawConfig.ChainSets = rawConfig.ChainSets.filter((cs) => configOverride.chains.includes(cs.Name))
   rawConfig.Run.CleanupMode = configOverride.cleanupMode
-  const { runObj, configObj } = await self.dev.runChainSets(rawConfig, logger)
+  const { runObj, configObj } = await self.dev.runChainSets(rawConfig)
 
   for (let i = 0; i < runObj.ChainSets.length; i++) {
     const evmChain = runObj.ChainSets[i]
@@ -38,7 +31,7 @@ test('start a geth chain from docker container', async (t) => {
     t.truthy(chainNode)
 
     const url = chainNode.RpcHost
-    logger.verbose(`[${evmChain.Name}] connection to url: ${url}`)
+    log.verbose(`[${evmChain.Name}] connection to url: ${url}`)
     const ethClient = self.dev.newJsonRpcProvider(url)
     const height = await ethClient.getBlockNumber()
 
@@ -47,16 +40,16 @@ test('start a geth chain from docker container', async (t) => {
     const accounts = configObj.ChainSets[i].Accounts! as any as z.infer<typeof AccountsConfigSchema.evm>
     t.deepEqual(accounts.Count, evmChain.Accounts!.length, `chain [${evmChain.Name}] accounts mismatch`)
 
-    logger.verbose(`[${evmChain.Name}] running container id: ${chainNode.ContainerId}`)
-    logger.verbose(`[${evmChain.Name}] block height: ${height} at url: ${url}`)
+    log.verbose(`[${evmChain.Name}] running container id: ${chainNode.ContainerId}`)
+    log.verbose(`[${evmChain.Name}] block height: ${height} at url: ${url}`)
     for (const acct of evmChain.Accounts as any as z.infer<typeof AccountsSchema.evm>) {
       const balanceWei = await ethClient.getBalance(acct.Address)
       const balance = ethers.utils.formatEther(balanceWei)
       t.deepEqual(parseInt(balance), acct.Balance)
-      logger.verbose(`[${evmChain.Name}] balance of ${acct.Address}: ${balance} ethers ${balanceWei} wei`)
+      log.verbose(`[${evmChain.Name}] balance of ${acct.Address}: ${balance} ethers ${balanceWei} wei`)
     }
   }
 
   // after clean up, folders should be cleaned up and containers are stopped
-  await self.dev.cleanupRuntime(runObj, logger)
+  await self.dev.cleanupRuntime(runObj)
 })
