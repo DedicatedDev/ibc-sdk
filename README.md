@@ -37,8 +37,8 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io/polymerdao -u '< your-github-usernam
 2. Run the `npm install` command in your terminal:
 
 ```bash
-echo "@polymerdao:registry=https://npm.pkg.github.com" >> ~/.npmrc
-echo "//npm.pkg.github.com/:_authToken=$TOKEN" >> ~/.npmrc
+npm config set @polymerdao:registry=https://npm.pkg.github.com
+npm config set //npm.pkg.github.com/:_authToken=$GITHUB_TOKEN
 npm install -g @polymerdao/ibc-sdk
 ```
 
