@@ -42,6 +42,8 @@ npm config set //npm.pkg.github.com/:_authToken=$GITHUB_TOKEN
 npm install -g @polymerdao/ibc-sdk
 ```
 
+Note that if you use `sudo` for any of the above commands, you need to do it for all of them.
+
 If you prefer to install from source, use the command `make` and execute it from the root of your workspace.
 
 > Note: Windows is not explicitly supported at the moment, although we will gladly accept feedback from brave explorers!
