@@ -72,6 +72,7 @@ ChainSets:
     Accounts:
       - Name: alice
         Coins: ["20000token", "200000000stake"]
+        Mnemonic: "short eager annual love dress board buffalo enemy material awful quit analyst develop steel pave consider amazing coyote physical crew goat blind improve raven"
       - Name: bob
         Coins: ["10000token", "100000000stake"]
       - Name: relayer

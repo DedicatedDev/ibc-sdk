@@ -17,8 +17,7 @@ export const EthRelayerConfigSchema = z.object({
   ibcCoreAbi: z.string().min(1),
   routerHostUrl: z.string().min(1),
   rpcAddressUrl: z.string().min(1),
-  accountName: z.string().min(1),
-  polymerHomeDir: z.string().min(1),
+  polymerMnemonic: z.string().min(1),
   localDevNet: z.boolean(),
   // TODO this feels hacky
   ethcontainer: z.string()
@@ -60,8 +59,7 @@ export class EthRelayer {
       ibcCoreAbi: dispatcher.Abi ?? '',
       rpcAddressUrl: poly.Nodes[0].RpcContainer,
       routerHostUrl: poly.Nodes[0].RpcContainer.replace(/:[0-9]+$/, ':9090'),
-      accountName: 'alice',
-      polymerHomeDir: path.join(runObj.Run.WorkingDir, poly.Name),
+      polymerMnemonic: poly.Accounts[0].Mnemonic ?? '',
       localDevNet: true,
       ethcontainer: eth1.Nodes[0].ContainerId
     }
@@ -145,10 +143,8 @@ export class EthRelayer {
       this.config.routerHostUrl,
       '--polymer-rpc-addr',
       this.config.rpcAddressUrl,
-      '--polymer-account',
-      this.config.accountName,
-      '--polymer-home',
-      '/tmp/polymer-home'
+      '--polymer-account-mnemonic',
+      this.config.polymerMnemonic
     ]
     if (this.config.localDevNet) rawCmds.push('--local-dev-net')
 
