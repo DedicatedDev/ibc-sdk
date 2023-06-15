@@ -20,6 +20,8 @@ test.beforeEach((t) => {
   // Run tests on different workspaces every time since docker will not like
   // directories to be removed while these are mapped out as volumes.
   t.context.workspace = fs.mkdtempSync(path.join('/tmp', 'ibctl-tests-'))
+
+  delete process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS
 })
 
 test.afterEach(async (t) => {
@@ -120,6 +122,7 @@ test.serial('the start command starts stack', async (t) => {
 })
 
 test.serial('running the start command with invalid relay path should fail', async (t) => {
+  process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS = '1'
   await $`${t.context.cli} start --workspace ${t.context.workspace} --connection foo`.then(
     () => t.fail('start with invalid path should fail'),
     (reject) => {
@@ -160,6 +163,7 @@ test.serial('running the start command on an invalid configuration file should f
 })
 
 test.serial('running the start command twice should fail', async (t) => {
+  process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS = '1'
   t.assert((await runInit(t)).exitCode === 0)
 
   await $`${t.context.cli} start --workspace ${t.context.workspace}`

@@ -125,7 +125,9 @@ export async function start(opts: StartOpts) {
   const contractsPath = path.join(opts.workspace, vibcCoreContracts)
 
   let { runObj: runtime } = await self.dev.runChainSets(config).then(...thenClause)
-  runtime = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsPath).then(...thenClause)
+  if (!process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS) {
+    runtime = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsPath).then(...thenClause)
+  }
 
   if (opts.useZkMint) {
     await self.dev.runProver(runtime).then(...thenClause)
