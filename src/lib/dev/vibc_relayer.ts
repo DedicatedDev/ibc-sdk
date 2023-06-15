@@ -19,7 +19,7 @@ export class VIBCRelayer {
   static async create(workDir: string): Promise<VIBCRelayer> {
     const containerDir = utils.ensureDir(utils.path.join(workDir, 'vibc-relayer'))
     const relayerDockerConfig: containerConfig = {
-      imageRepoTag: images.vibc_relayer.full(),
+      imageRepoTag: images.vibcRelayer.full(),
       detach: true,
       tty: true,
       workDir: '/tmp',

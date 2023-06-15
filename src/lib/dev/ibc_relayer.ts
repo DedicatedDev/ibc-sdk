@@ -18,7 +18,7 @@ export class IBCRelayer {
   static async create(workDir: string): Promise<IBCRelayer> {
     const containerDir = utils.ensureDir(utils.path.join(workDir, 'ibc-relayer'))
     const container = await newContainer({
-      imageRepoTag: images.ibc_go_relayer.full(),
+      imageRepoTag: images.ibcGoRelayer.full(),
       detach: true,
       tty: true,
       workDir: '/tmp',

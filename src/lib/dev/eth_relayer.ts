@@ -69,7 +69,7 @@ export class EthRelayer {
     const containerDir = utils.ensureDir(utils.path.join(runObj.Run.WorkingDir, 'eth-relayer'))
     const container = await newContainer({
       entrypoint: 'sh',
-      imageRepoTag: images.eth_relayer.full(),
+      imageRepoTag: images.ethRelayer.full(),
       detach: true,
       tty: true,
       workDir: '/tmp',

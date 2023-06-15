@@ -65,7 +65,7 @@ export async function newIBCTsRelayer(workDir: string, id: string): Promise<IBCT
   const containerDir = utils.ensureDir(utils.path.join(workDir, `ibc-relayer-${id}`))
   const container = await newContainer({
     entrypoint: 'sh',
-    imageRepoTag: images.ibc_relayer.full(),
+    imageRepoTag: images.ibcRelayer.full(),
     detach: true,
     tty: true,
     workDir: '/tmp',
