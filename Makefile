@@ -30,10 +30,10 @@ clean:
 
 build-vibc-core-contracts:
 	npx hardhat compile --config ./tests/xdapp/hardhat.config.ts --force
-	tar -c -z --strip-components 4 -f - tests/xdapp/artifacts/contracts | \
+	tar -c -z -f - tests/xdapp/artifacts/contracts | \
 		base64 | \
 		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
-		src/cli/contracts.template.ts
+		src/lib/utils/contracts.template.ts
 
 POLYMER_CHAIN_DIR = ../polymerase/chain
 PROTO_FILES = $(shell find $(POLYMER_CHAIN_DIR)/proto/ -name '*.proto')

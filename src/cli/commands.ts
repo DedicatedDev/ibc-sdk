@@ -1,9 +1,8 @@
 import path from 'path'
 import * as os from 'os'
 import { utils } from '../lib'
-import { $, fs } from '../lib/utils'
+import { $, extractSmartContracts, fs } from '../lib/utils'
 import { configTemplate } from './config.template'
-import { contractsTemplate } from './contracts.template'
 import * as self from '../lib/index.js'
 import { channelHandshake } from './channel'
 import { EndpointInfo, Packet, TxEvent } from '../lib/dev/query'
@@ -92,10 +91,7 @@ export async function init(opts: InitOpts) {
   const contractsDir = path.join(workspace, vibcCoreContracts)
   fs.mkdirSync(contractsDir)
 
-  // TODO: tidy up output?
-  await $`echo -e ${contractsTemplate.trim()} | base64 -d | tar zxv -C ${contractsDir}`.catch((reason) => {
-    throw new Error(reason)
-  })
+  await extractSmartContracts(contractsDir)
 
   log.info('workspace created at: %s', workspace)
   log.info('configuration file is available at: %s', configPath)

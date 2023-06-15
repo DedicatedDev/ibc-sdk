@@ -3,17 +3,36 @@ import path from 'path'
 import anyTest, { TestFn } from 'ava'
 import { gethConfig } from './simple_geth_config'
 import { getTestingLogger } from '../../lib/utils/logger'
+import { ChainSetsRunObj } from '../../lib/dev/schemas'
+import { extractSmartContracts } from "../../lib/utils";
+import os from "os";
+import fs from 'fs'
 
 const log = getTestingLogger()
 
-const test = anyTest as TestFn<{}>
+const test = anyTest as TestFn<{
+  runtime: ChainSetsRunObj,
+  contractsDir: string,
+}>
 
-// TODO: fix https://github.com/polymerdao/ibc-sdk/issues/32
-test.skip('deploy contracts on runtime chains', async (t) => {
-  let { runObj: runtime, configObj: _ } = await self.dev.runChainSets(gethConfig)
+test.beforeEach(async (t) => {
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'contracts-'))
+  t.context.contractsDir = tempDir
+  await extractSmartContracts(tempDir)
+})
 
-  const contractsDir = path.resolve(__dirname, '..', '..', '..', 'tests', 'xdapp', 'artifacts', 'contracts')
-  runtime = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsDir)
+test.afterEach.always(async (t) => {
+  if (t.context.runtime) {
+    // after clean up, folders should be cleaned up and containers are stopped
+    await self.dev.cleanupRuntime(t.context.runtime)
+  }
+  await fs.promises.rm(t.context.contractsDir, { recursive: true })
+})
+
+test('deploy contracts on runtime chains', async (t) => {
+  const { runObj: runtime, configObj: _ } = await self.dev.runChainSets(gethConfig)
+  t.context.runtime = runtime
+  t.context.runtime = await self.dev.deployVIBCCoreContractsOnChainSets(t.context.runtime, t.context.contractsDir)
 
   const assertions = runtime.ChainSets.map(async (chain) => {
     const provider = self.dev.newJsonRpcProvider(chain.Nodes[0].RpcHost)
@@ -26,6 +45,4 @@ test.skip('deploy contracts on runtime chains', async (t) => {
     }
   })
   await Promise.all(assertions)
-  // after clean up, folders should be cleaned up and containers are stopped
-  await self.dev.cleanupRuntime(runtime)
 })

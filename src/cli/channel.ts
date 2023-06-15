@@ -4,9 +4,9 @@ import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { DeliverTxResponse, SigningStargateClient } from '@cosmjs/stargate'
 import Long from 'long'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
-import { VIBCRelayer } from 'src/lib/dev/vibc_relayer'
+import { VIBCRelayer } from '../lib/dev/vibc_relayer'
 import { ethers } from 'ethers'
-import { EvmAccount } from 'src/lib/dev/accounts_config'
+import { EvmAccount } from '../lib/dev/accounts_config'
 import { getLogger } from '../lib/utils/logger'
 
 const log = getLogger()
