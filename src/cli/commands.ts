@@ -139,31 +139,34 @@ export async function start(opts: StartOpts) {
 export async function show(opts: any) {
   const runtime = loadWorkspace(opts.workspace)
 
-  const line = async (name: string, node: any) => {
+  const line = async (name: string, node: any, rows: any) => {
     if (node.Label) name = `${name}:${node.Label}`
     const out = { Name: name, 'Container ID': node.ContainerId, Endpoint: '', Status: '' }
 
     out.Endpoint = node.RpcHost ?? 'N/A'
 
-    const state = await $`docker inspect ${node.ContainerId}  --format='{{.State.Status}}'`
-    out.Status = state.stdout.trim()
-
-    return out
+    await $`docker inspect ${node.ContainerId}  --format='{{.State.Status}}'`.then(
+      (state) => {
+        out.Status = state.stdout.trim()
+        rows.push(out)
+      },
+      () => log.warn(`could not find container '${node.ContainerId}'`)
+    )
   }
 
   const rows: any = []
   for (const chain of runtime.ChainSets) {
     for (const node of chain.Nodes) {
-      rows.push(await line(chain.Name, node))
+      await line(chain.Name, node, rows)
     }
   }
 
   for (const relayer of runtime.Relayers) {
-    rows.push(await line(relayer.Name, relayer))
+    await line(relayer.Name, relayer, rows)
   }
 
   if (runtime.Prover) {
-    rows.push(await line(runtime.Prover.Name, runtime.Prover))
+    await line(runtime.Prover.Name, runtime.Prover, rows)
   }
 
   console.table(rows)

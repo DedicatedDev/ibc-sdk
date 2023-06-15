@@ -70,8 +70,8 @@ export async function cleanupRuntime(runtime: ChainSetsRunObj) {
       try {
         log.info(`removing container '${c.name}' ...`)
         await (await containerFromId(c.id)).kill()
-      } catch {
-        log.warning(`could not remove container '${c.name}'`)
+      } catch (e) {
+        log.warn(`could not remove container '${c.name}': ${e}`)
       }
     }
   }

@@ -285,10 +285,21 @@ export class Container {
   }
 
   async kill() {
-    const metadatastr = await this.getLabel('org.polymerlabs.metadata')
-    const metadata = JSON.parse(metadatastr)
-    if (metadata.binaries.length > 0) await this.exec(['killall', ...metadata.binaries])
-    if (metadata.remove.length > 0) await this.exec(['rm', '-rf', ...metadata.remove])
+    const metadata = await (async () => {
+      try {
+        return JSON.parse(await this.getLabel('org.polymerlabs.metadata'))
+      } catch {
+        return null
+      }
+    })()
+
+    if (metadata) {
+      if (metadata.binaries.length > 0)
+        await this.exec(['killall', ...metadata.binaries]).catch((e) => log.warn(e.toString().trim()))
+      if (metadata.remove.length > 0)
+        await this.exec(['rm', '-rf', ...metadata.remove]).catch((e) => log.warn(e.toString().trim()))
+    }
+
     await $`docker container rm -f ${this.containerId}`
   }
 }

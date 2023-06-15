@@ -279,10 +279,9 @@ test.serial('the stop command always kills the containers', async (t) => {
   out = await $`${t.context.cli} --workspace ${t.context.workspace} exec eth-consensus:main killall beacon-chain`
   t.assert(out.exitCode === 0)
 
-  // FIXME: here's the bug
   await $`${t.context.cli} stop --workspace ${t.context.workspace}`.then(
-    () => t.fail('this repro should have failed'),
-    (reject) => t.assert(reject.exitCode === 1)
+    (out) => t.assert(out.exitCode === 0),
+    () => t.fail('stop should not have failed')
   )
 })
 
@@ -301,9 +300,8 @@ test.serial('the show command ignores missing containers', async (t) => {
   t.assert(polymer)
   $`docker container rm -f ${polymer!.Nodes[0].ContainerId}`
 
-  // FIXME: here's the bug
   await $`${t.context.cli} show --workspace ${t.context.workspace}`.then(
-    () => t.fail('this repro should have failed'),
-    (reject) => t.assert(reject.exitCode === 1)
+    (out) => t.assert(out.exitCode === 0),
+    () => t.fail('show should not have failed')
   )
 })
