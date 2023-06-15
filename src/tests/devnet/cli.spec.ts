@@ -268,3 +268,42 @@ test.serial('the stop command resets the workspace', async (t) => {
     }
   )
 })
+
+test.serial('the stop command always kills the containers', async (t) => {
+  process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS = '1'
+  t.assert((await runInit(t)).exitCode === 0)
+
+  let out = await $`${t.context.cli} start --workspace ${t.context.workspace}`
+  t.assert(out.exitCode === 0)
+
+  out = await $`${t.context.cli} --workspace ${t.context.workspace} exec eth-consensus:main killall beacon-chain`
+  t.assert(out.exitCode === 0)
+
+  // FIXME: here's the bug
+  await $`${t.context.cli} stop --workspace ${t.context.workspace}`.then(
+    () => t.fail('this repro should have failed'),
+    (reject) => t.assert(reject.exitCode === 1)
+  )
+})
+
+test.serial('the show command ignores missing containers', async (t) => {
+  process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS = '1'
+  t.assert((await runInit(t)).exitCode === 0)
+
+  let out = await $`${t.context.cli} start --workspace ${t.context.workspace}`
+  t.assert(out.exitCode === 0)
+
+  const runtime = runningChainSetsSchema.parse(
+    JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
+  )
+  t.assert(runtime)
+  const polymer = runtime.ChainSets.find((c) => c.Name === 'polymer')
+  t.assert(polymer)
+  $`docker container rm -f ${polymer!.Nodes[0].ContainerId}`
+
+  // FIXME: here's the bug
+  await $`${t.context.cli} show --workspace ${t.context.workspace}`.then(
+    () => t.fail('this repro should have failed'),
+    (reject) => t.assert(reject.exitCode === 1)
+  )
+})
