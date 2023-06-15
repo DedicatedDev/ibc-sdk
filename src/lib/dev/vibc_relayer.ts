@@ -103,7 +103,7 @@ export class VIBCRelayer {
   }
 
   async start(): Promise<ProcessOutput> {
-    const start = this.exec(['sh', '-c', `${this.binary} start 1>/proc/1/fd/1 2>/proc/1/fd/2`], true, true)
+    const start = await this.exec(['sh', '-c', `${this.binary} start 1>/proc/1/fd/1 2>/proc/1/fd/2`], true, true)
     log.info('vibc-relayer started')
     return start
   }

@@ -54,7 +54,7 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
         try {
           const client = await Tendermint37Client.connect(runObj.Nodes[0].RpcHost)
           const status = await client.status()
-          return status.syncInfo.latestBlockHeight > 0
+          return status.syncInfo.latestBlockHeight > 1
         } catch {
           return false
         }

@@ -4,6 +4,7 @@ import { VIBCRelayer } from './vibc_relayer'
 import * as self from '../../lib/index.js'
 import { EthRelayer } from './eth_relayer.js'
 import { getLogger } from '../../lib/utils/logger'
+import { IBCRelayer } from './ibc_relayer'
 
 const log = getLogger()
 
@@ -48,6 +49,26 @@ async function setupIbcTsRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
   const connections = await relayer.getConnections()
   log.info(`IBC connections created: ${src}: ${connections.srcConnection}, ${dst}: ${connections.destConnection}`)
   await relayer.relay()
+
+  runtime.Relayers.push(await relayer.runtime())
+  self.dev.saveChainSetsRuntime(runtime)
+
+  log.info('ibc-relayer started')
+}
+
+export async function setupIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) {
+  log.info(`setting up ibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
+
+  const relayer = await IBCRelayer.create(runtime.Run.WorkingDir)
+  await relayer.setup(runtime, paths).catch((reason) => {
+    log.error(`Could not setup ibc-relayer: ${reason}`)
+    throw new Error(reason)
+  })
+
+  await relayer.connect(paths).catch((reason) => {
+    log.error(`Could not connect ibc-relayer: ${reason}`)
+    throw new Error(reason)
+  })
 
   runtime.Relayers.push(await relayer.runtime())
   self.dev.saveChainSetsRuntime(runtime)
