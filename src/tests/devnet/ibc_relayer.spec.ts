@@ -29,7 +29,7 @@ async function createIBCconnections(runObj: ChainSetsRunObj, src: string, dst: s
   const chainPair = { src: { name: src }, dest: { name: dst } }
   const relayerAccount = { mnemonic: mnemonic }
   const relayerConfig = self.dev.newIbcRelayerConfig(chainRegistry, chainPair, relayerAccount)
-  const relayer = await self.dev.newIBCRelayer(runObj.Run.WorkingDir, src + dst)
+  const relayer = await self.dev.newIBCTsRelayer(runObj.Run.WorkingDir, src + dst)
   await relayer.init(relayerConfig)
   await relayer.connect()
   return await relayer.getConnections()

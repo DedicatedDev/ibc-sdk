@@ -1,6 +1,6 @@
 export { runChainSets, cleanupRuntime, getChainSetsRuntimeFile, saveChainSetsRuntime } from './chainset'
 export { deployVIBCCoreContractsOnChainSets, deploySmartContract } from './deploy'
-export { newIbcRelayerConfig, newChainRegistry, newIBCRelayer } from './relayer'
+export { newIbcRelayerConfig, newChainRegistry, newIBCTsRelayer } from './relayer'
 export * as schemas from './schemas'
 export { runRelayers } from './relayers'
 export * as vibcRelayer from './vibc_relayer'

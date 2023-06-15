@@ -19,7 +19,7 @@ function findRelayerAccount(runtime: ChainSetsRunObj, src: string, dst: string):
   return undefined
 }
 
-async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
+async function setupIbcTsRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
   const [src, dst] = relayPath
   log.info(`starting ibc-relayer with path ${src} -> ${dst}`)
 
@@ -31,7 +31,7 @@ async function setupIbcRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
     throw new Error('Missing relayer account or mnemonic')
   }
   const relayerConfig = self.dev.newIbcRelayerConfig(chainRegistry, chainPair, { mnemonic: relayerAccount.Mnemonic })
-  const relayer = await self.dev.newIBCRelayer(runtime.Run.WorkingDir, `${src}-${dst}`)
+  const relayer = await self.dev.newIBCTsRelayer(runtime.Run.WorkingDir, `${src}-${dst}`)
   await relayer.init(relayerConfig).catch((reason) => {
     log.error(`Could not init ibc-relayer: ${reason}`)
     throw new Error(reason)
@@ -143,7 +143,7 @@ export async function runRelayers(runtime: ChainSetsRunObj, connections: string[
 
   // TODO: create one instance of the ibc-relayer per path because the ts-relayer sucks
   for (const path of paths.ibc) {
-    promises.push(setupIbcRelayer(runtime, path))
+    promises.push(setupIbcTsRelayer(runtime, path))
   }
 
   await Promise.all(promises)

@@ -61,7 +61,7 @@ export function newIbcRelayerConfig(
   return { chainRegistry, chainPair, relayerAccount }
 }
 
-export async function newIBCRelayer(workDir: string, id: string): Promise<IBCRelayer> {
+export async function newIBCTsRelayer(workDir: string, id: string): Promise<IBCTsRelayer> {
   const containerDir = utils.ensureDir(utils.path.join(workDir, `ibc-relayer-${id}`))
   const container = await newContainer({
     entrypoint: 'sh',
@@ -74,12 +74,12 @@ export async function newIBCRelayer(workDir: string, id: string): Promise<IBCRel
   // TODO: will change to generic relayer implementation once we support more than one relayers
   // use confio-ts-relayer for now
   const cmdPrefixes = ['/ts-relayer/poly-ibc-relayer', 'confio-ts-relayer']
-  return new IBCRelayer(id, container, cmdPrefixes)
+  return new IBCTsRelayer(id, container, cmdPrefixes)
 }
 
 // type RelayerConfig = ReturnType<typeof generateIbcRelayerConfig>
 
-class IBCRelayer {
+class IBCTsRelayer {
   name: string
   container: Container
   cmdPrefixes: string[]
