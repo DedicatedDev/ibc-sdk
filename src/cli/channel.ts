@@ -18,6 +18,7 @@ class Client {
   version: string
   name: string
   portid: string
+  connectionHops: string[]
   channelId: string
 
   private constructor(
@@ -35,6 +36,7 @@ class Client {
     this.signer = signer
     this.portid = portid
     this.channelId = ''
+    this.connectionHops = []
   }
 
   static async create(account: CosmosAccount, chain: CosmosChainSet, version: string, portid: string) {
@@ -85,6 +87,7 @@ class Client {
 
   async channOpenInit(counter: Client, connectionHops: string[]) {
     log.info(`executing ChanOpenInit on ${this.name}`)
+    this.connectionHops = connectionHops
     const msg: self.cosmos.client.polyibc.MsgChannelOpenInitEncodeObject = {
       typeUrl: '/ibc.core.channel.v1.MsgChannelOpenInit',
       value: {
@@ -96,7 +99,7 @@ class Client {
           state: self.cosmos.client.polyibc.channel.State.STATE_INIT,
           // TODO it won't let me use ordered channels
           ordering: self.cosmos.client.polyibc.channel.Order.ORDER_UNORDERED,
-          connectionHops: connectionHops,
+          connectionHops: this.connectionHops,
           counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
             portId: counter.portid
           }),
@@ -109,6 +112,85 @@ class Client {
     const openinit = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_init', res))
     this.channelId = openinit.channel_id
     log.info(`ChanOpenInit on ${this.name}: done`)
+  }
+
+  async channOpenTry(counter: Client) {
+    log.info(`executing ChanOpenTry on ${this.name}`)
+    this.connectionHops = [...counter.connectionHops].reverse()
+    const msg: self.cosmos.client.polyibc.MsgChannelOpenTryEncodeObject = {
+      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenTry',
+      value: {
+        portId: this.portid,
+        previousChannelId: '',
+        signer: this.account.Address,
+        channel: {
+          state: self.cosmos.client.polyibc.channel.State.STATE_TRYOPEN,
+          ordering: self.cosmos.client.polyibc.channel.Order.ORDER_UNORDERED,
+          connectionHops: this.connectionHops,
+          counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
+            channelId: counter.channelId,
+            portId: counter.portid
+          }),
+          version: this.version
+        },
+        counterpartyVersion: counter.version,
+        proofInit: new Uint8Array(Array(8).fill(0)),
+        proofHeight: {
+          revisionHeight: Long.fromNumber(100),
+          revisionNumber: Long.fromNumber(0)
+        }
+      }
+    }
+    await this.waitForBlocks(2)
+    const res = await this.signer.signAndBroadcast(this.account.Address, [msg], 'auto')
+    const opentry = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_try', res))
+    this.channelId = opentry.channel_id
+    log.info(`ChanOpenTry on ${this.name}: done`)
+  }
+
+  async channOpenAck(counter: Client) {
+    log.info(`executing ChanOpenAck on ${this.name}`)
+    const msg: self.cosmos.client.polyibc.MsgChannelOpenAckEncodeObject = {
+      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenAck',
+      value: {
+        portId: this.portid,
+        counterpartyVersion: counter.version,
+        counterpartyChannelId: counter.channelId,
+        channelId: this.channelId,
+        signer: this.account.Address,
+        proofTry: new Uint8Array(Array(8).fill(0)),
+        proofHeight: {
+          revisionHeight: Long.fromNumber(100),
+          revisionNumber: Long.fromNumber(0)
+        }
+      }
+    }
+    await this.waitForBlocks(2)
+    const res = await this.signer.signAndBroadcast(this.account.Address, [msg], 'auto')
+    self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_ack', res))
+    log.info(`ChanOpenAck on ${this.name}: done`)
+  }
+
+  async channOpenConfirm() {
+    log.info(`executing ChanOpenConfirm on ${this.name}`)
+
+    const msg: self.cosmos.client.polyibc.MsgChannelOpenConfirmEncodeObject = {
+      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenConfirm',
+      value: {
+        portId: this.portid,
+        signer: this.account.Address,
+        channelId: this.channelId,
+        proofAck: new Uint8Array(Array(8).fill(0)),
+        proofHeight: {
+          revisionHeight: Long.fromNumber(100),
+          revisionNumber: Long.fromNumber(0)
+        }
+      }
+    }
+    await this.waitForBlocks(2)
+    const res = await this.signer.signAndBroadcast(this.account.Address, [msg], 'auto')
+    self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_confirm', res))
+    log.info(`ChanOpenConfirm on ${this.name}: done`)
   }
 }
 
@@ -166,7 +248,7 @@ export async function channelHandshake(
   log.info(`Found light client: ${lc}`)
 
   const vConnection = await srcClient.createVirtualConnection(lc)
-  log.info(`Created virtual connection: ${vConnection}`)
+  log.info(`Created virtual connection: ${vConnection.connection_id}`)
 
   const ibcRelayerRuntime = runtime.Relayers.find((r) => r.Name.startsWith('ibc-relayer-'))
 
@@ -197,98 +279,23 @@ export async function channelHandshake(
   }
 
   // ChanOpenTry: on Polymer
-  let opentry: self.cosmos.client.polyibc.MsgOpenIBCChannelResponse
-  {
-    log.info(`executing ChanOpenTry on ${src.chain.Name}`)
-
-    const msg: self.cosmos.client.polyibc.MsgChannelOpenTryEncodeObject = {
-      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenTry',
-      value: {
-        portId: portEth2,
-        previousChannelId: '',
-        signer: srcAccount.Address,
-        channel: {
-          state: self.cosmos.client.polyibc.channel.State.STATE_TRYOPEN,
-          ordering: self.cosmos.client.polyibc.channel.Order.ORDER_UNORDERED,
-          connectionHops: [vConnection.connection_id, ibcconnections.srcConnection],
-          counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
-            channelId: dstClient.channelId,
-            portId: dstClient.portid
-          }),
-          version: src.version
-        },
-        counterpartyVersion: dst.version,
-        proofInit: new Uint8Array(Array(8).fill(0)),
-        proofHeight: {
-          revisionHeight: Long.fromNumber(100),
-          revisionNumber: Long.fromNumber(0)
-        }
-      }
-    }
-    await srcClient.waitForBlocks(2)
-    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
-    opentry = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_try', res))
-  }
-  log.info(`ChanOpenTry on ${src.chain.Name}: done`)
+  await srcClient.channOpenTry(dstClient)
 
   // ChanOpenAck: on WASM
-  let openack: self.cosmos.client.polyibc.MsgConnectIBCChannelResponse
-  {
-    log.info(`executing ChanOpenAck on ${dst.chain.Name}`)
-    const msg: self.cosmos.client.polyibc.MsgChannelOpenAckEncodeObject = {
-      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenAck',
-      value: {
-        // TODO: this seems to be the only thing the ibc relayer knows about
-        portId: wasmPortId,
-        counterpartyVersion: src.version,
-        channelId: dstClient.channelId,
-        counterpartyChannelId: opentry.channel_id,
-        proofTry: new Uint8Array(Array(8).fill(0)),
-        proofHeight: {
-          revisionHeight: Long.fromNumber(100),
-          revisionNumber: Long.fromNumber(0)
-        },
-        signer: dstAccount.Address
-      }
-    }
-    await dstClient.waitForBlocks(2)
-    const res = await dstClient.signer.signAndBroadcast(dstAccount.Address, [msg], 'auto')
-    openack = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_ack', res))
-  }
-  log.info(`ChanOpenAck on ${dst.chain.Name}: done`)
+  await dstClient.channOpenAck(srcClient)
 
   // ChanOpenConfirm: on Polymer
-  let openconfirm: self.cosmos.client.polyibc.MsgConnectIBCChannelResponse
-  {
-    log.info(`executing ChanOpenConfirm on ${src.chain.Name}`)
-
-    const msg: self.cosmos.client.polyibc.MsgChannelOpenConfirmEncodeObject = {
-      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenConfirm',
-      value: {
-        portId: portEth2,
-        signer: srcAccount.Address,
-        channelId: opentry.channel_id,
-        proofAck: new Uint8Array(Array(8).fill(0)),
-        proofHeight: {
-          revisionHeight: Long.fromNumber(100),
-          revisionNumber: Long.fromNumber(0)
-        }
-      }
-    }
-    await srcClient.waitForBlocks(2)
-    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
-    openconfirm = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_confirm', res))
-  }
+  await srcClient.channOpenConfirm()
 
   // TODO: let's get rid of this once the real channel handshake is in place
   await setupChannel(
     runtime,
     origSrc,
     src.address,
-    openack.channel_id,
-    openconfirm.channel_id,
-    openack.connection_id,
-    openack.counterparty_port_id!
+    dstClient.channelId,
+    srcClient.channelId,
+    dstClient.connectionHops,
+    srcClient.portid
   )
 
   const vibcruntime = runtime.Relayers.find((r) => r.Name === 'vibc-relayer')
@@ -296,13 +303,12 @@ export async function channelHandshake(
     const relayer = await VIBCRelayer.reuse(vibcruntime)
     // this is counter intuitive but the original source was replaced by polymer
     // so we want to setup the path between polymer and the original source.
-    await relayer.update(src.chain.Name, origSrc, openack.channel_id, openconfirm.channel_id)
+    await relayer.update(src.chain.Name, origSrc, dstClient.channelId, srcClient.channelId)
     await relayer.start()
   }
 
-  log.info(`ChanOpenConfirm on ${src.chain.Name}: done`)
-  log.info(`channel id on ${src.chain.Name}: ${openack.channel_id}`)
-  log.info(`channel id on ${dst.chain.Name}: ${openconfirm.channel_id}`)
+  log.info(`channel id on ${dstClient.name}: ${dstClient.channelId}`)
+  log.info(`channel id on ${srcClient.name}: ${srcClient.channelId}`)
 }
 
 // TODO: do all this so the contract stores the channel id in one of its internal mappings.
@@ -313,7 +319,7 @@ async function setupChannel(
   receiverAddress: string,
   srcChannel: string,
   dstChannel: string,
-  connectionHops: string,
+  connectionHops: string[],
   counterpartPortId: string
 ) {
   const chain = runtime.ChainSets.find((c) => c.Name === chainName)!
@@ -327,7 +333,7 @@ async function setupChannel(
   const connect = await contract.connectIbcChannel(
     receiverAddress,
     ethers.utils.formatBytes32String(srcChannel),
-    connectionHops.split('.'),
+    connectionHops,
     0,
     counterpartPortId,
     ethers.utils.formatBytes32String(dstChannel),
