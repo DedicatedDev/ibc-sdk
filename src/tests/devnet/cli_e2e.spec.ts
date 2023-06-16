@@ -1,12 +1,12 @@
-import { logs } from '@cosmjs/stargate'
-import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import anyTest, { TestFn } from 'ava'
 import { ethers } from 'ethers'
-import { newJsonRpcProvider } from '../../lib/dev'
 import { ProcessOutput } from 'zx-cjs'
 import { utils } from '../../lib'
 import { ChainConfig, RelayerRunObj, CosmosAccount, EvmChainSet } from '../../lib/dev/schemas'
 import { fs, path, $ } from '../../lib/utils'
+import { getTestingLogger } from '../../lib/utils/logger'
+
+const log = getTestingLogger()
 
 const test = anyTest as TestFn<{
   workspace: string
@@ -35,6 +35,23 @@ async function runCommand(t: any, ...args: string[]): Promise<ProcessOutput> {
 async function getChannelsFrom(t: any, chain: string) {
   const out = await runCommand(t, 'channels', chain)
   return utils.readYamlText(out.stdout.trim())
+}
+
+async function waitForEvent(t: any, chainName: string, eventName: string, cb: (e: any) => boolean) {
+  log.info(`querying events from ${chainName}`)
+  await utils.waitUntil(
+    async () => {
+      const out = await runCommand(t, 'events', chainName, '--json', '--extended')
+      t.assert(out.exitCode === 0)
+      const events = JSON.parse(out.stdout.trim())
+      const event = events.find((e: any) => e.events[eventName])
+      if (!event) return false
+      log.info(`got event from ${chainName}: ${JSON.stringify(event)}`)
+      return cb(event.events)
+    },
+    20,
+    5_000
+  )
 }
 
 test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
@@ -139,7 +156,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
 })
 
 async function testTracePackets(t: any, c: any) {
-  // TODO: endpoint will throw an invalid port error otherwsie
+  // TODO: endpoint will throw an invalid port error otherwise
   const portid = c.wasmChannel.channels[0].port_id.replace(/^wasm\./, '')
   const endpointA = `${c.wasmChain.Name}:${c.wasmChannel.channels[0].channel_id}:${portid}`
   const endpointB = `polymer:${c.polyChannel.channels[0].channel_id}:${c.polyChannel.channels[0].port_id}`
@@ -162,9 +179,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   const provider = new ethers.providers.JsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
   const signer = new ethers.Wallet(c.eth1Account.PrivateKey).connect(provider)
 
-  const dispatcher = new ethers.Contract(c.dispatcher.Address, c.dispatcher.Abi, signer)
-
-  console.log('Sending message from ETH to WASM...')
+  log.info('Sending message from ETH to WASM...')
   const receiver = new ethers.Contract(c.receiver.Address, c.receiver.Abi, signer)
   const response = await receiver.greet(
     c.dispatcher.Address,
@@ -179,67 +194,27 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   const parsed = iface.parseLog(receipt.logs[0])
   const [_sourcePortAddress, _sourceChannelId, _packet, sendPacketSequence, _timeout, _fee] = parsed.args
 
-  const client = await Tendermint37Client.connect(c.wasmChain.Nodes[0].RpcHost)
+  await waitForEvent(t, c.wasmChain.Name, 'recv_packet', (events: any) => {
+    const e = events.recv_packet
+    t.assert(e)
+    t.assert(JSON.parse(e.packet_data).message.m === 'Hello from ETH')
+    t.assert(e.packet_src_channel === c.polyChannel.channels[0].channel_id)
+    t.assert(e.packet_dst_channel === c.polyChannel.channels[0].counterparty.channel_id)
+    t.assert(e.packet_src_port === c.polyChannel.channels[0].port_id)
+    t.assert(e.packet_dst_port === c.polyChannel.channels[0].counterparty.port_id)
+    return true
+  })
 
-  let h = 1
-  t.assert(
-    await utils.waitUntil(
-      async () => {
-        const query = `recv_packet.packet_sequence EXISTS AND tx.height>=${h}`
-        const result = await client.txSearchAll({ query: query })
-        const events: any[] = []
-
-        result.txs.map(({ height, result }) => {
-          h = Math.max(height, h)
-          const rawLogs = logs.parseRawLog(result.log)
-          for (const log of rawLogs) {
-            log.events.forEach((e) => {
-              if (e.type !== 'recv_packet') return
-              const kv: any = {}
-              e.attributes.forEach((e) => (kv[e.key] = e.value))
-              events.push(kv)
-            })
-          }
-        })
-        h++
-        if (events.length === 0) return false
-        const kv = events[0]
-        console.log(`got event from WASM: ${JSON.stringify(kv)}`)
-        const msg = JSON.parse(kv.packet_data)
-        t.assert(msg.message.m === 'Hello from ETH')
-        t.assert(kv.packet_src_channel === c.polyChannel.channels[0].channel_id)
-        t.assert(kv.packet_dst_channel === c.polyChannel.channels[0].counterparty.channel_id)
-        t.assert(kv.packet_src_port === c.polyChannel.channels[0].port_id)
-        t.assert(kv.packet_dst_port === c.polyChannel.channels[0].counterparty.port_id)
-        return true
-      },
-      20,
-      10_000
-    )
-  )
-
-  t.assert(
-    await utils.waitUntil(
-      async () => {
-        const result = await dispatcher.queryFilter('Acknowledgement')
-        const event = result[0]
-        if (!event) return false
-
-        console.log(`got ack from ETH: ${JSON.stringify(event)}`)
-        const [receiverAddress, srcChannelId, ackpacket, sequence] = event.args!
-        t.assert(receiverAddress === c.receiver.Address)
-        t.assert(ethers.utils.parseBytes32String(srcChannelId) === c.polyChannel.channels[0].channel_id)
-        t.assert(ethers.BigNumber.from(sendPacketSequence).toString() === ethers.BigNumber.from(sequence).toString())
-        t.assert(ackpacket[0] === true)
-        // this is set by the CW contract
-        console.log(ethers.utils.toUtf8String(ackpacket[1]))
-        t.assert(ethers.utils.toUtf8String(ackpacket[1]) === `{"ok":{"account":"account","reply":"Got the message!"}}`)
-        return true
-      },
-      20,
-      10_000
-    )
-  )
+  await waitForEvent(t, c.eth1Chain.Name, 'Acknowledgement', (events: any) => {
+    const e = events.Acknowledgement
+    t.assert(e)
+    t.assert(JSON.parse(e.AckPacket.data).ok.reply === 'Got the message!')
+    t.assert(e.AckPacket.success === true)
+    t.assert(e.sourcePortAddress === c.receiver.Address)
+    t.assert(e.sourceChannelId === c.polyChannel.channels[0].channel_id)
+    t.assert(e.sequence === ethers.BigNumber.from(sendPacketSequence).toString())
+    return true
+  })
 }
 
 // Test the following sequence
@@ -260,65 +235,29 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   cmds.push(...['--yes', '--from', c.wasmAccount.Address, '--keyring-backend', 'test'])
   cmds.push(...['--chain-id', c.wasmChain.Name])
 
-  console.log('Sending message from WASM to ETH...')
+  log.info('Sending message from WASM to ETH...')
   const out = await runCommand(t, 'exec', ...cmds)
   t.assert(out.exitCode === 0)
 
-  const provider = newJsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
-  const contract = new ethers.Contract(c.dispatcher.Address, c.dispatcher.Abi, provider)
-  t.assert(
-    await utils.waitUntil(
-      async () => {
-        const result = await contract.queryFilter('RecvPacket')
-        const event = result[0]
-        if (!event) return false
+  await waitForEvent(t, c.eth1Chain.Name, 'RecvPacket', (events: any) => {
+    const e = events.RecvPacket
+    t.assert(e)
+    t.assert(e.srcChannelId === c.wasmChannel.channels[0].channel_id)
+    t.assert(e.destChannelId === c.wasmChannel.channels[0].counterparty.channel_id)
+    t.assert(e.srcPortId === c.wasmChannel.channels[0].port_id)
+    t.assert(e.destPortAddress === c.receiver.Address)
+    t.assert(e.sequence === '1')
+    return true
+  })
 
-        console.log(`got event from ETH: ${JSON.stringify(event)}`)
-        const [dstPortAddress, dstChannelId, srcPortId, srcChannelId, sequence] = event.args!
-        t.assert(ethers.utils.parseBytes32String(srcChannelId) === c.wasmChannel.channels[0].channel_id)
-        t.assert(ethers.utils.parseBytes32String(dstChannelId) === c.wasmChannel.channels[0].counterparty.channel_id)
-        t.assert(srcPortId === c.wasmChannel.channels[0].port_id)
-        t.assert(dstPortAddress === c.receiver.Address)
-        t.assert('1' === ethers.BigNumber.from(sequence).toString())
-        return true
-      },
-      20,
-      10_000
-    )
-  )
-
-  const client = await Tendermint37Client.connect(c.wasmChain.Nodes[0].RpcHost)
-  let h = 1
-  t.assert(
-    await utils.waitUntil(
-      async () => {
-        const query = `acknowledge_packet.packet_sequence EXISTS AND tx.height>=${h}`
-        const result = await client.txSearchAll({ query: query })
-        const events: any = {}
-        result.txs.map(({ height, result }) => {
-          h = Math.max(height, h)
-          const rawLogs = logs.parseRawLog(result.log)
-          for (const log of rawLogs) {
-            log.events.forEach((e) => {
-              if (e.type !== 'acknowledge_packet' && e.type !== 'wasm') return
-              const kv: any = {}
-              e.attributes.forEach((e) => (kv[e.key] = e.value))
-              events[e.type] = kv
-            })
-          }
-        })
-        h++
-        if (Object.keys(events).length === 0) return false
-        console.log(`got ack from WASM: ${JSON.stringify(events)}`)
-        t.assert(events.acknowledge_packet.packet_dst_channel === c.polyChannel.channels[0].channel_id)
-        t.assert(events.acknowledge_packet.packet_src_channel === c.polyChannel.channels[0].counterparty.channel_id)
-        t.assert(events.acknowledge_packet.packet_dst_port === c.polyChannel.channels[0].port_id)
-        t.assert(events.acknowledge_packet.packet_src_port === c.polyChannel.channels[0].counterparty.port_id)
-        t.assert(events.wasm.reply === 'got the message')
-        return true
-      },
-      20,
-      10_000
-    )
-  )
+  await waitForEvent(t, c.wasmChain.Name, 'acknowledge_packet', (events: any) => {
+    const e = events.acknowledge_packet
+    t.assert(e)
+    t.assert(e.packet_dst_channel === c.polyChannel.channels[0].channel_id)
+    t.assert(e.packet_src_channel === c.polyChannel.channels[0].counterparty.channel_id)
+    t.assert(e.packet_dst_port === c.polyChannel.channels[0].port_id)
+    t.assert(e.packet_src_port === c.polyChannel.channels[0].counterparty.port_id)
+    t.assert(events.wasm.reply === 'got the message')
+    return true
+  })
 }
