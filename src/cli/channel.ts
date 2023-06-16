@@ -41,6 +41,34 @@ class Client {
       await self.utils.sleep(1000)
     } while ((await this.client.block()).block.header.height < end)
   }
+
+  async createVirtualConnection(nativeClientID: string) {
+    log.info(`Creating virtual light client for native client ${nativeClientID}`)
+    const createClientMsg: self.cosmos.client.polyibc.MsgCreateVibcClientEncodeObject = {
+      typeUrl: '/polyibc.core.MsgCreateVibcClient',
+      value: {
+        creator: this.account.Address,
+        nativeClientID: nativeClientID,
+        params: Buffer.from(JSON.stringify({ finalized_only: false, delay_period: 2 }))
+      }
+    }
+    await this.waitForBlocks(2)
+    let res = await this.signer.signAndBroadcast(this.account.Address, [createClientMsg], 'auto')
+    const vLC = self.cosmos.client.polyibc.MsgCreateVibcClientResponseSchema.parse(flat('create_vibc_client', res))
+
+    log.info('Creating virtual connection...')
+    const createConnectionMsg: self.cosmos.client.polyibc.MsgCreateVibcConnectionEncodeObject = {
+      typeUrl: '/polyibc.core.MsgCreateVibcConnection',
+      value: {
+        creator: this.account.Address,
+        vibcClientID: vLC.client_id,
+        delayPeriod: '0'
+      }
+    }
+    await this.waitForBlocks(2)
+    res = await this.signer.signAndBroadcast(this.account.Address, [createConnectionMsg], 'auto')
+    return self.cosmos.client.polyibc.MsgCreateVibcConnectionResponseSchema.parse(flat('create_vibc_connection', res))
+  }
 }
 
 function flat(name: string, res: DeliverTxResponse) {
@@ -91,40 +119,10 @@ export async function channelHandshake(
   const dstClient = await Client.create(dstAccount, dst.chain)
 
   const lc = await queryLightClient(src.chain.Nodes[0].RpcHost, '/polyibc.lightclients.altair.ClientState')
-  log.info(`Found ETH2 light client: ${lc}`)
+  log.info(`Found light client: ${lc}`)
 
-  log.info('Creating virtual light client')
-  let vLC: any
-  {
-    const msg: self.cosmos.client.polyibc.MsgCreateVibcClientEncodeObject = {
-      typeUrl: '/polyibc.core.MsgCreateVibcClient',
-      value: {
-        creator: srcAccount.Address,
-        nativeClientID: lc,
-        params: Buffer.from(JSON.stringify({ finalized_only: false, delay_period: 2 }))
-      }
-    }
-    await srcClient.waitForBlocks(2)
-    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
-    vLC = self.cosmos.client.polyibc.MsgCreateVibcClientResponseSchema.parse(flat('create_vibc_client', res))
-  }
-
-  let vConnection: any
-  {
-    const msg: self.cosmos.client.polyibc.MsgCreateVibcConnectionEncodeObject = {
-      typeUrl: '/polyibc.core.MsgCreateVibcConnection',
-      value: {
-        creator: srcAccount.Address,
-        vibcClientID: vLC.client_id,
-        delayPeriod: '0'
-      }
-    }
-    await srcClient.waitForBlocks(2)
-    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
-    vConnection = self.cosmos.client.polyibc.MsgCreateVibcConnectionResponseSchema.parse(
-      flat('create_vibc_connection', res)
-    )
-  }
+  const vConnection = await srcClient.createVirtualConnection(lc)
+  log.info(`Created virtual connection: ${vConnection}`)
 
   const portEth2 = `polyibc.Ethereum-Devnet.${src.address.toLowerCase().slice(2)}`
   const ibcRelayerRuntime = runtime.Relayers.find((r) => r.Name.startsWith('ibc-relayer-'))
