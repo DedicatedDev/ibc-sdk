@@ -120,4 +120,28 @@ export class VIBCRelayer {
       Configuration: JSON.parse(config.stdout)
     }
   }
+
+  async channel(
+    path: string,
+    receiver: string,
+    order: string,
+    connections: string[],
+    counterVersion: string,
+    counterPortId: string,
+    counterChannelId: string
+  ) {
+    const args = {
+      '--version': '1.0',
+      '--receiver': receiver,
+      '--order': order,
+      '--counter-version': counterVersion,
+      '--counter-port-id': counterPortId,
+      '--connection-hops': connections.join('.')
+    }
+    if (counterChannelId) args['--counter-channel-id'] = counterChannelId
+    await this.exec([this.binary, 'transact', 'channel', path, ...Object.entries(args).flat()]).catch((e) => {
+      log.error(e)
+      throw new Error(e)
+    })
+  }
 }
