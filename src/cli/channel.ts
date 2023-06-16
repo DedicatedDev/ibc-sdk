@@ -1,4 +1,4 @@
-import { ChainSetsRunObj, CosmosAccount } from '../lib/schemas'
+import { ChainSetsRunObj, CosmosAccount, CosmosChainSet } from '../lib/schemas'
 import * as self from '../lib/index.js'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { DeliverTxResponse, SigningStargateClient } from '@cosmjs/stargate'
@@ -11,20 +11,36 @@ import { getLogger } from '../lib/utils/logger'
 
 const log = getLogger()
 
-async function createSignerClient(
-  sender: CosmosAccount,
-  prefix: string,
-  chainRpc: string
-): Promise<[Tendermint37Client, SigningStargateClient]> {
-  const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(sender.Mnemonic!, { prefix: prefix })
+class Client {
+  account: CosmosAccount
+  client: Tendermint37Client
+  signer: SigningStargateClient
+  name: string
 
-  const queryClient = await self.cosmos.client.newTendermintClient(chainRpc)
-  const signerClient = await self.cosmos.client.SigningStargateClient.createWithSigner(
-    queryClient,
-    offlineSigner,
-    self.cosmos.client.signerOpts()
-  )
-  return [queryClient, signerClient]
+  private constructor(name: string, account: CosmosAccount, client: Tendermint37Client, signer: SigningStargateClient) {
+    this.name = name
+    this.account = account
+    this.client = client
+    this.signer = signer
+  }
+
+  static async create(account: CosmosAccount, chain: CosmosChainSet) {
+    const queryClient = await self.cosmos.client.newTendermintClient(chain.Nodes[0].RpcHost)
+    const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(account.Mnemonic!, { prefix: chain.Prefix })
+    const signerClient = await self.cosmos.client.SigningStargateClient.createWithSigner(
+      queryClient,
+      offlineSigner,
+      self.cosmos.client.signerOpts()
+    )
+    return new Client(chain.Name, account, queryClient, signerClient)
+  }
+
+  async waitForBlocks(blocks: number) {
+    const end = (await this.client.block()).block.header.height + blocks
+    do {
+      await self.utils.sleep(1000)
+    } while ((await this.client.block()).block.header.height < end)
+  }
 }
 
 function flat(name: string, res: DeliverTxResponse) {
@@ -34,13 +50,6 @@ function flat(name: string, res: DeliverTxResponse) {
   const kv = {}
   event.attributes.forEach((e: any) => (kv[e.key] = e.value))
   return kv
-}
-
-async function waitForBlocks(client: Tendermint37Client, blocks: number = 2) {
-  const end = (await client.block()).block.header.height + blocks
-  do {
-    await self.utils.sleep(1000)
-  } while ((await client.block()).block.header.height < end)
 }
 
 type EndpointInfo = {
@@ -78,8 +87,8 @@ export async function channelHandshake(
   const dstAccount = dst.chain.Accounts.find((a) => a.Name === 'relayer')
   if (!dstAccount) throw new Error(`Could not find relayer account in '${dst.chain.Name}' chain`)
 
-  const [srcQuery, srcClient] = await createSignerClient(srcAccount, src.chain.Prefix, src.chain.Nodes[0].RpcHost)
-  const [dstQuery, dstClient] = await createSignerClient(dstAccount, dst.chain.Prefix, dst.chain.Nodes[0].RpcHost)
+  const srcClient = await Client.create(srcAccount, src.chain)
+  const dstClient = await Client.create(dstAccount, dst.chain)
 
   const lc = await queryLightClient(src.chain.Nodes[0].RpcHost, '/polyibc.lightclients.altair.ClientState')
   log.info(`Found ETH2 light client: ${lc}`)
@@ -95,8 +104,8 @@ export async function channelHandshake(
         params: Buffer.from(JSON.stringify({ finalized_only: false, delay_period: 2 }))
       }
     }
-    await waitForBlocks(srcQuery)
-    const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
+    await srcClient.waitForBlocks(2)
+    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     vLC = self.cosmos.client.polyibc.MsgCreateVibcClientResponseSchema.parse(flat('create_vibc_client', res))
   }
 
@@ -110,8 +119,8 @@ export async function channelHandshake(
         delayPeriod: '0'
       }
     }
-    await waitForBlocks(srcQuery)
-    const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
+    await srcClient.waitForBlocks(2)
+    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     vConnection = self.cosmos.client.polyibc.MsgCreateVibcConnectionResponseSchema.parse(
       flat('create_vibc_connection', res)
     )
@@ -148,8 +157,8 @@ export async function channelHandshake(
         }
       }
     }
-    await waitForBlocks(dstQuery)
-    const res = await dstClient.signAndBroadcast(dstAccount.Address, [msg], 'auto')
+    await dstClient.waitForBlocks(2)
+    const res = await dstClient.signer.signAndBroadcast(dstAccount.Address, [msg], 'auto')
     openinit = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_init', res))
   }
   log.info(`ChanOpenInit on ${dst.chain.Name}: done`)
@@ -168,8 +177,8 @@ export async function channelHandshake(
         clientID: lc
       }
     }
-    await waitForBlocks(srcQuery)
-    const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
+    await srcClient.waitForBlocks(2)
+    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     log.debug('register_port', res)
     log.info(`RegisterPort on ${src.chain.Name}: done`)
   }
@@ -203,8 +212,8 @@ export async function channelHandshake(
         }
       }
     }
-    await waitForBlocks(srcQuery)
-    const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
+    await srcClient.waitForBlocks(2)
+    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     opentry = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_try', res))
   }
   log.info(`ChanOpenTry on ${src.chain.Name}: done`)
@@ -229,8 +238,8 @@ export async function channelHandshake(
         signer: dstAccount.Address
       }
     }
-    await waitForBlocks(dstQuery)
-    const res = await dstClient.signAndBroadcast(dstAccount.Address, [msg], 'auto')
+    await dstClient.waitForBlocks(2)
+    const res = await dstClient.signer.signAndBroadcast(dstAccount.Address, [msg], 'auto')
     openack = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_ack', res))
   }
   log.info(`ChanOpenAck on ${dst.chain.Name}: done`)
@@ -253,8 +262,8 @@ export async function channelHandshake(
         }
       }
     }
-    await waitForBlocks(srcQuery)
-    const res = await srcClient.signAndBroadcast(srcAccount.Address, [msg], 'auto')
+    await srcClient.waitForBlocks(2)
+    const res = await srcClient.signer.signAndBroadcast(srcAccount.Address, [msg], 'auto')
     openconfirm = self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flat('channel_open_confirm', res))
   }
 
