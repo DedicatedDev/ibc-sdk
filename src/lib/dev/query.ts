@@ -106,7 +106,7 @@ type EventsFilter = {
 
 export type TxEvent = {
   height: number
-  kv: { [k: string]: {} }
+  events: { [k: string]: {} }
 }
 
 type TxEventCb = (e: TxEvent) => void
@@ -134,7 +134,7 @@ async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEve
         ev.attributes.forEach((e: any) => (kv[ev.type][e.key] = e.value))
       }
     }
-    cb({ height, kv })
+    cb({ height, events: kv })
   })
 }
 
@@ -172,17 +172,17 @@ async function evmEvents(chain: EvmChainSet, opts: EventsFilter, cb: TxEventCb) 
   const logs = await contract.provider.getLogs(filter)
   if (logs.length === 0) return
 
-  let event: TxEvent = { height: logs[0].blockNumber, kv: {} }
+  let event: TxEvent = { height: logs[0].blockNumber, events: {} }
   for (const l of logs) {
     const parsed = iface.parseLog(l)
     if (l.blockNumber === event.height) {
-      event.kv[parsed.name] = parse(parsed)
+      event.events[parsed.name] = parse(parsed)
       continue
     }
 
     cb(event)
-    event = { height: l.blockNumber, kv: {} }
-    event.kv[parsed.name] = parse(parsed)
+    event = { height: l.blockNumber, events: {} }
+    event.events[parsed.name] = parse(parsed)
   }
   cb(event)
 }

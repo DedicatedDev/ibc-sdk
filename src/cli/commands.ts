@@ -423,6 +423,7 @@ type EventsOpts = {
   minHeight: number
   maxHeight: number
   extended: boolean
+  json: boolean
 }
 
 export async function events(opts: EventsOpts) {
@@ -431,8 +432,13 @@ export async function events(opts: EventsOpts) {
   const chain = runtime.ChainSets.find((c) => c.Name === found.name)
   if (!chain) throw new Error(`Expected any chain`)
 
+  const events: TxEvent[] = []
   await self.dev.events(chain, opts, (event: TxEvent) => {
-    if (opts.extended) console.log(event.height, ':', event.kv)
-    else console.log(event.height, ':', Object.keys(event.kv).join(' '))
+    if (!opts.extended) return console.log(event.height, ':', Object.keys(event.events).join(' '))
+    if (!opts.json) return console.log(event.height, ':', event.events)
+    // this will use more memory since we are buffering all events instead of flushing them to stdout
+    // but it's non-trivial to print a valid json array otherwise.
+    events.push(event)
   })
+  if (opts.extended && opts.json) console.log(JSON.stringify(events))
 }
