@@ -77,11 +77,6 @@ export class EthRelayer {
     // make the vIBC SC ABI available to the relayer
     fs.writeFileSync(path.join(containerDir, 'abi.json'), config.ibcCoreAbi, { encoding: 'utf-8' })
 
-    // TODO: remove this once the relayer won't need to access the accounts in polymer home dir
-    await $`docker cp ${poly.Nodes[0].ContainerId}:/home/heighliner/.polymer /tmp`
-    await $`docker cp /tmp/.polymer ${container.containerId}:/tmp/polymer-home`
-    await $`rm -rf /tmp/.polymer`
-
     // TODO: this is horribly hacky. The altair lc running on polymer expects to find a random config file
     //       with the smart contract abi and the dispatcher address. So, we are adding that file here.
     //       So this adding a file within the polymer container for the lc (running in there) to work.
