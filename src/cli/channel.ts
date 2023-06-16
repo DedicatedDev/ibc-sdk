@@ -49,6 +49,23 @@ type EndpointInfo = {
   version: string
 }
 
+async function queryLightClient(url: string, typeUrl: string) {
+  const queryClient = self.cosmos.client.QueryClient.withExtensions(
+    await self.cosmos.client.newTendermintClient(url),
+    self.cosmos.client.setupPolyIbcExtension
+  )
+
+  const clients = await queryClient.polyibc.ClientStates(
+    self.cosmos.client.polyibc.query.QueryClientStatesRequest.fromPartial({})
+  )
+  if (!clients.clientStates) throw new Error('No client states found')
+  for (const state of clients.clientStates) {
+    if (state.clientState?.typeUrl === typeUrl) return state.clientId
+  }
+
+  throw new Error(`could not find light client type: ${typeUrl}`)
+}
+
 export async function channelHandshake(
   runtime: ChainSetsRunObj,
   origSrc: string,
@@ -64,26 +81,7 @@ export async function channelHandshake(
   const [srcQuery, srcClient] = await createSignerClient(srcAccount, src.chain.Prefix, src.chain.Nodes[0].RpcHost)
   const [dstQuery, dstClient] = await createSignerClient(dstAccount, dst.chain.Prefix, dst.chain.Nodes[0].RpcHost)
 
-  let lc = ''
-  {
-    const queryClient = self.cosmos.client.QueryClient.withExtensions(
-      await self.cosmos.client.newTendermintClient(src.chain.Nodes[0].RpcHost),
-      self.cosmos.client.setupPolyIbcExtension
-    )
-
-    const clients = await queryClient.polyibc.ClientStates(
-      self.cosmos.client.polyibc.query.QueryClientStatesRequest.fromPartial({})
-    )
-    if (!clients.clientStates) throw new Error('No client states found')
-    for (const state of clients.clientStates) {
-      if (state.clientState?.typeUrl !== '/polyibc.lightclients.altair.ClientState') continue
-      lc = state.clientId
-      break
-    }
-  }
-
-  if (lc.length === 0) throw new Error('Could not find ETH2 light client')
-
+  const lc = await queryLightClient(src.chain.Nodes[0].RpcHost, '/polyibc.lightclients.altair.ClientState')
   log.info(`Found ETH2 light client: ${lc}`)
 
   log.info('Creating virtual light client')
