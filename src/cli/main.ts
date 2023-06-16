@@ -7,6 +7,7 @@ import path from 'path'
 import { homedir } from 'os'
 import { version } from '../.package.json'
 import { getLogger, levels } from '../lib/utils/logger'
+import exit from 'exit'
 
 const log = getLogger()
 
@@ -256,10 +257,18 @@ program
 process.stdout.on('error', (err) => err.code === 'EPIPE' ?? process.exit(0))
 process.stderr.on('error', (err) => err.code === 'EPIPE' ?? process.exit(0))
 
+// Do not call process.exit() here or stdout/stderr may be truncated. See:
+// - https://github.com/nodejs/node/issues/6379
+// - https://github.com/google/zx/blob/main/docs/known-issues.md#output-gets-truncated
+//
+// An easy fix would be to use process.exitCode = 0, but we'd then get into this other issue:
+// - https://github.com/polymerdao/ibc-sdk/issues/6379
+//
+// A workaround for both is to use exit() that takes care of flushing stdout/stderr before exiting.
 program
   .parseAsync()
-  .then(() => process.exit())
+  .then(() => exit(0))
   .catch((error: Error) => {
     log.error(error.message)
-    process.exit(1)
+    exit(1)
   })
