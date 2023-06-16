@@ -12,9 +12,6 @@ test-e2e: build-ibctl
 test-cli: build-ibctl
 	npx ava src/tests/devnet/cli.spec.ts
 
-test-vibc-relayer-config: build
-	npx ava src/tests/devnet/vibc_relayer_config.spec.ts
-
 test-evm-deploy: build
 	npx ava src/tests/devnet/evm_deploy.spec.ts
 

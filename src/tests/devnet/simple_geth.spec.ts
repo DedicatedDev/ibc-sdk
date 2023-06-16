@@ -3,22 +3,27 @@ import { z } from 'zod'
 import { AccountsConfigSchema, AccountsSchema } from '../../lib/dev/schemas.js'
 import * as utils from '../../lib/utils/index.js'
 import * as ethers from 'ethers'
-import anyTest, { TestFn } from 'ava'
 import { gethConfig } from './simple_geth_config'
 import { getTestingLogger } from '../../lib/utils/logger'
+import { cleanupRuntime, runtimeTest } from './test_utils'
 
 const log = getTestingLogger()
 
-const test = anyTest as TestFn<{}>
+const test = runtimeTest;
+
+test.afterEach.always(async (t) => {
+  await cleanupRuntime(t)
+})
 
 test('start a geth chain from docker container', async (t) => {
   const rawConfig = utils.readYaml(gethConfig)
   t.truthy(rawConfig)
   // override test config
-  const configOverride = { chains: ['eth', 'polygon'], cleanupMode: 'debug' }
+  const configOverride = { chains: ['eth', 'polygon'], cleanupMode: 'all' }
   rawConfig.ChainSets = rawConfig.ChainSets.filter((cs) => configOverride.chains.includes(cs.Name))
   rawConfig.Run.CleanupMode = configOverride.cleanupMode
   const { runObj, configObj } = await self.dev.runChainSets(rawConfig)
+  t.context.runtime = runObj
 
   for (let i = 0; i < runObj.ChainSets.length; i++) {
     const evmChain = runObj.ChainSets[i]
@@ -49,7 +54,4 @@ test('start a geth chain from docker container', async (t) => {
       log.verbose(`[${evmChain.Name}] balance of ${acct.Address}: ${balance} ethers ${balanceWei} wei`)
     }
   }
-
-  // after clean up, folders should be cleaned up and containers are stopped
-  await self.dev.cleanupRuntime(runObj)
 })

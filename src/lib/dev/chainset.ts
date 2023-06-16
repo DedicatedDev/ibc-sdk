@@ -48,7 +48,7 @@ export async function runChainSets(
  * @param runtime The chain set runtime
  */
 export async function cleanupRuntime(runtime: ChainSetsRunObj) {
-  const mode = runtime.Run.CleanupMode
+  const mode = process.env.CLEANUP_MODE || runtime.Run.CleanupMode;
 
   if (mode === 'reuse') {
     log.verbose('CleanupMode is "reuse". Nothing to do.')

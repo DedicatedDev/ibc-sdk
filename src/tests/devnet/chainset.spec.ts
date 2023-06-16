@@ -1,16 +1,20 @@
-import anyTest, { TestFn } from 'ava'
 import { ethers } from 'ethers'
 import os from 'os'
 import { newJsonRpcProvider } from '../../lib/dev'
 import { utils } from '../../lib'
-import { RunningChainSets, runChainSets, cleanupRuntime } from '../../lib/dev/chainset'
+import { RunningChainSets, runChainSets } from '../../lib/dev/chainset'
 import { ChainConfig, ImageLabelTypes } from '../../lib/dev/schemas'
 import { gethConfig } from './simple_geth_config'
 import { getTestingLogger } from '../../lib/utils/logger'
+import { cleanupRuntime, runtimeTest } from './test_utils'
 
 getTestingLogger()
 
-const test = anyTest as TestFn<{}>
+const test = runtimeTest;
+
+test.afterEach.always(async (t) => {
+  await cleanupRuntime(t)
+})
 
 function is(x: ChainConfig[][], y: string[][]): boolean {
   if (x.length !== y.length) return false
@@ -185,6 +189,7 @@ test('start eth node with labels and dependencies', async (t) => {
   const config = utils.readYamlText(gethConfig)
   config.ChainSets = config.ChainSets.filter((c: any) => c.Type !== 'bsc')
   const runtime = await runChainSets(config)
+  t.context.runtime = runtime.runObj
   t.truthy(runtime)
 
   t.assert(runtime.runObj.ChainSets.length === 2)
@@ -211,6 +216,4 @@ test('start eth node with labels and dependencies', async (t) => {
   })
   const tx = await provider.getTransaction(receipt.hash)
   t.truthy(tx)
-
-  await cleanupRuntime(runtime.runObj)
 })

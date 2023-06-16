@@ -1,13 +1,18 @@
 import * as self from '../../lib/index.js'
 import * as utils from '../../lib/utils/index.js'
-import anyTest, { TestFn } from 'ava'
 import { images } from '../../lib/dev/docker'
 import { getTestingLogger } from '../../lib/utils/logger'
 import { setupIbcRelayer } from '../../lib/dev/relayers'
+import { cleanupRuntime, runtimeTest } from './test_utils'
 
 getTestingLogger()
 
-const test = anyTest as TestFn<{}>
+const test = runtimeTest;
+
+test.afterEach.always(async (t) => {
+  await cleanupRuntime(t);
+})
+
 
 const mnemonic =
   'wait team asthma refuse situate crush kidney nature ' +
@@ -21,12 +26,14 @@ ChainSets:
 const configSufix = `
 Run:
   WorkingDir: "/tmp/test-chainsets/run-*"
-  CleanupMode: debug
+  CleanupMode: all
 `
 
 const ibcConnectionsTest = test.macro(async (t, config: string) => {
   const { runObj: runtime, configObj: _ } = await self.dev.runChainSets(utils.readYaml(config))
   t.truthy(runtime)
+  t.context.runtime = runtime
+
   const chain = runtime.ChainSets[0]
   await setupIbcRelayer(runtime, [[chain.Name, chain.Name]])
 })
@@ -112,6 +119,7 @@ const ibcConnectionsTest2 = test.macro(async (t, config: string) => {
   const rawConfig = configPrefix + config + configSufix
   const { runObj: runtime, configObj: _ } = await self.dev.runChainSets(rawConfig)
   t.truthy(runtime)
+  t.context.runtime = runtime
 
   const chain0 = runtime.ChainSets[0] as self.dev.schemas.CosmosChainSet
   const chain1 = runtime.ChainSets[1] as self.dev.schemas.CosmosChainSet

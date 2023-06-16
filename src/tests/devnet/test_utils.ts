@@ -2,8 +2,9 @@ import * as utils from '../../lib/utils/index.js'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import * as self from '../../lib/index.js'
 import { ethers } from 'ethers'
-import { ChainConfig } from '../../lib/dev/schemas.js'
+import { ChainConfig, ChainSetsRunObj } from '../../lib/dev/schemas.js'
 import { getLogger } from '../../lib/utils/logger'
+import anyTest, { ExecutionContext, TestFn } from 'ava'
 
 const log = getLogger()
 
@@ -58,3 +59,16 @@ export function readParliaHeaders(start: number, take: number = 1): any[] {
 function getParliaFilePath(index: number): string {
   return `${parliaHeaderPath}parlia-header-${index}.json`
 }
+
+export type RuntimeContext = {
+  runtime: ChainSetsRunObj
+}
+export const runtimeTest = anyTest as TestFn<RuntimeContext>
+
+export async function cleanupRuntime(t: ExecutionContext<RuntimeContext>) {
+  if (t.context.runtime) {
+    // after clean up, folders should be cleaned up and containers are stopped
+    await self.dev.cleanupRuntime(t.context.runtime)
+  }
+}
+

@@ -1,19 +1,23 @@
 import * as self from '../../lib'
 
-import anyTest, { TestFn } from 'ava'
 import { Coin, MsgSendEncodeObject, setupBankExtension, setupIbcExtension } from '@cosmjs/stargate'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { TextEncoder } from 'util'
 import { toAny } from '../../lib/cosmos/client'
 import { images } from '../../lib/dev/docker'
 import { getTestingLogger } from '../../lib/utils/logger'
+import { cleanupRuntime, runtimeTest } from './test_utils'
 
 const log = getTestingLogger()
 
 const cosmos = self.cosmos
 const { utils } = self
 
-const test = anyTest as TestFn<{}>
+const test = runtimeTest;
+
+test.afterEach.always(async (t) => {
+  await cleanupRuntime(t);
+})
 
 const Relayer = {
   address: 'polymer158z04naus5r3vcanureh7u0ngs5q4l0g5yw8xv',
@@ -63,6 +67,7 @@ test('start a comos chain from docker container', async (t) => {
 
   const { runObj, configObj } = await self.dev.runChainSets(rawConfig)
   utils.ignoreUnused(runObj, configObj)
+  t.context.runtime = runObj;
 
   // ensure we're get a cosmos chain
   const chain = self.dev.schemas.chainSetSchema.cosmos.parse(runObj.ChainSets[0])
