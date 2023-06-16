@@ -15,16 +15,29 @@ class Client {
   account: CosmosAccount
   client: Tendermint37Client
   signer: SigningStargateClient
+  version: string
   name: string
+  portid: string
+  channelId: string
 
-  private constructor(name: string, account: CosmosAccount, client: Tendermint37Client, signer: SigningStargateClient) {
+  private constructor(
+    name: string,
+    version: string,
+    portid: string,
+    account: CosmosAccount,
+    client: Tendermint37Client,
+    signer: SigningStargateClient
+  ) {
     this.name = name
+    this.version = version
     this.account = account
     this.client = client
     this.signer = signer
+    this.portid = portid
+    this.channelId = ''
   }
 
-  static async create(account: CosmosAccount, chain: CosmosChainSet) {
+  static async create(account: CosmosAccount, chain: CosmosChainSet, version: string, portid: string) {
     const queryClient = await self.cosmos.client.newTendermintClient(chain.Nodes[0].RpcHost)
     const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(account.Mnemonic!, { prefix: chain.Prefix })
     const signerClient = await self.cosmos.client.SigningStargateClient.createWithSigner(
@@ -32,7 +45,7 @@ class Client {
       offlineSigner,
       self.cosmos.client.signerOpts()
     )
-    return new Client(chain.Name, account, queryClient, signerClient)
+    return new Client(chain.Name, version, portid, account, queryClient, signerClient)
   }
 
   async waitForBlocks(blocks: number) {
@@ -68,6 +81,34 @@ class Client {
     await this.waitForBlocks(2)
     res = await this.signer.signAndBroadcast(this.account.Address, [createConnectionMsg], 'auto')
     return self.cosmos.client.polyibc.MsgCreateVibcConnectionResponseSchema.parse(flat('create_vibc_connection', res))
+  }
+
+  async channOpenInit(counter: Client, connectionHops: string[]) {
+    log.info(`executing ChanOpenInit on ${this.name}`)
+    const msg: self.cosmos.client.polyibc.MsgChannelOpenInitEncodeObject = {
+      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenInit',
+      value: {
+        // TODO: this seems to be the only thing the ibc relayer knows about
+        portId: this.portid,
+        signer: this.account.Address,
+
+        channel: {
+          state: self.cosmos.client.polyibc.channel.State.STATE_INIT,
+          // TODO it won't let me use ordered channels
+          ordering: self.cosmos.client.polyibc.channel.Order.ORDER_UNORDERED,
+          connectionHops: connectionHops,
+          counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
+            portId: counter.portid
+          }),
+          version: this.version
+        }
+      }
+    }
+    await this.waitForBlocks(2)
+    const res = await this.signer.signAndBroadcast(this.account.Address, [msg], 'auto')
+    const openinit = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_init', res))
+    this.channelId = openinit.channel_id
+    log.info(`ChanOpenInit on ${this.name}: done`)
   }
 }
 
@@ -115,8 +156,11 @@ export async function channelHandshake(
   const dstAccount = dst.chain.Accounts.find((a) => a.Name === 'relayer')
   if (!dstAccount) throw new Error(`Could not find relayer account in '${dst.chain.Name}' chain`)
 
-  const srcClient = await Client.create(srcAccount, src.chain)
-  const dstClient = await Client.create(dstAccount, dst.chain)
+  const portEth2 = `polyibc.Ethereum-Devnet.${src.address.toLowerCase().slice(2)}`
+  const srcClient = await Client.create(srcAccount, src.chain, src.version, portEth2)
+
+  const wasmPortId = 'wasm.' + dst.address
+  const dstClient = await Client.create(dstAccount, dst.chain, dst.version, wasmPortId)
 
   const lc = await queryLightClient(src.chain.Nodes[0].RpcHost, '/polyibc.lightclients.altair.ClientState')
   log.info(`Found light client: ${lc}`)
@@ -124,42 +168,13 @@ export async function channelHandshake(
   const vConnection = await srcClient.createVirtualConnection(lc)
   log.info(`Created virtual connection: ${vConnection}`)
 
-  const portEth2 = `polyibc.Ethereum-Devnet.${src.address.toLowerCase().slice(2)}`
   const ibcRelayerRuntime = runtime.Relayers.find((r) => r.Name.startsWith('ibc-relayer-'))
 
   if (!ibcRelayerRuntime) throw new Error('Could not find ibc-relayer runtime')
   const ibcconnections = ibcRelayerRuntime.Configuration.connections
 
-  const wasmPortId = 'wasm.' + dst.address
-
   // ChanOpenInit: on WASM
-  let openinit: self.cosmos.client.polyibc.MsgOpenIBCChannelResponse
-  {
-    log.info(`executing ChanOpenInit on ${dst.chain.Name}`)
-    const msg: self.cosmos.client.polyibc.MsgChannelOpenInitEncodeObject = {
-      typeUrl: '/ibc.core.channel.v1.MsgChannelOpenInit',
-      value: {
-        // TODO: this seems to be the only thing the ibc relayer knows about
-        portId: wasmPortId,
-        signer: dstAccount.Address,
-
-        channel: {
-          state: self.cosmos.client.polyibc.channel.State.STATE_INIT,
-          // TODO it won't let me use ordered channels
-          ordering: self.cosmos.client.polyibc.channel.Order.ORDER_UNORDERED,
-          connectionHops: [ibcconnections.srcConnection, vConnection.connection_id],
-          counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
-            portId: portEth2
-          }),
-          version: dst.version
-        }
-      }
-    }
-    await dstClient.waitForBlocks(2)
-    const res = await dstClient.signer.signAndBroadcast(dstAccount.Address, [msg], 'auto')
-    openinit = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(flat('channel_open_init', res))
-  }
-  log.info(`ChanOpenInit on ${dst.chain.Name}: done`)
+  await dstClient.channOpenInit(srcClient, [ibcconnections.srcConnection, vConnection.connection_id])
 
   // Currently do not use vIBC OpenIbcChannel / ConnectIbcChannel endpoints, due to `ts-relayer` isn't multihop aware.
   // We directly setup the multi-hop channel on Polymer. In order to do so, we need to register port first.
@@ -197,8 +212,8 @@ export async function channelHandshake(
           ordering: self.cosmos.client.polyibc.channel.Order.ORDER_UNORDERED,
           connectionHops: [vConnection.connection_id, ibcconnections.srcConnection],
           counterparty: self.cosmos.client.polyibc.channel.Counterparty.fromPartial({
-            channelId: openinit.channel_id,
-            portId: openinit.port_id
+            channelId: dstClient.channelId,
+            portId: dstClient.portid
           }),
           version: src.version
         },
@@ -226,7 +241,7 @@ export async function channelHandshake(
         // TODO: this seems to be the only thing the ibc relayer knows about
         portId: wasmPortId,
         counterpartyVersion: src.version,
-        channelId: openinit.channel_id,
+        channelId: dstClient.channelId,
         counterpartyChannelId: opentry.channel_id,
         proofTry: new Uint8Array(Array(8).fill(0)),
         proofHeight: {
