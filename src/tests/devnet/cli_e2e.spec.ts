@@ -110,9 +110,9 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
     'channel',
     'eth-execution:' + mars!.Address,
     'wasm:' + wasmAddress,
-    '--a-channel-version',
+    '--version-a',
     'some-version',
-    '--b-channel-version',
+    '--version-b',
     'polymer-demo-v1'
   )
   t.assert(out2.exitCode === 0)

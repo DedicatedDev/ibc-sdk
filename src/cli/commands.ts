@@ -253,52 +253,50 @@ export async function deploy(opts: DeployOpts) {
 
 type ChannelOpts = {
   workspace: string
-  endpointA: { chainId: string; account: string }
-  endpointB: { chainId: string; account: string }
-  aChannelVersion: string
-  bChannelVersion: string
+  chainA: { chainId: string; account: string; version: string }
+  chainB: { chainId: string; account: string; version: string }
 }
 
 export async function channel(opts: ChannelOpts) {
   const runtime = loadWorkspace(opts.workspace)
 
-  let endpointA = runtime.ChainSets.find((c) => c.Name === opts.endpointA.chainId)
-  if (!endpointA) throw new Error(`Could not find endpoint ${opts.endpointA.chainId} is chain sets`)
+  let chainA = runtime.ChainSets.find((c) => c.Name === opts.chainA.chainId)
+  if (!chainA) throw new Error(`Could not find chain ${opts.chainA.chainId} is chain sets`)
 
-  let endpointB = runtime.ChainSets.find((c) => c.Name === opts.endpointB.chainId)
-  if (!endpointB) throw new Error(`Could not find endpoint ${opts.endpointB.chainId} is chain sets`)
+  let chainB = runtime.ChainSets.find((c) => c.Name === opts.chainB.chainId)
+  if (!chainB) throw new Error(`Could not find chain ${opts.chainB.chainId} is chain sets`)
 
   const poly = runtime.ChainSets.find((c) => c.Type === 'polymer')
   if (!poly) throw new Error('Could not find polymer chain is chain sets')
 
   const valid = new Set<string>(['cosmos:ethereum', 'ethereum:cosmos'])
 
-  if (!valid.has(`${endpointA.Type}:${endpointB.Type}`))
+  if (!valid.has(`${chainA.Type}:${chainB.Type}`))
     throw new Error(
       `Only the following combinations are currently supported: ${new Array(...valid).join(', ')}. ` +
-        `Got: ${endpointA.Type}:${endpointB.Type}`
+        `Got: ${chainA.Type}:${chainB.Type}`
     )
 
-  const origEndpointA = endpointA.Name
+  const origEndpointA = chainA.Name
   // replace the ethereum chain with polymer
-  endpointA = endpointA.Type === 'ethereum' ? poly : endpointA
-  endpointB = endpointB.Type === 'ethereum' ? poly : endpointB
+  chainA = chainA.Type === 'ethereum' ? poly : chainA
+  chainB = chainB.Type === 'ethereum' ? poly : chainB
 
   // always keep polymer as the endpoint A for convenience
-  if (endpointA.Type !== 'polymer') [endpointA, endpointB] = [endpointB, endpointA]
+  if (chainA.Type !== 'polymer') [chainA, chainB] = [chainB, chainA]
 
   await channelHandshake(
     runtime,
     origEndpointA,
     {
-      chain: endpointA as CosmosChainSet,
-      address: opts.endpointA.account,
-      version: opts.aChannelVersion
+      chain: chainA as CosmosChainSet,
+      address: opts.chainA.account,
+      version: opts.chainA.version
     },
     {
-      chain: endpointB as CosmosChainSet,
-      address: opts.endpointB.account,
-      version: opts.bChannelVersion
+      chain: chainB as CosmosChainSet,
+      address: opts.chainB.account,
+      version: opts.chainB.version
     }
   )
 }

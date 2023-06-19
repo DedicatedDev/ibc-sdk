@@ -153,12 +153,12 @@ That's it! The contracts are deployed and we're ready to move on to the next ste
 Now that both contract on either side are deployed, we need to create an IBC channel to connect them before you can send packets between the contracts.
 
 ```sh
-ibctl channel eth-execution:0xB10c73e50B9bdB51f3504F7104a411174B9C3aa3 wasm:wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d --a-channel-version messenger-1 --b-channel-version messenger-1
+ibctl channel eth-execution:0xB10c73e50B9bdB51f3504F7104a411174B9C3aa3 wasm:wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d --version-a messenger-1 --version-b messenger-1
 ```
 
-> Note that here you'll override the channel-version with the specified version. In the CosmWasm IBC template, the contract has an internal expected `IBC_VERSION` parameter (in this case `messenger-1`), so this will have to match with the argument passed in `--b-channel-version`.
+> Note that here you'll override the channel-version with the specified version. In the CosmWasm IBC template, the contract has an internal expected `IBC_VERSION` parameter (in this case `messenger-1`), so this will have to match with the argument passed in `--version-b`.
 
-The terminal output will show you the channel hanshake steps (`ChanOpenInit`,`ChanOpenTry`,`ChanOpenAck` and `ChanOpenConfirm`). If successful, you've created the IBC channel to send packets over.
+The terminal output will show you the channel handshake steps (`ChanOpenInit`,`ChanOpenTry`,`ChanOpenAck` and `ChanOpenConfirm`). If successful, you've created the IBC channel to send packets over.
 
 The channel creation, in the context of the setup is displayed in the following diagram. Pay attention to the fact that for you as a cross-chain application developer, only the top part (the channel creation between the virtual chain and chain B) is of real concern. The IBC SDK takes care of the rest.
 

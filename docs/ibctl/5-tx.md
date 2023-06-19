@@ -62,7 +62,7 @@ The contract address is part of the output of the terminal. Further granular inf
 When contracts on either side are deployed, you can create an IBC channel to connect them before you can send packets between the contracts. For this purpose, there's the `channel` command:
 
 ```sh
-ibctl channel eth-execution:<contract-address> wasm:<contract-address> --a-channel-version <version> --b-channel-version <version>
+ibctl channel eth-execution:<contract-address> wasm:<contract-address> --version-a <version> --version-b <version>
 ```
 
 The versions will have to match if you want to successfully go through the channel handshake.
