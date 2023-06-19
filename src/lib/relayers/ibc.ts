@@ -1,7 +1,7 @@
-import { images, newContainer, Container, containerFromId } from './docker'
-import * as utils from '../utils/index'
+import { images, newContainer, Container, containerFromId } from '../docker'
+import * as utils from '../utils'
 import { ProcessOutput } from 'zx-cjs'
-import { ChainSetsRunObj, CosmosChainSet, isCosmosChain, RelayerRunObj } from './schemas'
+import { ChainSetsRunObj, CosmosChainSet, isCosmosChain, RelayerRunObj } from '../schemas'
 import { getLogger } from '../utils/logger'
 
 const log = getLogger()

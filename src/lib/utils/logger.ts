@@ -6,7 +6,7 @@ export type Logger = winston.Logger
 export const levels = ['error', 'warn', 'info', 'verbose', 'debug']
 let logger: Logger
 
-function createLogger(level: string) {
+export function createLogger(level: string) {
   const timestampFormat = 'HH:mm:ss.SSS'
   return winston.createLogger({
     level: level,

@@ -1,12 +1,12 @@
-import { ChainSetsRunObj, CosmosAccount } from '../lib/dev/schemas'
+import { ChainSetsRunObj, CosmosAccount } from '../lib/schemas'
 import * as self from '../lib/index.js'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { DeliverTxResponse, SigningStargateClient } from '@cosmjs/stargate'
 import Long from 'long'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
-import { VIBCRelayer } from '../lib/dev/vibc_relayer'
+import { VIBCRelayer } from '../lib/relayers/vibc'
 import { ethers } from 'ethers'
-import { EvmAccount } from '../lib/dev/accounts_config'
+import { EvmAccount } from '../lib/accounts_config'
 import { getLogger } from '../lib/utils/logger'
 
 const log = getLogger()
@@ -44,7 +44,7 @@ async function waitForBlocks(client: Tendermint37Client, blocks: number = 2) {
 }
 
 type EndpointInfo = {
-  chain: self.dev.schemas.CosmosChainSet
+  chain: self.schemas.CosmosChainSet
   address: string
   version: string
 }

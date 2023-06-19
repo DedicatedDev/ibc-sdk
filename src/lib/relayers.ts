@@ -1,10 +1,10 @@
 import { ChainSetsRunObj, isCosmosChain } from './schemas'
-import { CosmosAccount, CosmosAccounts } from './accounts_config.js'
-import { VIBCRelayer } from './vibc_relayer'
-import * as self from '../../lib/index.js'
-import { EthRelayer } from './eth_relayer.js'
-import { getLogger } from '../../lib/utils/logger'
-import { IBCRelayer } from './ibc_relayer'
+import { CosmosAccount, CosmosAccounts } from './accounts_config'
+import { VIBCRelayer } from './relayers/vibc'
+import * as self from './index'
+import { EthRelayer } from './relayers/eth'
+import { getLogger } from './utils/logger'
+import { IBCRelayer } from './relayers/ibc'
 
 const log = getLogger()
 
@@ -24,15 +24,15 @@ async function setupIbcTsRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
   const [src, dst] = relayPath
   log.info(`starting ibc-relayer with path ${src} -> ${dst}`)
 
-  const chainRegistry = self.dev.newChainRegistry(runtime, [src, dst], true)
+  const chainRegistry = self.newChainRegistry(runtime, [src, dst], true)
   const chainPair = { src: { name: src }, dest: { name: dst } }
 
   const relayerAccount = findRelayerAccount(runtime, src, dst)
   if (relayerAccount === undefined || !relayerAccount.Mnemonic) {
     throw new Error('Missing relayer account or mnemonic')
   }
-  const relayerConfig = self.dev.newIbcRelayerConfig(chainRegistry, chainPair, { mnemonic: relayerAccount.Mnemonic })
-  const relayer = await self.dev.newIBCTsRelayer(runtime.Run.WorkingDir, `${src}-${dst}`)
+  const relayerConfig = self.newIbcRelayerConfig(chainRegistry, chainPair, { mnemonic: relayerAccount.Mnemonic })
+  const relayer = await self.newIBCTsRelayer(runtime.Run.WorkingDir, `${src}-${dst}`)
   await relayer.init(relayerConfig).catch((reason) => {
     log.error(`Could not init ibc-relayer: ${reason}`)
     throw new Error(reason)
@@ -51,7 +51,7 @@ async function setupIbcTsRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
   await relayer.relay()
 
   runtime.Relayers.push(await relayer.runtime())
-  self.dev.saveChainSetsRuntime(runtime)
+  self.saveChainSetsRuntime(runtime)
 
   log.info('ibc-relayer started')
 }
@@ -71,7 +71,7 @@ export async function setupIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) 
   })
 
   runtime.Relayers.push(await relayer.runtime())
-  self.dev.saveChainSetsRuntime(runtime)
+  self.saveChainSetsRuntime(runtime)
 
   log.info('ibc-relayer started')
 }
@@ -82,7 +82,7 @@ async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) {
   const relayer = await VIBCRelayer.create(runtime.Run.WorkingDir)
   await relayer.setup(runtime, paths)
   runtime.Relayers.push(await relayer.runtime())
-  self.dev.saveChainSetsRuntime(runtime)
+  self.saveChainSetsRuntime(runtime)
 
   log.info('vibc-relayer set up')
 }
@@ -94,7 +94,7 @@ async function setupEthRelayer(runtime: ChainSetsRunObj, paths: Tuple) {
   if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
 
   runtime.Relayers.push(relayer.runtime())
-  self.dev.saveChainSetsRuntime(runtime)
+  self.saveChainSetsRuntime(runtime)
 
   log.info('eth-relayer started')
 }

@@ -3,7 +3,7 @@ import path from 'path'
 import anyTest, { TestFn } from 'ava'
 import { gethConfig } from './simple_geth_config'
 import { getTestingLogger } from '../../lib/utils/logger'
-import { ChainSetsRunObj } from '../../lib/dev/schemas'
+import { ChainSetsRunObj } from '../../lib/schemas'
 import { extractSmartContracts } from "../../lib/utils";
 import os from "os";
 import fs from 'fs'
@@ -24,18 +24,18 @@ test.beforeEach(async (t) => {
 test.afterEach.always(async (t) => {
   if (t.context.runtime) {
     // after clean up, folders should be cleaned up and containers are stopped
-    await self.dev.cleanupRuntime(t.context.runtime)
+    await self.cleanupRuntime(t.context.runtime)
   }
   await fs.promises.rm(t.context.contractsDir, { recursive: true })
 })
 
 test('deploy contracts on runtime chains', async (t) => {
-  const { runObj: runtime, configObj: _ } = await self.dev.runChainSets(gethConfig)
+  const { runObj: runtime, configObj: _ } = await self.runChainSets(gethConfig)
   t.context.runtime = runtime
-  t.context.runtime = await self.dev.deployVIBCCoreContractsOnChainSets(t.context.runtime, t.context.contractsDir)
+  t.context.runtime = await self.deployVIBCCoreContractsOnChainSets(t.context.runtime, t.context.contractsDir)
 
   const assertions = runtime.ChainSets.map(async (chain) => {
-    const provider = self.dev.newJsonRpcProvider(chain.Nodes[0].RpcHost)
+    const provider = self.newJsonRpcProvider(chain.Nodes[0].RpcHost)
     for (const contract of chain.Contracts) {
       // verify contract is deployed at given address
       const code = await provider.getCode(contract.Address)

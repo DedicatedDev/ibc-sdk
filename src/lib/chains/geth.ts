@@ -1,8 +1,8 @@
-import { ethers, $, utils, zx } from './deps.js'
-import { AccountsConfig, generateEvmAccounts } from './accounts_config.js'
-import { ChainConfig, EvmChainConfig, imageByLabel, ImageLabelTypes } from './schemas.js'
-import { EndPoint, RunningChain, RunningChainBase } from './running_chain.js'
-import { newContainer } from './docker.js'
+import { ethers, $, utils, zx } from '../deps'
+import { AccountsConfig, generateEvmAccounts } from '../accounts_config'
+import { ChainConfig, EvmChainConfig, imageByLabel, ImageLabelTypes } from '../schemas'
+import { EndPoint, RunningChain, RunningChainBase } from './running_chain'
+import { newContainer } from '../docker'
 
 export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')

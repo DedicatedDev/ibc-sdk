@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ethers } from './deps.js'
+import { ethers } from './deps'
 
 /**
  * AccountsConfig => Accounts

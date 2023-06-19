@@ -1,8 +1,8 @@
 import anyTest, { TestFn } from 'ava'
 import { ethers } from 'ethers'
-import { ProcessOutput } from 'zx-cjs'
 import { utils } from '../../lib'
-import { ChainConfig, RelayerRunObj, CosmosAccount, EvmChainSet } from '../../lib/dev/schemas'
+import { ProcessOutput } from 'zx-cjs'
+import { ChainConfig, RelayerRunObj, CosmosAccount, EvmChainSet } from '../../lib/schemas'
 import { fs, path, $ } from '../../lib/utils'
 import { getTestingLogger } from '../../lib/utils/logger'
 

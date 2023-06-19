@@ -1,8 +1,8 @@
-import { clone, utils } from './deps.js'
-import { path } from '../utils/index.js'
-import { Container } from './docker.js'
-import { Accounts } from './accounts_config.js'
-import { ChainConfig, ChainSetsRunObj, ImageLabelTypes, RunningNodeConfig } from './schemas.js'
+import { clone, utils } from '../deps'
+import { path } from '../utils'
+import { Container } from '../docker'
+import { Accounts } from '../accounts_config'
+import { ChainConfig, ChainSetsRunObj, ImageLabelTypes, RunningNodeConfig } from '../schemas'
 import { getLogger } from '../utils/logger'
 
 const log = getLogger()

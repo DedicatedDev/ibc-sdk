@@ -1,19 +1,19 @@
-import { RunningBSCChain } from './bsc_chain'
+import { RunningBSCChain } from './chains/bsc'
 import { utils } from './deps'
-import { RunningGethChain } from './geth_chain.js'
+import { RunningGethChain } from './chains/geth'
 import {
   ChainConfig,
   ChainSetsRunConfig,
   chainSetsRunConfigSchema,
   ChainSetsRunObj,
   runningChainSetsSchema
-} from './schemas.js'
-import { RunningCosmosChain } from './cosmos_chain.js'
-import { NodeAccounts, RunningChain, RunningChainCreator } from './running_chain.js'
-import { fs } from '../utils'
-import { RunningPrysmChain } from './prysm_chain'
+} from './schemas'
+import { RunningCosmosChain } from './chains/cosmos'
+import { NodeAccounts, RunningChain, RunningChainCreator } from './chains/running_chain'
+import { fs } from './utils'
+import { RunningPrysmChain } from './chains/prysm'
 import { containerFromId } from './docker'
-import { getLogger } from '../utils/logger'
+import { getLogger } from './utils/logger'
 
 const log = getLogger()
 

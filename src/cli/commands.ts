@@ -1,17 +1,15 @@
 import path from 'path'
 import * as os from 'os'
-import { utils } from '../lib'
-import { $, extractSmartContracts, fs } from '../lib/utils'
+import { utils, cleanupRuntime, newJsonRpcProvider } from '../lib'
+import { $, extractSmartContracts, fs, getLogger } from '../lib/utils'
 import { configTemplate } from './config.template'
 import * as self from '../lib/index.js'
 import { channelHandshake } from './channel'
-import { EndpointInfo, Packet, TxEvent } from '../lib/dev/query'
-import { ChainSetsRunObj, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmChain } from '../lib/dev/schemas'
-import { containerFromId, removeStaleContainers } from '../lib/dev/docker'
+import { EndpointInfo, Packet, TxEvent } from '../lib/query'
+import { ChainSetsRunObj, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmChain } from '../lib/schemas'
+import { containerFromId, removeStaleContainers } from '../lib/docker'
 import { ProcessOutput } from 'zx-cjs'
 import archiver from 'archiver'
-import { cleanupRuntime, newJsonRpcProvider } from '../lib/dev'
-import { getLogger } from '../lib/utils/logger'
 
 const log = getLogger()
 
@@ -56,7 +54,7 @@ function loadWorkspace(workdir: string): ChainSetsRunObj {
   if (!fs.existsSync(runPath)) {
     throw new Error(`could not read runtime file: ${runPath}`)
   }
-  return self.dev.schemas.runningChainSetsSchema.parse(JSON.parse(utils.fs.readFileSync(runPath, 'utf-8')))
+  return self.schemas.runningChainSetsSchema.parse(JSON.parse(utils.fs.readFileSync(runPath, 'utf-8')))
 }
 
 function printOutput(out: ProcessOutput) {
@@ -120,16 +118,16 @@ export async function start(opts: StartOpts) {
 
   const contractsPath = path.join(opts.workspace, vibcCoreContracts)
 
-  let { runObj: runtime } = await self.dev.runChainSets(config).then(...thenClause)
+  let { runObj: runtime } = await self.runChainSets(config).then(...thenClause)
   if (!process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS) {
-    runtime = await self.dev.deployVIBCCoreContractsOnChainSets(runtime, contractsPath).then(...thenClause)
+    runtime = await self.deployVIBCCoreContractsOnChainSets(runtime, contractsPath).then(...thenClause)
   }
 
   if (opts.useZkMint) {
-    await self.dev.runProver(runtime).then(...thenClause)
+    await self.runProver(runtime).then(...thenClause)
   }
 
-  await self.dev.runRelayers(runtime, opts.connection).then(...thenClause)
+  await self.runRelayers(runtime, opts.connection).then(...thenClause)
 }
 
 export async function show(opts: any) {
@@ -222,7 +220,7 @@ type DeployOpts = {
 
 export async function deploy(opts: DeployOpts) {
   const runtime = loadWorkspace(opts.workspace)
-  const deployed = await self.dev.deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
+  const deployed = await self.deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
   console.log(deployed.Address)
 }
 
@@ -266,12 +264,12 @@ export async function channel(opts: ChannelOpts) {
     runtime,
     origEndpointA,
     {
-      chain: endpointA as self.dev.schemas.CosmosChainSet,
+      chain: endpointA as self.schemas.CosmosChainSet,
       address: opts.endpointA.account,
       version: opts.aChannelVersion
     },
     {
-      chain: endpointB as self.dev.schemas.CosmosChainSet,
+      chain: endpointB as self.schemas.CosmosChainSet,
       address: opts.endpointB.account,
       version: opts.bChannelVersion
     }
@@ -294,7 +292,7 @@ export async function tracePackets(opts: TracePacketsOpts) {
     throw new Error('Could not find chain runtime object!')
   }
 
-  const packetsRaw = await self.dev
+  const packetsRaw = await self
     .tracePackets(chainA.Nodes[0].RpcHost, chainB.Nodes[0].RpcHost, opts.endpointA, opts.endpointB)
     .then(...thenClause)
   const packets = packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
@@ -433,7 +431,7 @@ export async function events(opts: EventsOpts) {
   if (!chain) throw new Error(`Expected any chain`)
 
   const events: TxEvent[] = []
-  await self.dev.events(chain, opts, (event: TxEvent) => {
+  await self.events(chain, opts, (event: TxEvent) => {
     if (!opts.extended) return console.log(event.height, ':', Object.keys(event.events).join(' '))
     if (!opts.json) return console.log(event.height, ':', event.events)
     // this will use more memory since we are buffering all events instead of flushing them to stdout

@@ -1,8 +1,8 @@
 import * as self from '../../lib/index.js'
 import * as utils from '../../lib/utils/index.js'
-import { images } from '../../lib/dev/docker'
+import { images } from '../../lib/docker'
 import { getTestingLogger } from '../../lib/utils/logger'
-import { setupIbcRelayer } from '../../lib/dev/relayers'
+import { setupIbcRelayer } from '../../lib/relayers'
 import { cleanupRuntime, runtimeTest } from './test_utils'
 
 getTestingLogger()
@@ -30,7 +30,7 @@ Run:
 `
 
 const ibcConnectionsTest = test.macro(async (t, config: string) => {
-  const { runObj: runtime, configObj: _ } = await self.dev.runChainSets(utils.readYaml(config))
+  const { runObj: runtime, configObj: _ } = await self.runChainSets(utils.readYaml(config))
   t.truthy(runtime)
   t.context.runtime = runtime
 
@@ -117,12 +117,12 @@ test(
 
 const ibcConnectionsTest2 = test.macro(async (t, config: string) => {
   const rawConfig = configPrefix + config + configSufix
-  const { runObj: runtime, configObj: _ } = await self.dev.runChainSets(rawConfig)
+  const { runObj: runtime, configObj: _ } = await self.runChainSets(rawConfig)
   t.truthy(runtime)
   t.context.runtime = runtime
 
-  const chain0 = runtime.ChainSets[0] as self.dev.schemas.CosmosChainSet
-  const chain1 = runtime.ChainSets[1] as self.dev.schemas.CosmosChainSet
+  const chain0 = runtime.ChainSets[0] as self.schemas.CosmosChainSet
+  const chain1 = runtime.ChainSets[1] as self.schemas.CosmosChainSet
   await setupIbcRelayer(runtime, [[chain0.Name, chain1.Name]])
 })
 

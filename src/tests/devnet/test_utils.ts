@@ -2,7 +2,7 @@ import * as utils from '../../lib/utils/index.js'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import * as self from '../../lib/index.js'
 import { ethers } from 'ethers'
-import { ChainConfig, ChainSetsRunObj } from '../../lib/dev/schemas.js'
+import { ChainConfig, ChainSetsRunObj } from '../../lib/schemas'
 import { getLogger } from '../../lib/utils/logger'
 import anyTest, { ExecutionContext, TestFn } from 'ava'
 
@@ -23,7 +23,7 @@ export function getConfigs(chains: string[]): string {
 }
 
 export async function createSignerClient(
-  sender: self.dev.schemas.CosmosAccounts[0],
+  sender: self.schemas.CosmosAccounts[0],
   chainRpc: string
 ): Promise<self.cosmos.client.SigningStargateClient> {
   const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(sender.Mnemonic!, { prefix: 'polymer' })
@@ -41,7 +41,7 @@ export async function genEvmHeaders(
   evmRpcUrl: string,
   startBlock: number = 0
 ): Promise<{ blocks: any[]; height: number }> {
-  const provider = self.dev.newJsonRpcProvider(evmRpcUrl)
+  const provider = self.newJsonRpcProvider(evmRpcUrl)
   const rawBlock = await provider.send('eth_getBlockByNumber', [ethers.utils.hexValue(startBlock), true])
   return {
     blocks: [rawBlock],
@@ -68,7 +68,7 @@ export const runtimeTest = anyTest as TestFn<RuntimeContext>
 export async function cleanupRuntime(t: ExecutionContext<RuntimeContext>) {
   if (t.context.runtime) {
     // after clean up, folders should be cleaned up and containers are stopped
-    await self.dev.cleanupRuntime(t.context.runtime)
+    await self.cleanupRuntime(t.context.runtime)
   }
 }
 

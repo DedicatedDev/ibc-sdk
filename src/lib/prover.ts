@@ -1,10 +1,10 @@
 import { newContainer, Container } from './docker'
-import * as utils from '../utils'
+import * as utils from './utils'
 import { $, zx } from './deps'
-import { EndPoint } from './running_chain'
+import { EndPoint } from './chains/running_chain'
 import { ChainSetsRunObj, ProverRunObj } from './schemas'
-import * as self from '../index'
-import { getLogger } from '../utils/logger'
+import * as self from './index'
+import { getLogger } from './utils/logger'
 
 const log = getLogger()
 
@@ -15,7 +15,7 @@ export async function runProver(runtime: ChainSetsRunObj) {
   await prover.isReady()
 
   runtime.Prover = await prover.runtime(runtime)
-  self.dev.saveChainSetsRuntime(runtime)
+  self.saveChainSetsRuntime(runtime)
 }
 
 export class ZkMintProver {

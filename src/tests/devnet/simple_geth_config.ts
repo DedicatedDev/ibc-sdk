@@ -1,4 +1,4 @@
-import { images } from '../../lib/dev/docker'
+import { images } from '../../lib/docker'
 
 export const gethConfig = `
 ChainSets:

@@ -66,7 +66,7 @@ export class SimLightClient {
   clientID: string
   chainID: string
 
-  private static async queryLightClient(chain: self.dev.schemas.CosmosChainSet) {
+  private static async queryLightClient(chain: self.schemas.CosmosChainSet) {
     const tmClient = await self.cosmos.client.newTendermintClient(chain.Nodes[0].RpcHost)
     const queryClient = self.cosmos.client.QueryClient.withExtensions(
       tmClient,
@@ -85,7 +85,7 @@ export class SimLightClient {
   }
 
   public static async connect(config: any, reuse: boolean = true): Promise<SimLightClient> {
-    const chain = self.dev.schemas.chainSetSchema.cosmos.parse(config)
+    const chain = self.schemas.chainSetSchema.cosmos.parse(config)
     const sender = chain.Accounts.find((a) => a.Name === 'relayer')
     if (!sender) throw new Error('cannot find relayer account')
     console.log(sender)

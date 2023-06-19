@@ -2,7 +2,7 @@ import test from 'ava'
 
 import { newContainer } from './docker'
 import { $ } from 'zx-cjs'
-import { getTestingLogger } from '../../lib/utils/logger'
+import { getTestingLogger } from './utils/logger'
 
 const log = getTestingLogger()
 

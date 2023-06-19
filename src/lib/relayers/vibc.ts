@@ -1,8 +1,8 @@
-import { images, newContainer, containerConfig, Container, containerFromId } from './docker'
-import * as utils from '../utils/index.js'
+import { images, newContainer, containerConfig, Container, containerFromId } from '../docker'
+import * as utils from '../utils'
 import { ProcessOutput } from 'zx-cjs'
-import { ChainSetsRunObj, isCosmosChain, isEvmChain, RelayerRunObj } from './schemas'
-import { CosmosAccount, EvmAccount } from './accounts_config'
+import { ChainSetsRunObj, isCosmosChain, isEvmChain, RelayerRunObj } from '../schemas'
+import { CosmosAccount, EvmAccount } from '../accounts_config'
 import { getLogger } from '../utils/logger'
 
 const log = getLogger()

@@ -7,6 +7,7 @@ import * as tar from 'tar'
 
 export { path, fs }
 export { $ } from 'zx-cjs'
+export {createLogger, getLogger, getTestingLogger} from './logger'
 
 export { UrlResolver } from './url.js'
 

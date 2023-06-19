@@ -4,7 +4,7 @@ import { Coin, MsgSendEncodeObject, setupBankExtension, setupIbcExtension } from
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { TextEncoder } from 'util'
 import { toAny } from '../../lib/cosmos/client'
-import { images } from '../../lib/dev/docker'
+import { images } from '../../lib/docker'
 import { getTestingLogger } from '../../lib/utils/logger'
 import { cleanupRuntime, runtimeTest } from './test_utils'
 
@@ -65,12 +65,12 @@ test('start a comos chain from docker container', async (t) => {
   t.truthy(rawConfig)
   log.verbose(utils.dumpYaml(rawConfig))
 
-  const { runObj, configObj } = await self.dev.runChainSets(rawConfig)
+  const { runObj, configObj } = await self.runChainSets(rawConfig)
   utils.ignoreUnused(runObj, configObj)
   t.context.runtime = runObj;
 
   // ensure we're get a cosmos chain
-  const chain = self.dev.schemas.chainSetSchema.cosmos.parse(runObj.ChainSets[0])
+  const chain = self.schemas.chainSetSchema.cosmos.parse(runObj.ChainSets[0])
   const chainRpc = chain.Nodes[0].RpcHost
 
   const tmClient = await cosmos.client.newTendermintClient(chainRpc)

@@ -2,7 +2,7 @@ import anyTest, { TestFn } from 'ava'
 import { getTestingLogger } from '../../lib/utils/logger'
 import { ProcessOutput } from 'zx-cjs'
 import { utils } from '../../lib'
-import { runningChainSetsSchema } from '../../lib/dev/schemas'
+import { runningChainSetsSchema } from '../../lib/schemas'
 import { fs, path, $ } from '../../lib/utils'
 
 getTestingLogger()

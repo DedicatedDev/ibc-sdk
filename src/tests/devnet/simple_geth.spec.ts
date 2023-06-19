@@ -1,6 +1,6 @@
 import * as self from '../../lib/index.js'
 import { z } from 'zod'
-import { AccountsConfigSchema, AccountsSchema } from '../../lib/dev/schemas.js'
+import { AccountsConfigSchema, AccountsSchema } from '../../lib/schemas'
 import * as utils from '../../lib/utils/index.js'
 import * as ethers from 'ethers'
 import { gethConfig } from './simple_geth_config'
@@ -22,7 +22,7 @@ test('start a geth chain from docker container', async (t) => {
   const configOverride = { chains: ['eth', 'polygon'], cleanupMode: 'all' }
   rawConfig.ChainSets = rawConfig.ChainSets.filter((cs) => configOverride.chains.includes(cs.Name))
   rawConfig.Run.CleanupMode = configOverride.cleanupMode
-  const { runObj, configObj } = await self.dev.runChainSets(rawConfig)
+  const { runObj, configObj } = await self.runChainSets(rawConfig)
   t.context.runtime = runObj
 
   for (let i = 0; i < runObj.ChainSets.length; i++) {
@@ -37,7 +37,7 @@ test('start a geth chain from docker container', async (t) => {
 
     const url = chainNode.RpcHost
     log.verbose(`[${evmChain.Name}] connection to url: ${url}`)
-    const ethClient = self.dev.newJsonRpcProvider(url)
+    const ethClient = self.newJsonRpcProvider(url)
     const height = await ethClient.getBlockNumber()
 
     t.true(height >= 0)

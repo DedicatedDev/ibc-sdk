@@ -1,8 +1,8 @@
-import { $, utils, zx } from './deps.js'
-import { ChainConfig, imageByLabel, ImageLabelTypes, NoneChainConfig } from './schemas.js'
-import { EndPoint, NodeAccounts, RunningChain, RunningChainBase } from './running_chain.js'
-import { newContainer, runContainer } from './docker'
-import { RunningGethChain } from './geth_chain'
+import { $, utils, zx } from '../deps'
+import { ChainConfig, imageByLabel, ImageLabelTypes, NoneChainConfig } from '../schemas'
+import { EndPoint, NodeAccounts, RunningChain, RunningChainBase } from './running_chain'
+import { newContainer, runContainer } from '../docker'
+import { RunningGethChain } from './geth'
 import { getLogger } from '../utils/logger'
 
 const log = getLogger()

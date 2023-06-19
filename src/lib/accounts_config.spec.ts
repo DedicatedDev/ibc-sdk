@@ -1,6 +1,6 @@
 import test from 'ava'
-import { generateEvmAccounts, AccountsConfigSchema } from './accounts_config.js'
-import { ethers } from './deps.js'
+import { generateEvmAccounts, AccountsConfigSchema } from './accounts_config'
+import { ethers } from './deps'
 
 const defaultAddrs = [
   '0x0c46c2cafe097b4f7e1bb868b89e5697ee65f934',

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command, InvalidArgumentError, Option } from 'commander'
-import { EndpointInfo } from '../lib/dev/query'
+import { EndpointInfo } from '../lib/query'
 import * as commands from './commands'
 import path from 'path'
 import { homedir } from 'os'

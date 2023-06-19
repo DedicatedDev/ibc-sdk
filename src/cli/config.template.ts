@@ -1,4 +1,4 @@
-import { images } from '../lib/dev/docker'
+import { images } from '../lib/docker'
 
 export const configTemplate = `#
 # This is the IBC SDK configuration file. Edit it as you please before starting the stack with 'ibctl start'

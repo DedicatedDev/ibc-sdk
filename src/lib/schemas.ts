@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { AccountsConfigSchema, AccountsSchema } from './accounts_config.js'
+import { AccountsConfigSchema, AccountsSchema } from './accounts_config'
 export {
   AccountsConfigSchema,
   AccountsSchema,
@@ -7,8 +7,8 @@ export {
   Accounts,
   EvmAccounts,
   CosmosAccount
-} from './accounts_config.js'
-export { RelayerConfigSchema, RelayerConfig } from './relayer.js'
+} from './accounts_config'
+export { RelayerConfigSchema, RelayerConfig } from './relayers/ibc_ts'
 
 const EvmChains = ['ethereum', 'bsc'] as const
 const CosmosChains = ['cosmos', 'polymer'] as const

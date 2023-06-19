@@ -1,8 +1,8 @@
 import assert from 'assert'
 import { z } from 'zod'
-import { utils } from './deps'
-import { Container, newContainer, images } from './docker'
-import { ChainSetsRunObj, RelayerRunObj } from './schemas'
+import { utils } from '../deps'
+import { Container, newContainer, images } from '../docker'
+import { ChainSetsRunObj, RelayerRunObj } from '../schemas'
 
 export const CosmosChainRegistryItemSchema = z.object({
   name: z.string().min(1),

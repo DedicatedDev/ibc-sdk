@@ -1,6 +1,6 @@
 import test from 'ava'
-import * as relayers from './relayers'
-import { ChainSetsRunObj } from './schemas'
+import * as relayers from '../relayers'
+import { ChainSetsRunObj } from '../schemas'
 
 function checkPaths(t: any, got: any, vibc: string[][], ibc: string[][], eth2: string[][]) {
   t.assert(got.vibc.length === vibc.length)

@@ -1,11 +1,11 @@
-import { $, utils, clone } from './deps.js'
-import { ChainConfig, CosmosChainConfig, imageByLabel, ImageLabelTypes } from './schemas.js'
-import { AccountsConfig, CosmosAccount, CosmosAccounts, CosmosAccountsConfig } from './accounts_config'
-import { EndPoint, RunningChain, RunningChainBase } from './running_chain.js'
-import { newContainer } from './docker.js'
+import { $, utils, clone } from '../deps'
+import { ChainConfig, CosmosChainConfig, imageByLabel, ImageLabelTypes } from '../schemas'
+import { AccountsConfig, CosmosAccount, CosmosAccounts, CosmosAccountsConfig } from '../accounts_config'
+import { EndPoint, RunningChain, RunningChainBase } from './running_chain'
+import { newContainer } from '../docker'
 import { Writable } from 'stream'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
-import { getLogger } from '../../lib/utils/logger'
+import { getLogger } from '../utils/logger'
 
 const log = getLogger()
 
