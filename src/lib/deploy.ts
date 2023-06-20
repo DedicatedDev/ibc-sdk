@@ -10,7 +10,12 @@ import { getLogger } from './utils/logger'
 
 const log = getLogger()
 
-async function deployVIBCCoreContractsOnChain(runtime: ChainSetsRunObj, contractsDir: string, chain: EvmChainSet) {
+async function deployVIBCCoreContractsOnChain(
+  runtime: ChainSetsRunObj,
+  contractsDir: string,
+  chain: EvmChainSet,
+  useZkMint: boolean
+) {
   const contracts: DeployedContract[] = []
   const account = chain.Accounts[0].Address
 
@@ -25,8 +30,14 @@ async function deployVIBCCoreContractsOnChain(runtime: ChainSetsRunObj, contract
   scpath = path.join(contractsDir, 'IbcVerifier.sol', 'ZKMintVerifier.json')
   contracts.push(await deployEvmSmartContract(chain, account, scpath))
 
-  scpath = path.join(contractsDir, 'Verifier.sol', 'Verifier.json')
-  const verifier = await deployEvmSmartContract(chain, account, scpath)
+  let verifier: DeployedContract
+  if (useZkMint) {
+    scpath = path.join(contractsDir, 'Verifier.sol', 'Verifier.json')
+    verifier = await deployEvmSmartContract(chain, account, scpath)
+  } else {
+    scpath = path.join(contractsDir, 'DummyVerifier.sol', 'DummyVerifier.json')
+    verifier = await deployEvmSmartContract(chain, account, scpath)
+  }
   contracts.push(verifier)
 
   scpath = path.join(contractsDir, 'Dispatcher.sol', 'Dispatcher.json')
@@ -40,16 +51,6 @@ async function deployVIBCCoreContractsOnChain(runtime: ChainSetsRunObj, contract
   saveChainSetsRuntime(runtime)
 
   log.verbose(`deployed ${contracts.length} contracts on ${chain.Name}`)
-
-  // TODO create this dummy client on the core sc so future calls to verifyMembership work
-  const provider = newJsonRpcProvider(chain.Nodes[0].RpcHost)
-  const signer = new ethers.Wallet(chain.Accounts[0].PrivateKey!).connect(provider)
-  const contract = new ethers.Contract(dispatcher.Address, dispatcher.Abi!, signer)
-  const client = await contract.createClient({
-    clientState: ethers.utils.toUtf8Bytes('clientState'),
-    consensusState: ethers.utils.toUtf8Bytes('consensusState')
-  })
-  await client.wait()
 }
 
 /**
@@ -58,12 +59,13 @@ async function deployVIBCCoreContractsOnChain(runtime: ChainSetsRunObj, contract
  */
 export async function deployVIBCCoreContractsOnChainSets(
   runtime: ChainSetsRunObj,
-  contractsDir: string
+  contractsDir: string,
+  useZkMint: boolean
 ): Promise<ChainSetsRunObj> {
   const promises: Promise<void>[] = []
   for (let chain of runtime.ChainSets) {
     if (isEvmChain(chain.Type)) {
-      promises.push(deployVIBCCoreContractsOnChain(runtime, contractsDir, chain as EvmChainSet))
+      promises.push(deployVIBCCoreContractsOnChain(runtime, contractsDir, chain as EvmChainSet, useZkMint))
     }
   }
   await Promise.all(promises)

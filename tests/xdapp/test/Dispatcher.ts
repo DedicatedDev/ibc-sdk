@@ -2,18 +2,89 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { describe, it } from 'mocha'
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
+import { BigNumber } from 'ethers'
+import { Dispatcher } from '../typechain-types'
 
 const toBytes32 = ethers.utils.formatBytes32String
 const toBytes = ethers.utils.toUtf8Bytes
 
+interface Proof {
+  a: [BigNumber, BigNumber]
+  b: [[BigNumber, BigNumber], [BigNumber, BigNumber]]
+  c: [BigNumber, BigNumber]
+}
+
+function getValidProof(): Proof {
+  return {
+    a: [
+      BigNumber.from('13449388914393258752883032560537386278857542833249142697090243871249761501123'),
+      BigNumber.from('5963894333042515966217276339656894890750758020607775733717462915787234629927')
+    ],
+    b: [
+      [
+        BigNumber.from('4811559872397934450173412387101758297072581261546553338353504577141293696514'),
+        BigNumber.from('18400634037991283592418145553628778322894277765243742619561207628896194710939')
+      ],
+      [
+        BigNumber.from('17903685207039300384995795331083569887497623740119108595975170464164316221644'),
+        BigNumber.from('9246628133289276308945311797896077179503891414159382179119544904154776510385')
+      ]
+    ],
+    c: [
+      BigNumber.from('17432552394458345841788798376121543520587716339044416231610790827968220675517'),
+      BigNumber.from('15082220514596158133191868403239442750535261032426474092101151620016661078026')
+    ]
+  }
+}
+
+function genState(appHash: any, valsetHash: any, time: any, height: any) {
+  return {
+    app_hash: BigNumber.from(appHash),
+    valset_hash: BigNumber.from(valsetHash),
+    time: BigNumber.from(time),
+    height: BigNumber.from(height)
+  }
+}
+
+
+async function getLatestConsensusState(dispatcher: Dispatcher) {
+  const latestConsensusStateData = await dispatcher.latestConsensusState()
+  return {
+    app_hash: latestConsensusStateData.app_hash,
+    valset_hash: latestConsensusStateData.valset_hash,
+    time: latestConsensusStateData.time,
+    height: latestConsensusStateData.height
+  }
+}
+
+const proof = getValidProof();
+
 describe('IBC Core Smart Contract', function () {
   // Constants for testing
+  const trustedState = genState(
+    80990,
+    BigNumber.from('590199110038530808131927832294665177527506259518072095333098842116767351199'),
+    7000040,
+    1000
+  );
+  const untrustedState = genState(
+    10934,
+    BigNumber.from('7064503680087416120706887577693908749828198688716609274705703517077803898371'),
+    7002040,
+    1020
+  );
   const C = {
     ClientState: toBytes32('clientState'),
-    ConsensusStates: ['consState1', 'consState2', 'consState3'].map(toBytes32),
-    InitClientMsg: { clientState: toBytes32('clientState'), consensusState: toBytes32('consState1') },
-    UpdateClientMsg: { consensusState: toBytes32('consState2'), height: 2, zkProof: toBytes32('zkProof') },
-    UpgradeClientMsg: { clientState: toBytes32('clientState'), consensusState: toBytes32('consState100') },
+    ConsensusStates: [trustedState, genState(1, 1, 1, 1)],
+    InitClientMsg: {
+      clientState: toBytes32('clientState'),
+      consensusState: trustedState
+    },
+      UpdateClientMsg: {
+      consensusState: untrustedState,
+      zkProof: proof,
+    },
+    UpgradeClientMsg: { clientState: toBytes32('clientState'), consensusState: genState(0, 0, 0, 0) },
     ConnHops1: ['connection-0', 'connection-2'],
     ConnHops2: ['connection-1', 'connection-3'],
     EmptyVersion: toBytes32(''),
@@ -48,7 +119,7 @@ describe('IBC Core Smart Contract', function () {
 
   const getSignerAccounts = async () => {
     const signers = await ethers.getSigners()
-    const accounts = {
+    return {
       owner: signers[0],
       user1: signers[1],
       user2: signers[2],
@@ -56,7 +127,6 @@ describe('IBC Core Smart Contract', function () {
       escrow: signers[4],
       otherUsers: signers.slice(5)
     }
-    return accounts
   }
 
   /**
@@ -80,7 +150,6 @@ describe('IBC Core Smart Contract', function () {
 
     // Deploy Mars contract by user1
     const mars = await factories.Mars.connect(accounts.user1).deploy()
-
     // Set up Polymer light client on CoreSC
     await dispatcher.createClient(C.InitClientMsg).then((tx) => tx.wait())
 
@@ -129,9 +198,9 @@ describe('IBC Core Smart Contract', function () {
 
     it('should create a new client', async function () {
       const { dispatcher } = await loadFixture(setupCoreClientFixture)
-      const latestConsensusState = await dispatcher.latestConsensusState()
+      const latestConsensusState = await getLatestConsensusState(dispatcher)
 
-      expect(latestConsensusState).to.equal(C.ConsensusStates[0])
+      expect(latestConsensusState).to.deep.equal(C.ConsensusStates[0])
     })
 
     it('cannot create call creatClient twice', async function () {
@@ -145,14 +214,14 @@ describe('IBC Core Smart Contract', function () {
       const { dispatcher } = await loadFixture(setupCoreClientFixture)
 
       await dispatcher.updateClient(C.UpdateClientMsg)
-      const latestConsensusState = await dispatcher.latestConsensusState()
+      const latestConsensusState = await getLatestConsensusState(dispatcher)
 
-      expect(latestConsensusState).to.equal(C.UpdateClientMsg.consensusState)
+      expect(latestConsensusState).to.deep.equal(C.UpdateClientMsg.consensusState)
     })
 
     it('cannot update client with invalid consensusState', async function () {
       const { dispatcher } = await loadFixture(setupCoreClientFixture)
-      const invalidConsState = ethers.utils.toUtf8Bytes('short')
+      const invalidConsState = genState(0, 0, 0, 0)
       const invalidUpdateClientMsg = { ...C.UpdateClientMsg, consensusState: invalidConsState }
       await expect(dispatcher.updateClient(invalidUpdateClientMsg)).to.be.revertedWith(
         'UpdateClientMsg proof verification failed'
@@ -165,9 +234,9 @@ describe('IBC Core Smart Contract', function () {
       const { dispatcher } = await loadFixture(setupCoreClientFixture)
 
       await dispatcher.upgradeClient(C.UpgradeClientMsg)
-      const latestConsensusState = await dispatcher.latestConsensusState()
+      const latestConsensusState = await getLatestConsensusState(dispatcher)
 
-      expect(latestConsensusState).to.equal(C.UpgradeClientMsg.consensusState)
+      expect(latestConsensusState).to.deep.equal(C.UpgradeClientMsg.consensusState)
     })
 
     it('cannot upgrade by non-owner', async function () {

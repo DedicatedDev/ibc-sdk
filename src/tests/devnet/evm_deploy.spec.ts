@@ -32,7 +32,7 @@ test.afterEach.always(async (t) => {
 test('deploy contracts on runtime chains', async (t) => {
   const { runObj: runtime, configObj: _ } = await self.runChainSets(gethConfig)
   t.context.runtime = runtime
-  t.context.runtime = await self.deployVIBCCoreContractsOnChainSets(t.context.runtime, t.context.contractsDir)
+  t.context.runtime = await self.deployVIBCCoreContractsOnChainSets(t.context.runtime, t.context.contractsDir, false)
 
   const assertions = runtime.ChainSets.map(async (chain) => {
     const provider = self.newJsonRpcProvider(chain.Nodes[0].RpcHost)

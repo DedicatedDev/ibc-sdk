@@ -14,7 +14,7 @@ import './IbcVerifier.sol';
 // TODO: replace bytes with explictly typed fields for gas cost saving
 struct InitClientMsg {
     bytes clientState;
-    bytes consensusState;
+    ConsensusState consensusState;
 }
 
 // UpgradeClientMsg is used to upgrade an existing Polymer client on an EVM chain.
@@ -22,7 +22,7 @@ struct InitClientMsg {
 // TODO: replace bytes with explictly typed fields for gas cost saving
 struct UpgradeClientMsg {
     bytes clientState;
-    bytes consensusState;
+    ConsensusState consensusState;
 }
 
 struct Channel {
@@ -114,7 +114,7 @@ contract Dispatcher is IbcDispatcher, Ownable {
     ZKMintVerifier verifier;
     address payable escrow;
     bool isClientCreated = false;
-    bytes public latestConsensusState;
+    ConsensusState public latestConsensusState;
     // IBC_PortID = portPrefix + address (hex string without 0x prefix, case insensitive)
     string portPrefix;
     uint32 portPrefixLen;

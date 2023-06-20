@@ -6,9 +6,31 @@
     {
       "inputs": [
         {
-          "internalType": "bytes",
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "app_hash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "valset_hash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "time",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "height",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct ConsensusState",
           "name": "consensusState",
-          "type": "bytes"
+          "type": "tuple"
         },
         {
           "components": [
@@ -52,9 +74,31 @@
     {
       "inputs": [
         {
-          "internalType": "bytes",
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "app_hash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "valset_hash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "time",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "height",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct ConsensusState",
           "name": "consensusState",
-          "type": "bytes"
+          "type": "tuple"
         },
         {
           "components": [
@@ -93,26 +137,82 @@
     {
       "inputs": [
         {
-          "internalType": "bytes",
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "app_hash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "valset_hash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "time",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "height",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct ConsensusState",
           "name": "lastConsensusState",
-          "type": "bytes"
+          "type": "tuple"
         },
         {
           "components": [
             {
-              "internalType": "bytes",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "app_hash",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "valset_hash",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "time",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "height",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct ConsensusState",
               "name": "consensusState",
-              "type": "bytes"
+              "type": "tuple"
             },
             {
-              "internalType": "uint64",
-              "name": "height",
-              "type": "uint64"
-            },
-            {
-              "internalType": "bytes",
+              "components": [
+                {
+                  "internalType": "uint256[2]",
+                  "name": "a",
+                  "type": "uint256[2]"
+                },
+                {
+                  "internalType": "uint256[2][2]",
+                  "name": "b",
+                  "type": "uint256[2][2]"
+                },
+                {
+                  "internalType": "uint256[2]",
+                  "name": "c",
+                  "type": "uint256[2]"
+                }
+              ],
+              "internalType": "struct ZkProof",
               "name": "zkProof",
-              "type": "bytes"
+              "type": "tuple"
             }
           ],
           "internalType": "struct UpdateClientMsg",
@@ -128,7 +228,7 @@
           "type": "bool"
         }
       ],
-      "stateMutability": "pure",
+      "stateMutability": "view",
       "type": "function"
     }
   ],

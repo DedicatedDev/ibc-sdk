@@ -120,7 +120,7 @@ export async function start(opts: StartOpts) {
 
   let { runObj: runtime } = await self.runChainSets(config).then(...thenClause)
   if (!process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS) {
-    runtime = await self.deployVIBCCoreContractsOnChainSets(runtime, contractsPath).then(...thenClause)
+    runtime = await self.deployVIBCCoreContractsOnChainSets(runtime, contractsPath, opts.useZkMint).then(...thenClause)
   }
 
   if (opts.useZkMint) {

@@ -3,21 +3,40 @@ pragma solidity ^0.8.0;
 
 import './IbcVerifier.sol';
 import './IbcReceiver.sol';
-import "./Groth16Verifier.sol";
 
 
-contract Verifier is ZKMintVerifier {
+function isUpdateClientMsgFilled(UpdateClientMsg memory message) pure returns (bool) {
+    // check that each field of the ConsensusState struct is not zero
+    if (message.consensusState.app_hash == 0 ||
+    message.consensusState.valset_hash == 0 ||
+    message.consensusState.time == 0 ||
+        message.consensusState.height == 0) {
+        return false;
+    }
+
+    // check that each field of the ZkProof struct is not zero
+    for (uint256 i = 0; i < 2; i++) {
+        if (message.zkProof.a[i] == 0) return false;
+        if (message.zkProof.c[i] == 0) return false;
+        for (uint256 j = 0; j < 2; j++) {
+            if (message.zkProof.b[i][j] == 0) return false;
+        }
+    }
+
+    // if none of the fields were zero, the struct is considered filled
+    return true;
+}
+
+
+contract DummyVerifier is ZKMintVerifier {
     function verifyUpdateClientMsg(
         ConsensusState calldata trustedState,
         UpdateClientMsg calldata updateClientMsg
-    ) external view override returns (bool) {
+    ) external pure override returns (bool) {
         ConsensusState memory untrustedState = updateClientMsg.consensusState;
 
-        bool isVerified = Groth16Verifier.verifyProof(updateClientMsg.zkProof.a, updateClientMsg.zkProof.b, updateClientMsg.zkProof.c,
-            [trustedState.valset_hash, trustedState.time, trustedState.height,
-            untrustedState.app_hash, untrustedState.valset_hash, untrustedState.time, untrustedState.height]
-        );
-        return isVerified;
+        require(isUpdateClientMsgFilled(updateClientMsg), 'Invalid update client message');
+        return untrustedState.height >= trustedState.height;
     }
 
     function verifyMembership(

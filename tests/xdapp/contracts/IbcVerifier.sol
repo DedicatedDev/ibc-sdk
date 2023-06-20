@@ -3,29 +3,41 @@ pragma solidity ^0.8.0;
 
 import './IbcReceiver.sol';
 
+
+struct ConsensusState {
+    uint256 app_hash;
+    uint256 valset_hash;
+    uint256 time;
+    uint256 height;
+}
+
+struct ZkProof {
+    uint256[2]  a;
+    uint256[2][2] b;
+    uint256[2]  c;
+}
+
 // UpdateClientMsg is used to update an existing Polymer client on an EVM chain
-// TODO: replace bytes with explictly typed fields for gas cost saving
 struct UpdateClientMsg {
-    bytes consensusState;
-    uint64 height;
-    bytes zkProof;
+    ConsensusState consensusState;
+    ZkProof zkProof;
 }
 
 interface ZKMintVerifier {
     function verifyUpdateClientMsg(
-        bytes calldata lastConsensusState,
+        ConsensusState calldata lastConsensusState,
         UpdateClientMsg calldata newConsensusState
-    ) external pure returns (bool);
+    ) external view returns (bool);
 
     function verifyMembership(
-        bytes calldata consensusState,
+        ConsensusState calldata consensusState,
         Proof calldata proof,
         bytes calldata key,
         bytes calldata expectedValue
     ) external pure returns (bool);
 
     function verifyNonMembership(
-        bytes calldata consensusState,
+        ConsensusState calldata consensusState,
         Proof calldata proof,
         bytes calldata key
     ) external pure returns (bool);
