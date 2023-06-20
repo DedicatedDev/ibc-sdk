@@ -6,9 +6,8 @@ import { configTemplate } from './config.template'
 import * as self from '../lib/index.js'
 import { channelHandshake } from './channel'
 import { EndpointInfo, Packet, TxEvent } from '../lib/query'
-import { ChainSetsRunObj, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmChain } from '../lib/schemas'
+import { ChainSetsRunObj, ChainSetsRunConfig, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmChain } from '../lib/schemas'
 import { containerFromId, removeStaleContainers } from '../lib/docker'
-import { ProcessOutput } from 'zx-cjs'
 import archiver from 'archiver'
 
 const log = getLogger()
@@ -33,6 +32,12 @@ function filterContainers(runtime: ChainSetsRunObj, name: string) {
   return found[0]
 }
 
+export type WrapCommandsOpts = {
+  workspace: string
+  name: string
+  json: boolean
+}
+
 async function wrapCosmosCommand(args: string[], opts: WrapCommandsOpts) {
   const runtime = loadWorkspace(opts.workspace)
 
@@ -45,7 +50,7 @@ async function wrapCosmosCommand(args: string[], opts: WrapCommandsOpts) {
   const container = await containerFromId(chain.Nodes[0].ContainerId)
   const bin = imageByLabel(chain.Images, ImageLabelTypes.Main)!.Bin!
   const fmt = opts.json ? 'json' : 'text'
-  printOutput(await container.exec([bin, '--output', fmt, ...args]))
+  return await container.exec([bin, '--output', fmt, ...args])
 }
 
 function loadWorkspace(workdir: string): ChainSetsRunObj {
@@ -57,12 +62,7 @@ function loadWorkspace(workdir: string): ChainSetsRunObj {
   return self.schemas.runningChainSetsSchema.parse(JSON.parse(utils.fs.readFileSync(runPath, 'utf-8')))
 }
 
-function printOutput(out: ProcessOutput) {
-  if (out.stdout.length > 0) process.stdout.write(out.stdout)
-  if (out.stderr.length > 0) process.stderr.write(out.stderr)
-}
-
-type InitOpts = {
+export type InitOpts = {
   workspace: string
 }
 
@@ -103,13 +103,13 @@ const thenClause = [
   }
 ]
 
-type StartOpts = {
+export type StartOpts = {
   workspace: string
   connection: string[]
   useZkMint: boolean
 }
 
-export async function start(opts: StartOpts) {
+export async function start(opts: StartOpts): Promise<{ runObj: ChainSetsRunObj; configObj: ChainSetsRunConfig }> {
   const configPath = path.join(opts.workspace, configFile)
   if (!fs.existsSync(configPath)) {
     throw new Error(`could not read configuration file: ${configPath}`)
@@ -128,6 +128,7 @@ export async function start(opts: StartOpts) {
   }
 
   await self.runRelayers(runtime, opts.connection).then(...thenClause)
+  return runtime
 }
 
 export async function show(opts: any) {
@@ -163,10 +164,10 @@ export async function show(opts: any) {
     await line(runtime.Prover.Name, runtime.Prover, rows)
   }
 
-  console.table(rows)
+  return rows
 }
 
-type StopOpts = {
+export type StopOpts = {
   workspace: string
   prover: boolean
   clean: boolean
@@ -197,7 +198,7 @@ export async function stop(opts: StopOpts) {
   await removeAll()
 }
 
-type ExecOpts = {
+export type ExecOpts = {
   workspace: string
   args: string[]
   name: string
@@ -207,10 +208,10 @@ export async function exec(opts: ExecOpts) {
   const runtime = loadWorkspace(opts.workspace)
   const containerId = filterContainers(runtime, opts.name).id
   const container = await containerFromId(containerId)
-  printOutput(await container.exec(opts.args))
+  return await container.exec(opts.args)
 }
 
-type DeployOpts = {
+export type DeployOpts = {
   workspace: string
   chain: string
   account: string
@@ -220,11 +221,10 @@ type DeployOpts = {
 
 export async function deploy(opts: DeployOpts) {
   const runtime = loadWorkspace(opts.workspace)
-  const deployed = await self.deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
-  console.log(deployed.Address)
+  return await self.deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
 }
 
-type ChannelOpts = {
+export type ChannelOpts = {
   workspace: string
   endpointA: { chainId: string; account: string }
   endpointB: { chainId: string; account: string }
@@ -276,7 +276,7 @@ export async function channel(opts: ChannelOpts) {
   )
 }
 
-type TracePacketsOpts = {
+export type TracePacketsOpts = {
   workspace: string
   endpointA: EndpointInfo
   endpointB: EndpointInfo
@@ -295,13 +295,10 @@ export async function tracePackets(opts: TracePacketsOpts) {
   const packetsRaw = await self
     .tracePackets(chainA.Nodes[0].RpcHost, chainB.Nodes[0].RpcHost, opts.endpointA, opts.endpointB)
     .then(...thenClause)
-  const packets = packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
-
-  if (opts.json) console.log(JSON.stringify(packets))
-  else console.table(packets, ['channelID', 'portID', 'sequence', 'state'])
+  return packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
 }
 
-type LogsOpts = {
+export type LogsOpts = {
   workspace: string
   name: string
   follow: boolean
@@ -315,10 +312,10 @@ export async function logs(opts: LogsOpts) {
   const runtime = loadWorkspace(opts.workspace)
   const containerId = filterContainers(runtime, opts.name).id
   const container = await containerFromId(containerId)
-  await container.logs({ stdout: process.stdout, stderr: process.stderr, ...opts }).then(...thenClause)
+  return await container.logs({ stdout: process.stdout, stderr: process.stderr, ...opts }).then(...thenClause)
 }
 
-type ArchiveOpts = {
+export type ArchiveOpts = {
   workspace: string
   output: string
 }
@@ -363,22 +360,16 @@ export async function archiveLogs(opts: ArchiveOpts) {
   await archive
 }
 
-type WrapCommandsOpts = {
-  workspace: string
-  name: string
-  json: boolean
-}
-
 export async function channels(opts: WrapCommandsOpts) {
-  await wrapCosmosCommand(['query', 'ibc', 'channel', 'channels'], opts)
+  return await wrapCosmosCommand(['query', 'ibc', 'channel', 'channels'], opts)
 }
 
 export async function connections(opts: WrapCommandsOpts) {
-  await wrapCosmosCommand(['query', 'ibc', 'connection', 'connections'], opts)
+  return await wrapCosmosCommand(['query', 'ibc', 'connection', 'connections'], opts)
 }
 
 export async function clients(opts: WrapCommandsOpts) {
-  await wrapCosmosCommand(['query', 'ibc', 'client', 'states'], opts)
+  return await wrapCosmosCommand(['query', 'ibc', 'client', 'states'], opts)
 }
 
 export async function tx(opts: WrapCommandsOpts & { tx: string }) {
@@ -391,15 +382,13 @@ export async function tx(opts: WrapCommandsOpts & { tx: string }) {
     const container = await containerFromId(chain.Nodes[0].ContainerId)
     const bin = imageByLabel(chain.Images, ImageLabelTypes.Main)!.Bin!
     const fmt = opts.json ? 'json' : 'text'
-    printOutput(await container.exec([bin, '--output', fmt, 'query', 'tx', opts.tx]))
-    return
+    return await container.exec([bin, '--output', fmt, 'query', 'tx', opts.tx])
   }
 
   if (isEvmChain(chain.Type)) {
     const eth = newJsonRpcProvider(chain.Nodes[0].RpcHost)
     const tx = await eth.getTransaction(opts.tx)
-    process.stdout.write(opts.json ? JSON.stringify(tx) : utils.dumpYamlSafe(tx))
-    return
+    return opts.json ? JSON.stringify(tx) : utils.dumpYamlSafe(tx)
   }
 
   throw new Error(`Cannot query transactions on chain type: ${chain.Type}`)
@@ -411,10 +400,10 @@ export async function accounts(opts: WrapCommandsOpts) {
   const chain = runtime.ChainSets.find((c) => c.Name === found.name)
   if (!chain) throw new Error(`Expected any chain`)
 
-  process.stdout.write(opts.json ? JSON.stringify(chain.Accounts) : utils.dumpYamlSafe(chain.Accounts))
+  return opts.json ? JSON.stringify(chain.Accounts) : utils.dumpYamlSafe(chain.Accounts)
 }
 
-type EventsOpts = {
+export type EventsOpts = {
   workspace: string
   name: string
   height: number
@@ -424,19 +413,17 @@ type EventsOpts = {
   json: boolean
 }
 
-export async function events(opts: EventsOpts) {
+export async function events(opts: EventsOpts): Promise<TxEvent[]> {
   const runtime = loadWorkspace(opts.workspace)
   const found = filterContainers(runtime, opts.name)
   const chain = runtime.ChainSets.find((c) => c.Name === found.name)
   if (!chain) throw new Error(`Expected any chain`)
 
   const events: TxEvent[] = []
+
   await self.events(chain, opts, (event: TxEvent) => {
-    if (!opts.extended) return console.log(event.height, ':', Object.keys(event.events).join(' '))
-    if (!opts.json) return console.log(event.height, ':', event.events)
-    // this will use more memory since we are buffering all events instead of flushing them to stdout
-    // but it's non-trivial to print a valid json array otherwise.
     events.push(event)
   })
-  if (opts.extended && opts.json) console.log(JSON.stringify(events))
+
+  return events
 }
