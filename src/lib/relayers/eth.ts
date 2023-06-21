@@ -64,7 +64,7 @@ export class EthRelayer {
       ethcontainer: eth1.Nodes[0].ContainerId
     }
 
-    const containerDir = utils.ensureDir(utils.path.join(runObj.Run.WorkingDir, 'eth-relayer'))
+    const containerDir = utils.ensureDir(utils.path.join(runObj.WorkDir, 'eth-relayer'))
     const container = await newContainer({
       entrypoint: 'sh',
       imageRepoTag: images.ethRelayer.full(),
@@ -82,7 +82,7 @@ export class EthRelayer {
     //       So this adding a file within the polymer container for the lc (running in there) to work.
     //       Let's get rid of this ASAP
     {
-      const polyDir = path.join(runObj.Run.WorkingDir, poly.Name)
+      const polyDir = path.join(runObj.WorkDir, poly.Name)
       fs.writeFileSync(path.join(polyDir, 'abi.json'), config.ibcCoreAbi, { encoding: 'utf-8' })
       const lcConfig: any = {
         sc_address: config.ibcCoreAddress,

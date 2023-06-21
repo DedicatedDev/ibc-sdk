@@ -1,8 +1,8 @@
-import { images, newContainer, Container, containerFromId } from '../docker'
-import * as utils from '../utils'
+import { images, newContainer, Container } from '../docker'
 import { ProcessOutput } from 'zx-cjs'
 import { ChainSetsRunObj, CosmosChainSet, isCosmosChain, RelayerRunObj } from '../schemas'
 import { getLogger } from '../utils/logger'
+import { ensureDir, path, sleep } from '../utils'
 
 const log = getLogger()
 
@@ -10,13 +10,15 @@ export class IBCRelayer {
   container: Container
 
   private readonly binary = 'rly'
+  private paths: string[][]
 
-  private constructor(container: Container) {
+  private constructor(container: Container, paths: string[][]) {
     this.container = container
+    this.paths = paths
   }
 
-  static async create(workDir: string): Promise<IBCRelayer> {
-    const containerDir = utils.ensureDir(utils.path.join(workDir, 'ibc-relayer'))
+  static async create(workDir: string, paths: string[][]): Promise<IBCRelayer> {
+    const containerDir = ensureDir(path.join(workDir, 'ibc-relayer'))
     const container = await newContainer({
       imageRepoTag: images.ibcGoRelayer.full(),
       detach: true,
@@ -26,12 +28,7 @@ export class IBCRelayer {
       volumes: [[containerDir, '/tmp']]
     })
     log.verbose(`host dir: ${containerDir}`)
-    return new IBCRelayer(container)
-  }
-
-  static async reuse(runtime: RelayerRunObj): Promise<IBCRelayer> {
-    const container = await containerFromId(runtime.ContainerId)
-    return new IBCRelayer(container)
+    return new IBCRelayer(container, paths)
   }
 
   async exec(commands: string[], tty = false, detach = false): Promise<ProcessOutput> {
@@ -41,7 +38,7 @@ export class IBCRelayer {
     )
   }
 
-  async setup(runtime: ChainSetsRunObj, paths: string[][]) {
+  async init(runtime: ChainSetsRunObj) {
     const template = {
       type: 'cosmos',
       value: {
@@ -79,7 +76,7 @@ export class IBCRelayer {
       await this.exec([this.binary, 'keys', 'restore', chain.Name, 'default', account.Mnemonic!])
     }
 
-    for (const path of paths) {
+    for (const path of this.paths) {
       const [src, dst] = path
       const x = JSON.stringify({
         src: {
@@ -103,19 +100,20 @@ export class IBCRelayer {
         }
       )
     }
+    await this.connect()
   }
 
-  async connect(paths: string[][]) {
-    for (const path of paths) {
+  async connect() {
+    for (const path of this.paths) {
       await this.exec([this.binary, 'transact', 'clients', path.join('-')]).catch((e) => {
         log.error(e)
         throw new Error(e)
       })
     }
     // TODO: this is hacky
-    await utils.sleep(10_000)
+    await sleep(10_000)
 
-    for (const path of paths) {
+    for (const path of this.paths) {
       await this.exec([this.binary, 'transact', 'connection', path.join('-')]).catch((e) => {
         log.error(e)
         throw new Error(e)
@@ -125,7 +123,7 @@ export class IBCRelayer {
 
   async start(): Promise<ProcessOutput> {
     const start = this.exec(['sh', '-c', `${this.binary} start 1>/proc/1/fd/1 2>/proc/1/fd/2`], true, true)
-    log.info('vibc-relayer started')
+    log.info('ibc-relayer started')
     return start
   }
 

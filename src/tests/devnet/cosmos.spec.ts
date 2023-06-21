@@ -6,17 +6,17 @@ import { TextEncoder } from 'util'
 import { toAny } from '../../lib/cosmos/client'
 import { images } from '../../lib/docker'
 import { getTestingLogger } from '../../lib/utils/logger'
-import { cleanupRuntime, runtimeTest } from './test_utils'
+import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 
 const log = getTestingLogger()
 
 const cosmos = self.cosmos
 const { utils } = self
 
-const test = runtimeTest;
+const test = runtimeTest
 
 test.afterEach.always(async (t) => {
-  await cleanupRuntime(t);
+  await cleanupRuntime(t)
 })
 
 const Relayer = {
@@ -54,10 +54,6 @@ ChainSets:
     Validator:
       Name: validatorRunner
       Staked: "100000000stake"
-
-Run:
-  WorkingDir: "/tmp/test-chainsets/run-*"
-  CleanupMode: all
 `
 
 test('start a comos chain from docker container', async (t) => {
@@ -65,9 +61,9 @@ test('start a comos chain from docker container', async (t) => {
   t.truthy(rawConfig)
   log.verbose(utils.dumpYaml(rawConfig))
 
-  const { runObj, configObj } = await self.runChainSets(rawConfig)
+  const { runObj, configObj } = await self.runChainSets(rawConfig, getWorkspace('cosmos-test'))
   utils.ignoreUnused(runObj, configObj)
-  t.context.runtime = runObj;
+  t.context.runtime = runObj
 
   // ensure we're get a cosmos chain
   const chain = self.schemas.chainSetSchema.cosmos.parse(runObj.ChainSets[0])

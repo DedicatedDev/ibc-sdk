@@ -36,8 +36,4 @@ ChainSets:
     Accounts:
       Mnemonic: "develop test test test test only develop test test test test only"
       Count: 1
-
-Run:
-  WorkingDir: "/tmp/test-chainsets/run-*"
-  CleanupMode: all
 `

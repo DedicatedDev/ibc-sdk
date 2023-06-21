@@ -11,8 +11,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '4000')
   static readonly grpcEndpoint = new EndPoint('http', '0.0.0.0', '3500')
 
-  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean): Promise<RunningChain> {
-    reuse = false // TODO: implement reuse container
+  static async newNode(config: ChainConfig, hostDir: string): Promise<RunningChain> {
     const mainImage = config.Images.find((i) => i.Label === ImageLabelTypes.Main)
     const genesisImage = config.Images.find((i) => i.Label === ImageLabelTypes.Genesis)
     const validatorImage = config.Images.find((i) => i.Label === ImageLabelTypes.Validator)
@@ -21,39 +20,33 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
       throw new Error('Need three images: main, validator and genesis!')
     }
 
-    const mainContainer = await newContainer(
-      {
-        label: mainImage.Label.toString(),
-        entrypoint: 'sh',
-        exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
-        imageRepoTag: `${mainImage.Repository}:${mainImage.Tag}`,
-        detach: true,
-        publishAllPorts: true,
-        tty: true,
-        volumes: [[hostDir, '/tmp']],
-        binaries: [mainImage.Bin!],
-        remove: [RunningChainBase.getContainerDataDir()],
-        workDir: '/tmp'
-      },
-      reuse
-    )
+    const mainContainer = await newContainer({
+      label: mainImage.Label.toString(),
+      entrypoint: 'sh',
+      exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
+      imageRepoTag: `${mainImage.Repository}:${mainImage.Tag}`,
+      detach: true,
+      publishAllPorts: true,
+      tty: true,
+      volumes: [[hostDir, '/tmp']],
+      binaries: [mainImage.Bin!],
+      remove: [RunningChainBase.getContainerDataDir()],
+      workDir: '/tmp'
+    })
 
-    const validatorContainer = await newContainer(
-      {
-        label: validatorImage.Label.toString(),
-        entrypoint: 'sh',
-        exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
-        imageRepoTag: `${validatorImage.Repository}:${validatorImage.Tag}`,
-        detach: true,
-        tty: true,
-        volumes: [[hostDir, '/tmp']],
-        publishAllPorts: true,
-        binaries: [validatorImage.Bin!],
-        remove: [RunningChainBase.getContainerDataDir(validatorImage.Label)],
-        workDir: '/tmp'
-      },
-      reuse
-    )
+    const validatorContainer = await newContainer({
+      label: validatorImage.Label.toString(),
+      entrypoint: 'sh',
+      exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
+      imageRepoTag: `${validatorImage.Repository}:${validatorImage.Tag}`,
+      detach: true,
+      tty: true,
+      volumes: [[hostDir, '/tmp']],
+      publishAllPorts: true,
+      binaries: [validatorImage.Bin!],
+      remove: [RunningChainBase.getContainerDataDir(validatorImage.Label)],
+      workDir: '/tmp'
+    })
 
     const chain = new RunningPrysmChain(config as NoneChainConfig, hostDir)
     chain.setContainer(ImageLabelTypes.Main, mainContainer)

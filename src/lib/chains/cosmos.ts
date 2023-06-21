@@ -13,22 +13,19 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
   static readonly rpcEndpoint = new EndPoint('tcp', '0.0.0.0', '26657')
   static readonly grpcEndpoint = new EndPoint('tcp', '0.0.0.0', '9090')
 
-  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean): Promise<RunningChain> {
+  static async newNode(config: ChainConfig, hostDir: string): Promise<RunningChain> {
     const image = imageByLabel(config.Images, ImageLabelTypes.Main)
-    const container = await newContainer(
-      {
-        label: image.Label.toString(),
-        entrypoint: 'sh',
-        exposedPorts: [RunningCosmosChain.rpcEndpoint.port, RunningCosmosChain.grpcEndpoint.port],
-        imageRepoTag: `${image.Repository}:${image.Tag}`,
-        detach: true,
-        tty: true,
-        volumes: [[hostDir, '/tmp']],
-        publishAllPorts: true,
-        workDir: '/tmp'
-      },
-      reuse
-    )
+    const container = await newContainer({
+      label: image.Label.toString(),
+      entrypoint: 'sh',
+      exposedPorts: [RunningCosmosChain.rpcEndpoint.port, RunningCosmosChain.grpcEndpoint.port],
+      imageRepoTag: `${image.Repository}:${image.Tag}`,
+      detach: true,
+      tty: true,
+      volumes: [[hostDir, '/tmp']],
+      publishAllPorts: true,
+      workDir: '/tmp'
+    })
 
     const chain = new RunningCosmosChain(config as CosmosChainConfig, hostDir)
     chain.setContainer(ImageLabelTypes.Main, container)

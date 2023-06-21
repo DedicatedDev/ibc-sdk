@@ -49,6 +49,7 @@ program
   .command('init')
   .description('Initializes the workspace')
   .allowExcessArguments(false)
+  .option('-c, --config-file <file>', 'Optional config file for chain setup')
   .action(async (opts) => await commands.init({ ...program.opts(), ...opts }))
 
 program
@@ -73,7 +74,7 @@ program
   .command('stop')
   .description('Stop the stack defined in the workspace')
   .allowExcessArguments(false)
-  .option('-a, --all', 'Removes the entire workspace, including the configuration file. Implies `--clean`')
+  .option('-a, --all', 'Removes the containers and the workspace')
   .action(async (opts) => await commands.stop({ ...program.opts(), ...opts }))
 // TODO: figure out a better way to do this without stepping outside the boundary of -w
 // .option('-c, --clean', 'Removes stale containers created by previous executions.')

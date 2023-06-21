@@ -5,11 +5,11 @@ import { RunningChainSets, runChainSets } from '../../lib/chainset'
 import { ChainConfig, ImageLabelTypes } from '../../lib/schemas'
 import { gethConfig } from './simple_geth_config'
 import { getTestingLogger } from '../../lib/utils/logger'
-import { cleanupRuntime, runtimeTest } from './test_utils'
+import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 
 getTestingLogger()
 
-const test = runtimeTest;
+const test = runtimeTest
 
 test.afterEach.always(async (t) => {
   await cleanupRuntime(t)
@@ -187,7 +187,7 @@ ChainSets:
 test('start eth node with labels and dependencies', async (t) => {
   const config = utils.readYamlText(gethConfig)
   config.ChainSets = config.ChainSets.filter((c: any) => c.Type !== 'bsc')
-  const runtime = await runChainSets(config)
+  const runtime = await runChainSets(config, getWorkspace('chainset-test'))
   t.context.runtime = runtime.runObj
   t.truthy(runtime)
 

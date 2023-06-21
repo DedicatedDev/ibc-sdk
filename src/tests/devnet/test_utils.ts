@@ -17,8 +17,6 @@ export function getConfigs(chains: string[]): string {
   chainsetsConfig.ChainSets = chainsetsConfig.ChainSets.filter((cs: ChainConfig) =>
     configOverride.chains.includes(cs.Name)
   )
-  chainsetsConfig.Run.CleanupMode = configOverride.cleanupMode
-
   return JSON.stringify(chainsetsConfig)
 }
 
@@ -62,13 +60,17 @@ function getParliaFilePath(index: number): string {
 
 export type RuntimeContext = {
   runtime: ChainSetsRunObj
+  workspace: string
 }
 export const runtimeTest = anyTest as TestFn<RuntimeContext>
 
 export async function cleanupRuntime(t: ExecutionContext<RuntimeContext>) {
   if (t.context.runtime) {
     // after clean up, folders should be cleaned up and containers are stopped
-    await self.cleanupRuntime(t.context.runtime)
+    await self.cleanupRuntime(t.context.runtime, true)
   }
 }
 
+export function getWorkspace(prefix: string): string {
+  return `/tmp/${prefix}-${(Math.random() + 1).toString(36).substring(2)}`
+}

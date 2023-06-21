@@ -11,23 +11,20 @@ export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')
   static containerGethDataDir = '/tmp/gethDataDir'
 
-  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean): Promise<RunningChain> {
+  static async newNode(config: ChainConfig, hostDir: string): Promise<RunningChain> {
     const image = imageByLabel(config.Images, ImageLabelTypes.Main)
-    const container = await newContainer(
-      {
-        label: image.Label.toString(),
-        entrypoint: 'sh',
-        exposedPorts: [RunningBSCChain.rpcEndpoint.port],
-        imageRepoTag: `${image.Repository}:${image.Tag}`,
-        detach: true,
-        tty: true,
-        volumes: [[hostDir, '/tmp']],
-        binaries: [image.Bin!],
-        remove: [RunningBSCChain.containerGethDataDir],
-        workDir: '/tmp'
-      },
-      reuse
-    )
+    const container = await newContainer({
+      label: image.Label.toString(),
+      entrypoint: 'sh',
+      exposedPorts: [RunningBSCChain.rpcEndpoint.port],
+      imageRepoTag: `${image.Repository}:${image.Tag}`,
+      detach: true,
+      tty: true,
+      volumes: [[hostDir, '/tmp']],
+      binaries: [image.Bin!],
+      remove: [RunningBSCChain.containerGethDataDir],
+      workDir: '/tmp'
+    })
 
     const chain = new RunningBSCChain(config as EvmChainConfig, hostDir)
     chain.setContainer(ImageLabelTypes.Main, container)

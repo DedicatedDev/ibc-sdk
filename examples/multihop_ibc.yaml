@@ -1,0 +1,68 @@
+ChainSets:
+  - Name: "polymer"
+    Type: "polymer"
+    Moniker: "polymer"
+    Prefix: "polymer"
+    Images:
+      - Repository: "ghcr.io/polymerdao/polymer"
+        Tag: "v0.0.1-rc2"
+        Bin: "polymerd"
+    Accounts:
+      - Name: alice
+        Coins: ["20000token", "200000000stake"]
+      - Name: bob
+        Coins: ["10000token", "100000000stake"]
+      - Name: relayer
+        Mnemonic: "wait team asthma refuse situate crush kidney nature frown kid alpha boat engage test across cattle practice text olive level tag profit they veteran"
+        Coins: ["1234567token", "200000000stake"]
+      - Name: randomUser
+        Coins: ["0token"]
+      - Name: validatorRunner
+        Coins: ["150000000stake"]
+    Validator:
+      Name: validatorRunner
+      Staked: "100000000stake"
+
+  - Name: "osmosis"
+    Type: "cosmos"
+    Moniker: "osmosis"
+    Prefix: "osmo"
+    Images:
+      - Repository: "ghcr.io/strangelove-ventures/heighliner/osmosis"
+        Tag: "v15.1.2"
+        Bin: "osmosisd"
+    Accounts:
+      - Name: bob
+        Coins: ["10000token", "100000000stake"]
+      - Name: relayer
+        Mnemonic: "wait team asthma refuse situate crush kidney nature frown kid alpha boat engage test across cattle practice text olive level tag profit they veteran"
+        Coins: ["1234567token", "200000000stake"]
+      - Name: randomUser
+        Coins: ["0token"]
+      - Name: validatorRunner
+        Coins: ["150000000stake"]
+    Validator:
+      Name: validatorRunner
+      Staked: "100000000stake"
+
+  - Name: "wasm"
+    Type: "cosmos"
+    Moniker: "wasm"
+    Prefix: "wasm"
+    Images:
+      - Repository: "ghcr.io/polymerdao/wasm"
+        Tag: "v0.40.0-multihop-1"
+        Bin: "wasmd"
+    Accounts:
+      - Name: bob
+        Coins: ["10000token", "100000000stake"]
+      - Name: relayer
+        Mnemonic: "wait team asthma refuse situate crush kidney nature frown kid alpha boat engage test across cattle practice text olive level tag profit they veteran"
+        Coins: ["1234567token", "200000000stake"]
+      - Name: randomUser
+        Coins: ["0token"]
+      - Name: validatorRunner
+        Coins: ["150000000stake"]
+    Validator:
+      Name: validatorRunner
+      Staked: "100000000stake"

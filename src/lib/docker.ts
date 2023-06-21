@@ -85,16 +85,8 @@ export async function runContainer(config: containerConfig): Promise<ProcessOutp
  * @param config
  * @returns
  */
-export async function newContainer(config: containerConfig, reuse: boolean = false): Promise<Container> {
+export async function newContainer(config: containerConfig): Promise<Container> {
   const [parsed, args] = parseConfig(config)
-
-  if (reuse) {
-    try {
-      return await containerFromTag(parsed.imageRepoTag)
-    } catch {
-      log.debug("couldn't find a running container. Will create a new one")
-    }
-  }
 
   log.debug(`creating container: ${args.map($.quote).join(' ')}`)
   const process = $`${args}`

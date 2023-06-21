@@ -1,13 +1,32 @@
 import path from 'path'
-import * as os from 'os'
-import { utils, cleanupRuntime, newJsonRpcProvider } from '../lib'
-import { $, extractSmartContracts, fs, getLogger } from '../lib/utils'
+import { $, extractSmartContracts, fs, readYamlFile, readYamlText } from '../lib/utils'
 import { configTemplate } from './config.template'
-import * as self from '../lib/index.js'
 import { channelHandshake } from './channel'
-import { EndpointInfo, Packet, TxEvent } from '../lib/query'
-import { ChainSetsRunObj, ChainSetsRunConfig, imageByLabel, ImageLabelTypes, isCosmosChain, isEvmChain } from '../lib/schemas'
+import { EndpointInfo, Packet, TxEvent, tracePackets as sdkTracePackets } from '../lib/query'
+import {
+  ChainSetsRunObj,
+  ChainSetsRunConfig,
+  CosmosChainSet,
+  imageByLabel,
+  ImageLabelTypes,
+  isCosmosChain,
+  isEvmChain,
+  runningChainSetsSchema
+} from '../lib/schemas'
 import { containerFromId, removeStaleContainers } from '../lib/docker'
+import {
+  cleanupRuntime,
+  deploySmartContract,
+  deployVIBCCoreContractsOnChainSets,
+  events as sdkEvents,
+  newJsonRpcProvider,
+  runChainSets,
+  runProver,
+  runRelayers,
+  utils
+} from '../lib'
+import { getLogger } from '../lib/utils/logger'
+import { tmpdir } from 'os'
 import archiver from 'archiver'
 
 const log = getLogger()
@@ -53,17 +72,21 @@ async function wrapCosmosCommand(args: string[], opts: WrapCommandsOpts) {
   return await container.exec([bin, '--output', fmt, ...args])
 }
 
-function loadWorkspace(workdir: string): ChainSetsRunObj {
-  const workspace = path.resolve(path.join(workdir, 'run'))
-  const runPath = path.join(workspace, 'run.json')
+function loadWorkspace(workspace: string): ChainSetsRunObj {
+  // TODO: this run subdir is assumed in mulitple places
+  const workdir = path.resolve(path.join(workspace, 'run'))
+  const runPath = path.join(workdir, 'run.json')
   if (!fs.existsSync(runPath)) {
     throw new Error(`could not read runtime file: ${runPath}`)
   }
-  return self.schemas.runningChainSetsSchema.parse(JSON.parse(utils.fs.readFileSync(runPath, 'utf-8')))
+  const runObj = runningChainSetsSchema.parse(JSON.parse(utils.fs.readFileSync(runPath, 'utf-8')))
+  runObj.WorkDir = workdir
+  return runObj
 }
 
 export type InitOpts = {
   workspace: string
+  configFile: string
 }
 
 const vibcCoreContracts = 'vibc-core-smart-contracts'
@@ -82,8 +105,16 @@ export async function init(opts: InitOpts) {
 
   const runDir = path.join(workspace, 'run')
   fs.mkdirSync(runDir)
-  const config = configTemplate.replace('<working-dir>', runDir)
-
+  let config = configTemplate
+  if (opts.configFile) {
+    const configYaml = readYamlText(config)
+    const userConfigYaml = readYamlFile(opts.configFile)
+    const chainSetsKey = 'ChainSets'
+    if (userConfigYaml[chainSetsKey]) {
+      configYaml[chainSetsKey] = userConfigYaml[chainSetsKey]
+      config = utils.dumpYamlSafe(configYaml)
+    }
+  }
   fs.writeFileSync(configPath, config, 'utf-8')
 
   const contractsDir = path.join(workspace, vibcCoreContracts)
@@ -118,16 +149,16 @@ export async function start(opts: StartOpts): Promise<{ runObj: ChainSetsRunObj;
 
   const contractsPath = path.join(opts.workspace, vibcCoreContracts)
 
-  let { runObj: runtime } = await self.runChainSets(config).then(...thenClause)
+  let { runObj: runtime } = await runChainSets(config, opts.workspace).then(...thenClause)
   if (!process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS) {
-    runtime = await self.deployVIBCCoreContractsOnChainSets(runtime, contractsPath, opts.useZkMint).then(...thenClause)
+    runtime = await deployVIBCCoreContractsOnChainSets(runtime, contractsPath, opts.useZkMint).then(...thenClause)
   }
 
   if (opts.useZkMint) {
-    await self.runProver(runtime).then(...thenClause)
+    await runProver(runtime).then(...thenClause)
   }
 
-  await self.runRelayers(runtime, opts.connection).then(...thenClause)
+  await runRelayers(runtime, opts.connection).then(...thenClause)
   return runtime
 }
 
@@ -170,18 +201,15 @@ export async function show(opts: any) {
 export type StopOpts = {
   workspace: string
   prover: boolean
-  clean: boolean
   all: boolean
 }
 
 export async function stop(opts: StopOpts) {
   const removeAll = async () => {
     fs.rmSync(path.join(opts.workspace, 'run'), { force: true, recursive: true })
-    if (!opts.all && !opts.clean) return
+    if (!opts.all) return
     log.info('removing stale containers')
     await removeStaleContainers()
-    if (!opts.all) return
-    log.info('removing the entire workspace')
     fs.rmSync(opts.workspace, { force: true, recursive: true })
   }
 
@@ -193,8 +221,7 @@ export async function stop(opts: StopOpts) {
     return await removeAll()
   }
 
-  runtime.Run.CleanupMode = 'all'
-  await cleanupRuntime(runtime)
+  await cleanupRuntime(runtime, opts.all)
   await removeAll()
 }
 
@@ -221,7 +248,7 @@ export type DeployOpts = {
 
 export async function deploy(opts: DeployOpts) {
   const runtime = loadWorkspace(opts.workspace)
-  return await self.deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
+  return await deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
 }
 
 export type ChannelOpts = {
@@ -264,12 +291,12 @@ export async function channel(opts: ChannelOpts) {
     runtime,
     origEndpointA,
     {
-      chain: endpointA as self.schemas.CosmosChainSet,
+      chain: endpointA as CosmosChainSet,
       address: opts.endpointA.account,
       version: opts.aChannelVersion
     },
     {
-      chain: endpointB as self.schemas.CosmosChainSet,
+      chain: endpointB as CosmosChainSet,
       address: opts.endpointB.account,
       version: opts.bChannelVersion
     }
@@ -292,9 +319,12 @@ export async function tracePackets(opts: TracePacketsOpts) {
     throw new Error('Could not find chain runtime object!')
   }
 
-  const packetsRaw = await self
-    .tracePackets(chainA.Nodes[0].RpcHost, chainB.Nodes[0].RpcHost, opts.endpointA, opts.endpointB)
-    .then(...thenClause)
+  const packetsRaw = await sdkTracePackets(
+    chainA.Nodes[0].RpcHost,
+    chainB.Nodes[0].RpcHost,
+    opts.endpointA,
+    opts.endpointB
+  ).then(...thenClause)
   return packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
 }
 
@@ -328,8 +358,9 @@ export async function archiveLogs(opts: ArchiveOpts) {
   ).flat()
   components.push(...runtime.Relayers.map((r) => ({ name: r.Name, id: r.ContainerId })))
 
+  // eslint-disable-next-line no-async-promise-executor
   const archive = new Promise(async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logs'))
+    const dir = fs.mkdtempSync(path.join(tmpdir(), 'logs'))
     const archive = archiver('tar', { gzip: true })
     const output = fs.createWriteStream(opts.output)
     archive.pipe(output)
@@ -420,8 +451,7 @@ export async function events(opts: EventsOpts): Promise<TxEvent[]> {
   if (!chain) throw new Error(`Expected any chain`)
 
   const events: TxEvent[] = []
-
-  await self.events(chain, opts, (event: TxEvent) => {
+  await sdkEvents(chain, opts, (event: TxEvent) => {
     events.push(event)
   })
 

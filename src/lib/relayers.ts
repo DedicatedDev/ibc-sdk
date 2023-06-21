@@ -32,7 +32,7 @@ async function setupIbcTsRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
     throw new Error('Missing relayer account or mnemonic')
   }
   const relayerConfig = self.newIbcRelayerConfig(chainRegistry, chainPair, { mnemonic: relayerAccount.Mnemonic })
-  const relayer = await self.newIBCTsRelayer(runtime.Run.WorkingDir, `${src}-${dst}`)
+  const relayer = await self.newIBCTsRelayer(runtime.WorkDir, `${src}-${dst}`)
   await relayer.init(relayerConfig).catch((reason) => {
     log.error(`Could not init ibc-relayer: ${reason}`)
     throw new Error(reason)
@@ -59,14 +59,9 @@ async function setupIbcTsRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
 export async function setupIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) {
   log.info(`setting up ibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
 
-  const relayer = await IBCRelayer.create(runtime.Run.WorkingDir)
-  await relayer.setup(runtime, paths).catch((reason) => {
+  const relayer = await IBCRelayer.create(runtime.WorkDir, paths)
+  await relayer.init(runtime).catch((reason) => {
     log.error(`Could not setup ibc-relayer: ${reason}`)
-    throw new Error(reason)
-  })
-
-  await relayer.connect(paths).catch((reason) => {
-    log.error(`Could not connect ibc-relayer: ${reason}`)
     throw new Error(reason)
   })
 
@@ -79,7 +74,7 @@ export async function setupIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) 
 async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) {
   log.info(`setting up vibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
 
-  const relayer = await VIBCRelayer.create(runtime.Run.WorkingDir)
+  const relayer = await VIBCRelayer.create(runtime.WorkDir)
   await relayer.setup(runtime, paths)
   runtime.Relayers.push(await relayer.runtime())
   self.saveChainSetsRuntime(runtime)

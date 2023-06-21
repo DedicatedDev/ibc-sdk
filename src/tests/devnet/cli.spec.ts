@@ -57,7 +57,6 @@ test.serial('the init command creates all files within workspace', async (t) => 
 
   const config = utils.readYamlFile(path.join(t.context.workspace, 'config.yaml'))
   t.truthy(config)
-  t.assert(config.Run.WorkingDir, path.join(t.context.workspace, 'run'))
 })
 
 test.serial('running the init command twice should fail', async (t) => {
@@ -149,7 +148,7 @@ test.serial('running the start command on an invalid configuration file should f
   t.assert((await runInit(t)).exitCode === 0)
 
   const configPath = path.join(t.context.workspace, 'config.yaml')
-  await $`grep -v '^Run:' ${configPath} > ${configPath}.bak`
+  await $`grep -v '^ChainSets:' ${configPath} > ${configPath}.bak`
   await $`mv ${configPath}.bak ${configPath}`
 
   await $`${t.context.cli} start --workspace ${t.context.workspace}`.then(

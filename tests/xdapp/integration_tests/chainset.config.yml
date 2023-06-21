@@ -40,23 +40,3 @@ ChainSets:
     Validator:
       Name: validatorRunner
       Staked: "100000000stake"
-
-
-Run:
-  # * is optional for timestamp and a random suffix, suitable for repeated runs
-  WorkingDir: "/tmp/test-chainsets/run-*"
-  # valid modes: ['all', 'debug', 'log'], default 'all'
-  CleanupMode: debug
-  Logger:
-    # valid levels: [deubg, info, warn, error]
-    Level: debug
-    # Colorize: false
-    # Transports can take a single str with the default log love above
-    # Transports: 'log'
-    Transports:
-      - 'log' # will use default level
-      - FileName: critial.log
-        Level: warn
-      # add console logger for debugging
-      - FileName: '-'
-        Level: verbose

@@ -63,7 +63,7 @@ export async function deployVIBCCoreContractsOnChainSets(
   useZkMint: boolean
 ): Promise<ChainSetsRunObj> {
   const promises: Promise<void>[] = []
-  for (let chain of runtime.ChainSets) {
+  for (const chain of runtime.ChainSets) {
     if (isEvmChain(chain.Type)) {
       promises.push(deployVIBCCoreContractsOnChain(runtime, contractsDir, chain as EvmChainSet, useZkMint))
     }
@@ -148,7 +148,7 @@ class Container {
     const out = await $`${cmds}`
     const receipt = JSON.parse(out.stdout)
 
-    const query_cmds = [
+    const queryCmds = [
       'docker',
       'container',
       'exec',
@@ -163,8 +163,8 @@ class Container {
 
     while (true) {
       try {
-        const query_cmds_out = await $`${query_cmds}`
-        return JSON.parse(query_cmds_out.stdout)
+        const queryCmdsOut = await $`${queryCmds}`
+        return JSON.parse(queryCmdsOut.stdout)
       } catch {
         await utils.sleep(2000)
       }
@@ -190,31 +190,24 @@ async function deployCosmosSmartContract(
   const deployer = chain.Accounts.find((a) => a.Name === account || a.Address === account)
   if (!deployer) throw new Error(`Could not find account '${account}' on chain ${chain.Name}`)
 
-  const container_id = chain.Nodes[0].ContainerId
+  const containerId = chain.Nodes[0].ContainerId
 
-  await $`docker cp ${scpath} ${container_id}:/tmp/sc.wasm`
-  const container = new Container(container_id, deployer.Address, chain.Name)
+  await $`docker cp ${scpath} ${containerId}:/tmp/sc.wasm`
+  const container = new Container(containerId, deployer.Address, chain.Name)
 
   // make sure we pass in an empty object at the very least
   if (scargs.length === 0) scargs.push('{}')
 
   const tx = await container.tx('store', '/tmp/sc.wasm')
-  const store_code = container.flat(tx, 'store_code')
-  const instantiate_tx = await container.tx(
-    'instantiate',
-    store_code.code_id,
-    ...scargs,
-    '--no-admin',
-    '--label',
-    'demo'
-  )
-  const contract = container.flat(instantiate_tx, 'instantiate')
+  const storeCode = container.flat(tx, 'store_code')
+  const instantiateTx = await container.tx('instantiate', storeCode.code_id, ...scargs, '--no-admin', '--label', 'demo')
+  const contract = container.flat(instantiateTx, 'instantiate')
 
   return {
     Name: path.basename(scpath),
     Address: contract._contract_address,
     DeployerAddress: deployer.Address,
-    TxHash: instantiate_tx.txhash
+    TxHash: instantiateTx.txhash
   }
 }
 

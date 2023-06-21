@@ -14,7 +14,7 @@ export interface RunningChain {
   getRunObj(): Promise<NodeAccounts>
 }
 
-export type RunningChainCreator = (config: ChainConfig, hostDir: string, reuse: boolean) => Promise<RunningChain>
+export type RunningChainCreator = (config: ChainConfig, hostDir: string) => Promise<RunningChain>
 
 export class EndPoint {
   readonly protocol: string

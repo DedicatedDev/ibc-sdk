@@ -5,11 +5,11 @@ import * as utils from '../../lib/utils/index.js'
 import * as ethers from 'ethers'
 import { gethConfig } from './simple_geth_config'
 import { getTestingLogger } from '../../lib/utils/logger'
-import { cleanupRuntime, runtimeTest } from './test_utils'
+import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 
 const log = getTestingLogger()
 
-const test = runtimeTest;
+const test = runtimeTest
 
 test.afterEach.always(async (t) => {
   await cleanupRuntime(t)
@@ -21,8 +21,8 @@ test('start a geth chain from docker container', async (t) => {
   // override test config
   const configOverride = { chains: ['eth', 'polygon'], cleanupMode: 'all' }
   rawConfig.ChainSets = rawConfig.ChainSets.filter((cs) => configOverride.chains.includes(cs.Name))
-  rawConfig.Run.CleanupMode = configOverride.cleanupMode
-  const { runObj, configObj } = await self.runChainSets(rawConfig)
+  const workspace = getWorkspace('test-geth')
+  const { runObj, configObj } = await self.runChainSets(rawConfig, workspace)
   t.context.runtime = runObj
 
   for (let i = 0; i < runObj.ChainSets.length; i++) {

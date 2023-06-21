@@ -14,6 +14,7 @@ import { fs } from './utils'
 import { RunningPrysmChain } from './chains/prysm'
 import { containerFromId } from './docker'
 import { getLogger } from './utils/logger'
+import path from 'path'
 
 const log = getLogger()
 
@@ -29,15 +30,18 @@ Returned `runObj` contains info of containers, pre-loaded accounts, and host wor
 `configObj` typed ChainSetsRunConfig
  */
 export async function runChainSets(
-  config: string | object
+  config: string | object,
+  workspace: string
 ): Promise<{ runObj: ChainSetsRunObj; configObj: ChainSetsRunConfig }> {
   const configObj = typeof config === 'object' ? config : utils.readYaml(config)
   // TODO: improve zod's error handling to return more meaningful messages when the
   // configuration file is invalid
   const parsedConfig = chainSetsRunConfigSchema.parse(configObj)
-  const runTemplate = new ChainSetsRunTemplate(parsedConfig)
+  const runTemplate = new ChainSetsRunTemplate(parsedConfig, workspace)
 
   const runObj = await runTemplate.run()
+  // TODO: stop creating run objects in multiple places
+  runObj.WorkDir = path.join(workspace, 'run')
   return { runObj, configObj: parsedConfig }
 }
 
@@ -47,40 +51,31 @@ export async function runChainSets(
  * - Remove working directories recursively.
  * @param runtime The chain set runtime
  */
-export async function cleanupRuntime(runtime: ChainSetsRunObj) {
-  const mode = process.env.CLEANUP_MODE || runtime.Run.CleanupMode;
+export async function cleanupRuntime(runtime: ChainSetsRunObj, cleanAll: boolean) {
+  const components = runtime.ChainSets.reduce((acc: any[], c: any) => {
+    c.Nodes.map((n: any) => acc.push({ name: `${c.Name}:${n.Label}`, id: n.ContainerId }))
+    return acc
+  }, [])
+  runtime.Relayers.forEach((r: any) => components.push({ name: r.Name, id: r.ContainerId }))
 
-  if (mode === 'reuse') {
-    log.verbose('CleanupMode is "reuse". Nothing to do.')
-    return
+  if (runtime.Prover) {
+    components.push({ name: 'prover', id: runtime.Prover.ContainerId })
   }
 
-  if (mode !== 'debug') {
-    const components = runtime.ChainSets.reduce((acc: any[], c: any) => {
-      c.Nodes.map((n: any) => acc.push({ name: `${c.Name}:${n.Label}`, id: n.ContainerId }))
-      return acc
-    }, [])
-    runtime.Relayers.forEach((r: any) => components.push({ name: r.Name, id: r.ContainerId }))
-
-    if (runtime.Prover && runtime.Prover.CleanupMode !== 'reuse') {
-      components.push({ name: 'prover', id: runtime.Prover.ContainerId })
-    }
-
-    for (const c of components) {
-      try {
-        log.info(`removing container '${c.name}' ...`)
-        await (await containerFromId(c.id)).kill()
-      } catch (e) {
-        log.warn(`could not remove container '${c.name}': ${e}`)
-      }
+  for (const c of components) {
+    try {
+      log.info(`removing container '${c.name}' ...`)
+      await (await containerFromId(c.id)).kill()
+    } catch (e) {
+      log.warn(`could not remove container '${c.name}': ${e}`)
     }
   }
 
-  if (mode === 'all') utils.rmDir(runtime.Run.WorkingDir)
+  if (cleanAll) utils.rmDir(runtime.WorkDir)
 }
 
 export function saveChainSetsRuntime(runtime: ChainSetsRunObj): ChainSetsRunObj {
-  const runFilepath = utils.path.join(runtime.Run.WorkingDir, 'run.json')
+  const runFilepath = utils.path.join(runtime.WorkDir, 'run.json')
   utils.fs.writeFileSync(runFilepath, JSON.stringify(runtime, null, 2))
   return runningChainSetsSchema.parse(runtime)
 }
@@ -98,9 +93,9 @@ class ChainSetsRunTemplate {
   readonly config: ChainSetsRunConfig
   wd = ''
 
-  constructor(config: ChainSetsRunConfig) {
+  constructor(config: ChainSetsRunConfig, workspace: string) {
     this.config = config
-    this.wd = utils.expandUserHomeDir(this.generateWD(new Date(), this.config.Run.WorkingDir))
+    this.wd = path.join(utils.expandUserHomeDir(workspace), 'run')
   }
 
   // Start all chains in a ready state.
@@ -114,28 +109,10 @@ class ChainSetsRunTemplate {
 
     const running = new RunningChainSets(this.config, this.wd)
     await running.run()
-    return saveChainSetsRuntime(await running.getChainSetsRunObj())
-  }
-
-  private generateWD(date: Date, template: string): string {
-    if (!template.includes('*')) {
-      return template
-    }
-    if (template.indexOf('*') !== template.lastIndexOf('*')) {
-      throw new Error(`Only one * is allowed in WorkingDir, but got ${template}`)
-    }
-    const random = [
-      date.getUTCFullYear(),
-      date.getUTCMonth().toString().padStart(2, '0'),
-      date.getUTCDate().toString().padStart(2, '0'),
-      date.getUTCHours().toString().padStart(2, '0'),
-      date.getUTCMinutes().toString().padStart(2, '0'),
-      date.getUTCSeconds().toString().padStart(2, '0'),
-      '-',
-      // not reliablly random, but sufficient for dir suffix
-      (Math.random() + 1).toString(36).substring(2)
-    ].join('')
-    return template.replace('*', random)
+    // TODO: consolidate run object creation
+    const runObj = await running.getChainSetsRunObj()
+    runObj.WorkDir = this.wd
+    return saveChainSetsRuntime(runObj)
   }
 }
 
@@ -259,11 +236,7 @@ export class RunningChainSets {
         return await runningChain.getRunObj()
       })
     )
-    const Run = {
-      WorkingDir: this.wd,
-      CleanupMode: this.config.Run.CleanupMode
-    }
-    const obj = { ChainSets, Run }
+    const obj = { ChainSets }
     return obj as any
   }
 
@@ -289,6 +262,6 @@ export class RunningChainSets {
       )
     }
     log.verbose(`creating chain of type ${chainConfig.Type}`)
-    return await ChainConstructor(chainConfig, containerDir, this.config.Run.CleanupMode === 'reuse')
+    return await ChainConstructor(chainConfig, containerDir)
   }
 }

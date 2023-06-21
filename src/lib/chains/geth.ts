@@ -116,24 +116,21 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     }
   }
 
-  static async newNode(config: ChainConfig, hostDir: string, reuse: boolean): Promise<RunningChain> {
+  static async newNode(config: ChainConfig, hostDir: string): Promise<RunningChain> {
     const image = imageByLabel(config.Images, ImageLabelTypes.Main)
-    const container = await newContainer(
-      {
-        label: image.Label.toString(),
-        entrypoint: 'sh',
-        exposedPorts: [RunningGethChain.rpcEndpoint.port, RunningGethChain.authRpcEndpoint.port],
-        imageRepoTag: `${image.Repository}:${image.Tag}`,
-        detach: true,
-        tty: true,
-        publishAllPorts: true,
-        volumes: [[hostDir, '/tmp']],
-        binaries: [image.Bin!],
-        remove: [RunningChainBase.getContainerDataDir()],
-        workDir: '/tmp'
-      },
-      reuse && false // TODO Implement reuse container
-    )
+    const container = await newContainer({
+      label: image.Label.toString(),
+      entrypoint: 'sh',
+      exposedPorts: [RunningGethChain.rpcEndpoint.port, RunningGethChain.authRpcEndpoint.port],
+      imageRepoTag: `${image.Repository}:${image.Tag}`,
+      detach: true,
+      tty: true,
+      publishAllPorts: true,
+      volumes: [[hostDir, '/tmp']],
+      binaries: [image.Bin!],
+      remove: [RunningChainBase.getContainerDataDir()],
+      workDir: '/tmp'
+    })
 
     const chain = new RunningGethChain(config as EvmChainConfig, hostDir)
     chain.setContainer(ImageLabelTypes.Main, container)

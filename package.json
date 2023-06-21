@@ -17,7 +17,8 @@
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "prepack": "rm -rf ./dist"
+    "prepack": "rm -rf ./dist",
+    "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx"
   },
   "author": "Polymer Labs",
   "license": "UNLICENSED",
@@ -64,7 +65,7 @@
   },
   "ava": {
     "verbose": true,
-    "failFast": false,
+    "failFast": true,
     "concurrency": 1,
     "workerThreads": false,
     "timeout": "600s",

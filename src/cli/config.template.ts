@@ -107,18 +107,4 @@ ChainSets:
     Validator:
       Name: validatorRunner
       Staked: "100000000stake"
-
-
-# This section contains configuration relevant to the runtime.
-
-Run:
-    # This is the workspace directory where the runtime data will be stored. It's also the 'dirname' of this configuration file.
-    # A '*' within the path will be expanded to a random timestamped suffix in the form of '<timestamp>-<random suffix>'.
-    # This is useful for repeated runs, for example when executed from automated tests.
-    # Example: '/tmp/run-*' will be expanded to something like '/tmp/run-20230304090145-7018ba624d/'
-    WorkingDir: <working-dir>
-
-    # Determines what happens to the runtime files when the workspace is stopped.
-    # Can be one of: all, debug or log. It defaults to all
-    CleanupMode: debug
 `

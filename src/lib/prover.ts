@@ -11,10 +11,10 @@ const log = getLogger()
 export async function runProver(runtime: ChainSetsRunObj) {
   log.info(`Starting a zkmint prover... It might take a while`)
 
-  const prover = await ZkMintProver.create(runtime)
+  const prover = await ZkMintProver.create()
   await prover.isReady()
 
-  runtime.Prover = await prover.runtime(runtime)
+  runtime.Prover = await prover.runtime()
   self.saveChainSetsRuntime(runtime)
 }
 
@@ -27,17 +27,13 @@ export class ZkMintProver {
     this.container = container
   }
 
-  static async create(runtime: ChainSetsRunObj): Promise<ZkMintProver> {
-    const container = await newContainer(
-      {
-        imageRepoTag: 'ghcr.io/polymerdao/zkmint-prover:full',
-        exposedPorts: [ZkMintProver.rpcEndpoint.port],
-        detach: true,
-        tty: true
-      },
-      runtime.Prover?.CleanupMode === 'reuse'
-    )
-
+  static async create(): Promise<ZkMintProver> {
+    const container = await newContainer({
+      imageRepoTag: 'ghcr.io/polymerdao/zkmint-prover:full',
+      exposedPorts: [ZkMintProver.rpcEndpoint.port],
+      detach: true,
+      tty: true
+    })
     return new ZkMintProver(container)
   }
 
@@ -72,14 +68,13 @@ export class ZkMintProver {
     return true
   }
 
-  async runtime(runtime: ChainSetsRunObj): Promise<ProverRunObj> {
+  async runtime(): Promise<ProverRunObj> {
     const containerIp = await this.container.getIPAddress()
     return {
       Name: 'zkmint-prover',
       ContainerId: this.container.containerId,
       RpcHost: ZkMintProver.rpcEndpoint.withHost('localhost').withPort(await this.getRPCPort()).address,
-      RpcContainer: ZkMintProver.rpcEndpoint.withHost(containerIp).address,
-      CleanupMode: runtime.Prover?.CleanupMode || 'all'
+      RpcContainer: ZkMintProver.rpcEndpoint.withHost(containerIp).address
     }
   }
 }

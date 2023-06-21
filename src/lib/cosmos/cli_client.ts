@@ -27,7 +27,9 @@ export class CosmosChainClient {
 
   async ibcConnections(): Promise<{
     connections: string[]
+    // eslint-disable-next-line camelcase
     pagination: { next_key?: string; total: string }
+    // eslint-disable-next-line camelcase
     height: { revision_number: string; revision_height: string }
   }> {
     const out = await this.query(['ibc', 'connection', 'connections'])

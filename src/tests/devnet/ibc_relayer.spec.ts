@@ -3,16 +3,15 @@ import * as utils from '../../lib/utils/index.js'
 import { images } from '../../lib/docker'
 import { getTestingLogger } from '../../lib/utils/logger'
 import { setupIbcRelayer } from '../../lib/relayers'
-import { cleanupRuntime, runtimeTest } from './test_utils'
+import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 
 getTestingLogger()
 
-const test = runtimeTest;
+const test = runtimeTest
 
 test.afterEach.always(async (t) => {
-  await cleanupRuntime(t);
+  await cleanupRuntime(t)
 })
-
 
 const mnemonic =
   'wait team asthma refuse situate crush kidney nature ' +
@@ -23,14 +22,9 @@ const configPrefix = `# applicable to all cosmos chains; use polymer
 ChainSets:
 `
 
-const configSufix = `
-Run:
-  WorkingDir: "/tmp/test-chainsets/run-*"
-  CleanupMode: all
-`
-
 const ibcConnectionsTest = test.macro(async (t, config: string) => {
-  const { runObj: runtime, configObj: _ } = await self.runChainSets(utils.readYaml(config))
+  const workspace = getWorkspace('test-ibc-relayer')
+  const { runObj: runtime, configObj: _ } = await self.runChainSets(utils.readYaml(config), workspace)
   t.truthy(runtime)
   t.context.runtime = runtime
 
@@ -60,11 +54,7 @@ const polymerConfig = `
       Staked: "100000000stake"
 `
 
-test(
-  'poly-ibc-relayer creates IBC connections with polymer chain',
-  ibcConnectionsTest,
-  configPrefix + polymerConfig + configSufix
-)
+test('poly-ibc-relayer creates IBC connections with polymer chain', ibcConnectionsTest, configPrefix + polymerConfig)
 
 const gaiaConfig = `
   - Name: "gaia"
@@ -109,15 +99,12 @@ const junoConfig = `
       Name: validatorRunner
       Staked: "100000000stake"
 `
-test(
-  'poly-ibc-relayer creates IBC connections with gaia chain',
-  ibcConnectionsTest,
-  configPrefix + gaiaConfig + configSufix
-)
+test('poly-ibc-relayer creates IBC connections with gaia chain', ibcConnectionsTest, configPrefix + gaiaConfig)
 
 const ibcConnectionsTest2 = test.macro(async (t, config: string) => {
-  const rawConfig = configPrefix + config + configSufix
-  const { runObj: runtime, configObj: _ } = await self.runChainSets(rawConfig)
+  const rawConfig = configPrefix + config
+  const workspace = getWorkspace('test-ibc-relayer')
+  const { runObj: runtime, configObj: _ } = await self.runChainSets(rawConfig, workspace)
   t.truthy(runtime)
   t.context.runtime = runtime
 
