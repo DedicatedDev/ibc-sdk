@@ -1,6 +1,6 @@
 import { images, newContainer, containerConfig, Container, containerFromId } from '../docker'
 import * as utils from '../utils'
-import { ProcessOutput } from 'zx-cjs'
+import { $, ProcessOutput } from 'zx-cjs'
 import { ChainSetsRunObj, isCosmosChain, isEvmChain, RelayerRunObj } from '../schemas'
 import { CosmosAccount, EvmAccount } from '../accounts_config'
 import { getLogger } from '../utils'
@@ -36,8 +36,11 @@ export class VIBCRelayer {
     return new VIBCRelayer(container)
   }
 
-  async exec(commands: string[], tty = false, detach = false): Promise<ProcessOutput> {
-    return await this.container.exec(commands, tty, detach).then(
+  async exec(args: string[], tty = false, detach = false, logit = true): Promise<ProcessOutput> {
+    const rawArgs = args.map($.quote)
+    if (logit) rawArgs.push(...['1>/proc/1/fd/1', '2>/proc/1/fd/2'])
+    const cmd = ['sh', '-c', `${rawArgs.join(' ')}`]
+    return await this.container.exec(cmd, tty, detach).then(
       (resolve) => resolve,
       (reject) => reject
     )
@@ -77,7 +80,7 @@ export class VIBCRelayer {
         throw new Error(e)
       })
 
-      await this.exec([this.binary, 'config', 'set', 'global.polling-idle-time', '10000']).catch((e) => {
+      await this.exec([this.binary, 'config', 'set', 'global.polling-idle-time', '5000']).catch((e) => {
         log.error(e)
         throw new Error(e)
       })
@@ -103,13 +106,13 @@ export class VIBCRelayer {
   }
 
   async start(): Promise<ProcessOutput> {
-    const start = await this.exec(['sh', '-c', `${this.binary} start 1>/proc/1/fd/1 2>/proc/1/fd/2`], true, true)
+    const start = await this.exec([this.binary, 'start'], true, true)
     log.info('vibc-relayer started')
     return start
   }
 
   async getConfig(): Promise<ProcessOutput> {
-    return await this.exec([this.binary, 'config', 'show'])
+    return await this.exec([this.binary, 'config', 'show'], false, false, false)
   }
 
   async runtime(): Promise<RelayerRunObj> {
