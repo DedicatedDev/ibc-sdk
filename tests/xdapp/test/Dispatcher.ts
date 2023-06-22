@@ -46,7 +46,6 @@ function genState(appHash: any, valsetHash: any, time: any, height: any) {
   }
 }
 
-
 async function getLatestConsensusState(dispatcher: Dispatcher) {
   const latestConsensusStateData = await dispatcher.latestConsensusState()
   return {
@@ -57,7 +56,7 @@ async function getLatestConsensusState(dispatcher: Dispatcher) {
   }
 }
 
-const proof = getValidProof();
+const proof = getValidProof()
 
 describe('IBC Core Smart Contract', function () {
   // Constants for testing
@@ -66,13 +65,13 @@ describe('IBC Core Smart Contract', function () {
     BigNumber.from('590199110038530808131927832294665177527506259518072095333098842116767351199'),
     7000040,
     1000
-  );
+  )
   const untrustedState = genState(
     10934,
     BigNumber.from('7064503680087416120706887577693908749828198688716609274705703517077803898371'),
     7002040,
     1020
-  );
+  )
   const C = {
     ClientState: toBytes32('clientState'),
     ConsensusStates: [trustedState, genState(1, 1, 1, 1)],
@@ -80,9 +79,9 @@ describe('IBC Core Smart Contract', function () {
       clientState: toBytes32('clientState'),
       consensusState: trustedState
     },
-      UpdateClientMsg: {
+    UpdateClientMsg: {
       consensusState: untrustedState,
-      zkProof: proof,
+      zkProof: proof
     },
     UpgradeClientMsg: { clientState: toBytes32('clientState'), consensusState: genState(0, 0, 0, 0) },
     ConnHops1: ['connection-0', 'connection-2'],
@@ -467,6 +466,45 @@ describe('IBC Core Smart Contract', function () {
     }
     return { accounts, dispatcher, mars, channel, packets }
   }
+
+  describe('recvPacket', function () {
+    it('succeeds with a case insensitive address', async function () {
+      const { dispatcher, mars, accounts, channel, packets } = await loadFixture(setupChannelFixture)
+
+      const updatedPortPrefix = 'polyibc.eth.'
+      await dispatcher.setPortPrefix(updatedPortPrefix)
+      const packet = getPacket(packets[0], 0)
+
+      const portId = `${updatedPortPrefix}${mars.address.slice(2)}`
+
+      const ibcPacket = {
+        src: {
+          portId: C.BscPortId,
+          channelId: channel.channelId
+        },
+        dest: { portId: portId, channelId: C.RemoteChannelIds[0] },
+        sequence: 1,
+        data: toBytes(packet.msg),
+        timeout: { blockHeight: 0, timestamp: packet.timeout }
+      }
+
+      const txRecv = await dispatcher.connect(accounts.relayer).recvPacket(mars.address, ibcPacket, C.ValidProof)
+      await expect(txRecv)
+        .to.emit(dispatcher, 'RecvPacket')
+        .withArgs(
+          mars.address,
+          ibcPacket.dest.channelId,
+          ibcPacket.src.portId,
+          ibcPacket.src.channelId,
+          ibcPacket.sequence
+        )
+        .to.emit(dispatcher, 'WriteAckPacket')
+        .withArgs(mars.address, ibcPacket.dest.channelId, ibcPacket.sequence, [
+          true,
+          ethers.utils.hexlify(toBytes(`{ "account": "account", "reply": "got the message" }`))
+        ])
+    })
+  })
 
   describe('sendPacket', function () {
     it('succeeds', async function () {
