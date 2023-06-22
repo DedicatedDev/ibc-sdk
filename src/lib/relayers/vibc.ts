@@ -97,9 +97,8 @@ export class VIBCRelayer {
     }
   }
 
-  async update(srcChain: string, dstChain: string, srcChannel: string, dstChannel: string) {
-    const args = [`${srcChain}-${dstChain}`, '--src-channel', srcChannel, '--dst-channel', dstChannel]
-    await this.exec([this.binary, 'paths', 'update', ...args]).catch((e) => {
+  async update(path: string, connectionId: string) {
+    await this.exec([this.binary, 'paths', 'update', path, '--src-connection', connectionId]).catch((e) => {
       log.error(e)
       throw new Error(e)
     })
@@ -127,6 +126,7 @@ export class VIBCRelayer {
   async channel(
     path: string,
     receiver: string,
+    version: string,
     order: string,
     connections: string[],
     counterVersion: string,
@@ -134,7 +134,7 @@ export class VIBCRelayer {
     counterChannelId: string
   ) {
     const args = {
-      '--version': '1.0',
+      '--version': version,
       '--receiver': receiver,
       '--order': order,
       '--counter-version': counterVersion,

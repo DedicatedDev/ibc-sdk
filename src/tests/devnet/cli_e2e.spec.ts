@@ -37,7 +37,7 @@ async function getChannelsFrom(t: any, chain: string) {
 }
 
 async function waitForEvent(t: any, chainName: string, eventName: string, cb: (e: any) => boolean) {
-  log.info(`querying events from ${chainName}`)
+  log.info(`querying event '${eventName}' from ${chainName}`)
   await utils.waitUntil(
     async () => {
       const out = await runCommand(t, 'events', chainName, '--json', '--extended')
@@ -48,8 +48,8 @@ async function waitForEvent(t: any, chainName: string, eventName: string, cb: (e
       log.info(`got event from ${chainName}: ${JSON.stringify(event)}`)
       return cb(event.events)
     },
-    20,
-    5_000
+    10,
+    6_000
   )
 }
 
@@ -109,9 +109,9 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
     t,
     'channel',
     'eth-execution:' + mars!.Address,
-    'wasm:' + wasmAddress,
     '--version-a',
-    'some-version',
+    '1.0',
+    'wasm:' + wasmAddress,
     '--version-b',
     'polymer-demo-v1'
   )

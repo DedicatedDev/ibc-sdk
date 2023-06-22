@@ -266,28 +266,8 @@ export async function channel(opts: ChannelOpts) {
   let chainB = runtime.ChainSets.find((c) => c.Name === opts.chainB.chainId)
   if (!chainB) throw new Error(`Could not find chain ${opts.chainB.chainId} is chain sets`)
 
-  const poly = runtime.ChainSets.find((c) => c.Type === 'polymer')
-  if (!poly) throw new Error('Could not find polymer chain is chain sets')
-
-  const valid = new Set<string>(['cosmos:ethereum', 'ethereum:cosmos'])
-
-  if (!valid.has(`${chainA.Type}:${chainB.Type}`))
-    throw new Error(
-      `Only the following combinations are currently supported: ${new Array(...valid).join(', ')}. ` +
-        `Got: ${chainA.Type}:${chainB.Type}`
-    )
-
-  const origEndpointA = chainA.Name
-  // replace the ethereum chain with polymer
-  chainA = chainA.Type === 'ethereum' ? poly : chainA
-  chainB = chainB.Type === 'ethereum' ? poly : chainB
-
-  // always keep polymer as the endpoint A for convenience
-  if (chainA.Type !== 'polymer') [chainA, chainB] = [chainB, chainA]
-
   await channelHandshake(
     runtime,
-    origEndpointA,
     {
       chain: chainA as CosmosChainSet,
       address: opts.chainA.account,
