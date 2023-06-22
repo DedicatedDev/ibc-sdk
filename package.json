@@ -69,7 +69,7 @@
   "ava": {
     "verbose": true,
     "failFast": true,
-    "concurrency": 3,
+    "concurrency": 2,
     "workerThreads": false,
     "timeout": "600s",
     "files": [
