@@ -4,7 +4,6 @@ import * as path from 'path'
 import { contractsTemplate } from './contracts.template'
 import os from 'os'
 import * as tar from 'tar'
-
 export { path, fs }
 export { $ } from 'zx-cjs'
 export { createLogger, getLogger, getTestingLogger } from './logger'
@@ -76,7 +75,7 @@ export function ensureDir(dir: string, recursive: boolean = false): string {
 }
 
 export function readYamlFile(path: string): any {
-  return yaml.load(fs.readFileSync(path))
+  return yaml.load(fs.readFileSync(path, 'utf-8'))
 }
 
 export function readYamlText(text: string): any {
@@ -93,16 +92,16 @@ export function readYaml(pathOrText: string): any {
   return isPath ? readYamlFile(pathOrText) : readYamlText(pathOrText)
 }
 
-export function dumpYaml(obj, opts = { noRefs: true }): string {
+export function dumpYaml(obj: any, opts = { noRefs: true }): string {
   return yaml.dump(obj, opts)
 }
 
-export function dumpYamlToFile(filepath: string, obj, opts = { noRefs: true }, safeDump = false) {
+export function dumpYamlToFile(filepath: string, obj: any, opts = { noRefs: true }, safeDump = false) {
   const content = safeDump ? dumpYamlSafe(obj) : dumpYaml(obj, opts)
   fs.writeFileSync(filepath, content)
 }
 
-export function dumpYamlSafe(obj): string {
+export function dumpYamlSafe(obj: any): string {
   const textWithFuncRemoved = JSON.stringify(obj)
   const strippedObj = yaml.load(textWithFuncRemoved)
   return yaml.dump(strippedObj)
