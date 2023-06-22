@@ -1,11 +1,15 @@
+import * as self from '../index'
 import { z } from 'zod'
 import { utils } from '../deps'
 import { Container, containerFromId, newContainer, images } from '../docker'
-import { ChainSetsRunObj, RelayerRunObj } from '../schemas'
+import { ChainSetsRunObj, CosmosChainSet, RelayerRunObj } from '../schemas'
 import path from 'path'
 import { $, ProcessOutput } from 'zx-cjs'
-import { fs, getLogger } from '../utils'
+import { flatCosmosEvent, fs, waitForBlocks, getLogger } from '../utils'
 import { Writable } from 'stream'
+import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
+import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
+import { SigningStargateClient } from '@cosmjs/stargate'
 
 const log = getLogger()
 
@@ -22,18 +26,26 @@ export const EthRelayerConfigSchema = z.object({
   ethcontainer: z.string()
 })
 
+export const EthRelayerRuntimeSchema = z.object({
+  config: EthRelayerConfigSchema,
+  nativeClientId: z.string().nullish(),
+  virtualClientId: z.string().nullish(),
+  virtualConnectionId: z.string().nullish()
+})
+
 export type EthRelayerConfig = z.infer<typeof EthRelayerConfigSchema>
+export type EthRelayerRuntime = z.infer<typeof EthRelayerRuntimeSchema>
 
 export class EthRelayer {
   container: Container
-  config: EthRelayerConfig
+  run: EthRelayerRuntime
   containerDir: string
   private readonly cmdPrefix = '/relayer/eth-relayer'
 
-  private constructor(container: Container, config: EthRelayerConfig, containerDir: string) {
+  private constructor(container: Container, run: EthRelayerRuntime, containerDir: string) {
     this.container = container
     this.containerDir = containerDir
-    this.config = config
+    this.run = run
   }
 
   static async create(runObj: ChainSetsRunObj, paths: string[]): Promise<EthRelayer> {
@@ -91,12 +103,15 @@ export class EthRelayer {
     }
 
     log.verbose(`host dir: ${containerDir}`)
-    return new EthRelayer(container, config, containerDir)
+    const runtime: EthRelayerRuntime = {
+      config: config
+    }
+    return new EthRelayer(container, runtime, containerDir)
   }
 
   async waitForPoS() {
     let found = false
-    const eth = await containerFromId(this.config.ethcontainer)
+    const eth = await containerFromId(this.run.config.ethcontainer)
 
     const stream = new Writable({
       write: (chunk: any, _enc: BufferEncoding, cb: (err?: Error) => void) => {
@@ -117,7 +132,7 @@ export class EthRelayer {
     if (!found) throw new Error('Ethereum did not enter PoS stage after 10 minutes')
   }
 
-  async run(): Promise<ProcessOutput> {
+  async start(): Promise<ProcessOutput> {
     // We can only start the relayer once the eth chain has reached the merge point.
     // This here waits for that to happen by looking into the logs. It's not great but it's all we
     // have for now. It times out after 10 minutes
@@ -126,21 +141,21 @@ export class EthRelayer {
     const rawCmds = [
       this.cmdPrefix,
       '--consensus-host',
-      this.config.consensusHostUrl,
+      this.run.config.consensusHostUrl,
       '--execution-host',
-      this.config.executionHostUrl,
+      this.run.config.executionHostUrl,
       '--ibc-core-address',
-      this.config.ibcCoreAddress,
+      this.run.config.ibcCoreAddress,
       '--ibc-core-abi',
       path.join('/tmp', 'abi.json'),
       '--router-host',
-      this.config.routerHostUrl,
+      this.run.config.routerHostUrl,
       '--polymer-rpc-addr',
-      this.config.rpcAddressUrl,
+      this.run.config.rpcAddressUrl,
       '--polymer-account-mnemonic',
-      this.config.polymerMnemonic
+      this.run.config.polymerMnemonic
     ]
-    if (this.config.localDevNet) rawCmds.push('--local-dev-net')
+    if (this.run.config.localDevNet) rawCmds.push('--local-dev-net')
 
     {
       // Even after eth has entered the PoS stage, the relayer can't create the LC just yet.
@@ -161,11 +176,95 @@ export class EthRelayer {
     }
   }
 
+  private async createVirtualLightClient(address: string, signer: SigningStargateClient, client: Tendermint37Client) {
+    log.info(`Creating virtual light client for native client ${this.run.nativeClientId}`)
+    const createClientMsg: self.cosmos.client.polyibc.MsgCreateVibcClientEncodeObject = {
+      typeUrl: '/polyibc.core.MsgCreateVibcClient',
+      value: {
+        creator: address,
+        nativeClientID: this.run.nativeClientId!,
+        params: Buffer.from(JSON.stringify({ finalized_only: false, delay_period: 2 }))
+      }
+    }
+    await waitForBlocks(client, 2)
+    let res = await signer.signAndBroadcast(address, [createClientMsg], 'auto')
+    const virtualLightClient = self.cosmos.client.polyibc.MsgCreateVibcClientResponseSchema.parse(
+      flatCosmosEvent('create_vibc_client', res)
+    )
+    this.run.virtualClientId = virtualLightClient.client_id
+  }
+
+  private async createVirtualConnection(address: string, signer: SigningStargateClient, client: Tendermint37Client) {
+    log.info('Creating virtual connection...')
+    const createConnectionMsg: self.cosmos.client.polyibc.MsgCreateVibcConnectionEncodeObject = {
+      typeUrl: '/polyibc.core.MsgCreateVibcConnection',
+      value: {
+        creator: address,
+        vibcClientID: this.run.virtualClientId!,
+        delayPeriod: '0'
+      }
+    }
+    await waitForBlocks(client, 2)
+    const res = await signer.signAndBroadcast(address, [createConnectionMsg], 'auto')
+    const vConnection = self.cosmos.client.polyibc.MsgCreateVibcConnectionResponseSchema.parse(
+      flatCosmosEvent('create_vibc_connection', res)
+    )
+    this.run.virtualConnectionId = vConnection.connection_id
+  }
+
+  async connect(runtime: ChainSetsRunObj) {
+    const poly = runtime.ChainSets.find((c) => c.Type === 'polymer') as CosmosChainSet
+    if (!poly) throw new Error('could not find polymer chain')
+    const account = poly.Accounts.find((a) => a.Name === 'relayer')
+    if (!account) throw new Error(`Could not find relayer account in polymer chain`)
+
+    const client = await self.cosmos.client.newTendermintClient(poly.Nodes[0].RpcHost)
+    const queryClient = self.cosmos.client.QueryClient.withExtensions(client, self.cosmos.client.setupPolyIbcExtension)
+
+    const offlineSigner = await DirectSecp256k1HdWallet.fromMnemonic(account.Mnemonic!, { prefix: poly.Prefix })
+    const signer = await self.cosmos.client.SigningStargateClient.createWithSigner(
+      client,
+      offlineSigner,
+      self.cosmos.client.signerOpts()
+    )
+
+    const clients = await queryClient.polyibc.ClientStates(
+      self.cosmos.client.polyibc.query.QueryClientStatesRequest.fromPartial({})
+    )
+
+    if (!clients.clientStates) throw new Error('No client states found')
+    for (const state of clients.clientStates) {
+      if (state.clientState?.typeUrl === '/polyibc.lightclients.altair.ClientState') {
+        this.run.nativeClientId = state.clientId
+        break
+      }
+    }
+    if (!this.run.nativeClientId) throw new Error(`could not find altair light client`)
+
+    for (let i = 0; i < 3; i++) {
+      try {
+        await this.createVirtualLightClient(account.Address, signer, client)
+        break
+      } catch (e) {
+        log.warn(`could not create virtual light client: ${e}, retrying...`)
+      }
+    }
+
+    for (let i = 0; i < 3; i++) {
+      try {
+        await this.createVirtualConnection(account.Address, signer, client)
+        break
+      } catch (e) {
+        log.warn(`could not create virtual connection: ${e}, retrying...`)
+      }
+    }
+  }
+
   public runtime(): RelayerRunObj {
     return {
       Name: 'eth-relayer',
       ContainerId: this.container.containerId,
-      Configuration: this.config
+      Configuration: this.run
     }
   }
 }

@@ -87,8 +87,10 @@ async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) {
 async function setupEthRelayer(runtime: ChainSetsRunObj, paths: Tuple) {
   log.info(`starting eth-relayer with path ${paths[0]} -> ${paths[1]}`)
   const relayer = await EthRelayer.create(runtime, paths)
-  const out = await relayer.run()
+  const out = await relayer.start()
   if (out.exitCode !== 0) throw new Error(`Could not run the vibc-relayer: ${out.stderr}`)
+
+  await relayer.connect(runtime)
 
   runtime.Relayers.push(relayer.runtime())
   self.saveChainSetsRuntime(runtime)
