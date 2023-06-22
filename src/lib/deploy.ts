@@ -2,11 +2,10 @@ import { ethers } from 'ethers'
 import { utils } from './deps'
 import path from 'path'
 import { ChainSetsRunObj, CosmosChainSet, DeployedContract, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
-import { $, fs } from './utils'
+import { $, fs, getLogger } from './utils'
 import { Attribute, Event } from '@cosmjs/stargate'
 import { saveChainSetsRuntime } from './chainset'
 import { newJsonRpcProvider } from './ethers'
-import { getLogger } from './utils/logger'
 
 const log = getLogger()
 

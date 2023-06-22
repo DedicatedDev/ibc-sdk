@@ -1,7 +1,7 @@
 import { Writable } from 'stream'
 import { z } from 'zod'
 import { $, nothrow, ProcessOutput } from 'zx-cjs'
-import { getLogger } from './utils/logger'
+import { getLogger } from './utils'
 
 const log = getLogger()
 

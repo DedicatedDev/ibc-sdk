@@ -2,10 +2,9 @@ import * as self from '../../lib/index'
 import path from 'path'
 import anyTest, { TestFn } from 'ava'
 import { gethConfig } from './simple_geth_config'
-import { getTestingLogger } from '../../lib/utils/logger'
+import { getTestingLogger, extractSmartContracts } from '../../lib/utils'
 import { ChainSetsRunObj } from '../../lib/schemas'
-import { extractSmartContracts } from '../../lib/utils'
-import os from 'os'
+import os from "os";
 import fs from 'fs'
 import { getWorkspace } from './test_utils'
 

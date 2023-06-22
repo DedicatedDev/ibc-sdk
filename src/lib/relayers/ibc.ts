@@ -1,8 +1,8 @@
+import path from 'path'
 import { images, newContainer, Container } from '../docker'
 import { ProcessOutput } from 'zx-cjs'
 import { ChainSetsRunObj, CosmosChainSet, isCosmosChain, RelayerRunObj } from '../schemas'
-import { getLogger } from '../utils/logger'
-import { ensureDir, path, sleep } from '../utils'
+import { getLogger, sleep, ensureDir } from '../utils'
 
 const log = getLogger()
 

@@ -4,9 +4,8 @@ import { Container, containerFromId, newContainer, images } from '../docker'
 import { ChainSetsRunObj, RelayerRunObj } from '../schemas'
 import path from 'path'
 import { $, ProcessOutput } from 'zx-cjs'
-import { fs } from '../utils'
+import { fs, getLogger } from '../utils'
 import { Writable } from 'stream'
-import { getLogger } from '../utils/logger'
 
 const log = getLogger()
 

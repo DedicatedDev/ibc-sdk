@@ -3,7 +3,7 @@ import { CosmosAccount, CosmosAccounts } from './accounts_config'
 import { VIBCRelayer } from './relayers/vibc'
 import * as self from './index'
 import { EthRelayer } from './relayers/eth'
-import { getLogger } from './utils/logger'
+import { getLogger } from './utils'
 import { IBCRelayer } from './relayers/ibc'
 
 const log = getLogger()

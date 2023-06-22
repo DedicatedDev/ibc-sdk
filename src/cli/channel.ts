@@ -7,7 +7,7 @@ import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import { VIBCRelayer } from '../lib/relayers/vibc'
 import { ethers } from 'ethers'
 import { EvmAccount } from '../lib/accounts_config'
-import { getLogger } from '../lib/utils/logger'
+import { getLogger } from '../lib/utils'
 
 const log = getLogger()
 

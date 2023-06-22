@@ -1,7 +1,7 @@
 import * as self from '../../lib/index.js'
 import * as utils from '../../lib/utils/index.js'
 import { images } from '../../lib/docker'
-import { getTestingLogger } from '../../lib/utils/logger'
+import { getTestingLogger } from '../../lib/utils'
 import { setupIbcRelayer } from '../../lib/relayers'
 import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 

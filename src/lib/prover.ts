@@ -4,7 +4,7 @@ import { $, zx } from './deps'
 import { EndPoint } from './chains/running_chain'
 import { ChainSetsRunObj, ProverRunObj } from './schemas'
 import * as self from './index'
-import { getLogger } from './utils/logger'
+import { getLogger } from './utils'
 
 const log = getLogger()
 

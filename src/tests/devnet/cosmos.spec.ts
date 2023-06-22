@@ -5,7 +5,7 @@ import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { TextEncoder } from 'util'
 import { toAny } from '../../lib/cosmos/client'
 import { images } from '../../lib/docker'
-import { getTestingLogger } from '../../lib/utils/logger'
+import { getTestingLogger } from '../../lib/utils'
 import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 
 const log = getTestingLogger()

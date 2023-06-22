@@ -3,7 +3,7 @@ import { ChainConfig, imageByLabel, ImageLabelTypes, NoneChainConfig } from '../
 import { EndPoint, NodeAccounts, RunningChain, RunningChainBase } from './running_chain'
 import { newContainer, runContainer } from '../docker'
 import { RunningGethChain } from './geth'
-import { getLogger } from '../utils/logger'
+import { getLogger } from '../utils'
 
 const log = getLogger()
 

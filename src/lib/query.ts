@@ -2,7 +2,7 @@ import * as self from './index'
 import { IbcExtension, logs, QueryClient, setupIbcExtension } from '@cosmjs/stargate'
 import { ChainSet, CosmosChainSet, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
 import { ethers } from 'ethers'
-import { getLogger } from './utils/logger'
+import { getLogger } from './utils'
 
 const log = getLogger()
 

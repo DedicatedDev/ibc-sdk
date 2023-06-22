@@ -5,7 +5,7 @@ import { EndPoint, RunningChain, RunningChainBase } from './running_chain'
 import { newContainer } from '../docker'
 import { Writable } from 'stream'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
-import { getLogger } from '../utils/logger'
+import { getLogger } from '../utils'
 
 const log = getLogger()
 

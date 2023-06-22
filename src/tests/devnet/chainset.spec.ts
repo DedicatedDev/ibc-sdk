@@ -4,7 +4,7 @@ import { newJsonRpcProvider, utils } from '../../lib'
 import { RunningChainSets, runChainSets } from '../../lib/chainset'
 import { ChainConfig, ImageLabelTypes } from '../../lib/schemas'
 import { gethConfig } from './simple_geth_config'
-import { getTestingLogger } from '../../lib/utils/logger'
+import { getTestingLogger } from '../../lib/utils'
 import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 
 getTestingLogger()

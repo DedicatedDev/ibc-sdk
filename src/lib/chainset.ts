@@ -10,10 +10,9 @@ import {
 } from './schemas'
 import { RunningCosmosChain } from './chains/cosmos'
 import { NodeAccounts, RunningChain, RunningChainCreator } from './chains/running_chain'
-import { fs } from './utils'
+import { fs, getLogger } from './utils'
 import { RunningPrysmChain } from './chains/prysm'
 import { containerFromId } from './docker'
-import { getLogger } from './utils/logger'
 import path from 'path'
 
 const log = getLogger()

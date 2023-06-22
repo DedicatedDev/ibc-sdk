@@ -1,9 +1,9 @@
-import * as utils from '../../lib/utils/index.js'
+import * as utils from '../../lib/utils'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import * as self from '../../lib/index.js'
 import { ethers } from 'ethers'
 import { ChainConfig, ChainSetsRunObj } from '../../lib/schemas'
-import { getLogger } from '../../lib/utils/logger'
+import { getLogger } from '../../lib/utils'
 import anyTest, { ExecutionContext, TestFn } from 'ava'
 
 const log = getLogger()

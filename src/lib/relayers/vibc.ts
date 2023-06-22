@@ -3,7 +3,7 @@ import * as utils from '../utils'
 import { ProcessOutput } from 'zx-cjs'
 import { ChainSetsRunObj, isCosmosChain, isEvmChain, RelayerRunObj } from '../schemas'
 import { CosmosAccount, EvmAccount } from '../accounts_config'
-import { getLogger } from '../utils/logger'
+import { getLogger } from '../utils'
 
 const log = getLogger()
 

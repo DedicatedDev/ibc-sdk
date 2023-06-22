@@ -1,9 +1,8 @@
 import anyTest, { TestFn } from 'ava'
-import { getTestingLogger } from '../../lib/utils/logger'
 import { ProcessOutput } from 'zx-cjs'
 import { utils } from '../../lib'
 import { runningChainSetsSchema } from '../../lib/schemas'
-import { fs, path, $ } from '../../lib/utils'
+import { fs, path, $, getTestingLogger } from '../../lib/utils'
 
 getTestingLogger()
 

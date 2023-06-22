@@ -4,7 +4,7 @@ import { AccountsConfigSchema, AccountsSchema } from '../../lib/schemas'
 import * as utils from '../../lib/utils/index.js'
 import * as ethers from 'ethers'
 import { gethConfig } from './simple_geth_config'
-import { getTestingLogger } from '../../lib/utils/logger'
+import { getTestingLogger } from '../../lib/utils'
 import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 
 const log = getTestingLogger()

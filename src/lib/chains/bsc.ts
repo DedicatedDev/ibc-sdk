@@ -3,7 +3,7 @@ import { AccountsConfig, generateEvmAccounts } from '../accounts_config'
 import { ChainConfig, EvmChainConfig, imageByLabel, ImageLabelTypes } from '../schemas'
 import { EndPoint, RunningChain, RunningChainBase } from './running_chain'
 import { newContainer } from '../docker'
-import { getLogger } from '../utils/logger'
+import { getLogger } from '../utils'
 
 getLogger()
 
