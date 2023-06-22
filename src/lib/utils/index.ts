@@ -7,9 +7,10 @@ import * as tar from 'tar'
 export { path, fs }
 export { $ } from 'zx-cjs'
 export { createLogger, getLogger, getTestingLogger } from './logger'
-
 export { UrlResolver } from './url.js'
 import toml from '@iarna/toml'
+import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
+import { DeliverTxResponse } from '@cosmjs/stargate'
 
 /** Expand the first ~ to the user home dir in a path. Throw and error if no $HOME env var is set */
 export function expandUserHomeDir(path: string): string {
@@ -192,4 +193,20 @@ export async function extractSmartContracts(contractsDir: string): Promise<void>
     fs.unlinkSync(tempTarPath)
     fs.rmdirSync(tempDir)
   }
+}
+
+export async function waitForBlocks(client: Tendermint37Client, blocks: number) {
+  const end = (await client.block()).block.header.height + blocks
+  do {
+    await sleep(1000)
+  } while ((await client.block()).block.header.height < end)
+}
+
+export function flatCosmosEvent(name: string, res: DeliverTxResponse) {
+  if (res.code !== 0) throw new Error(`Response contains an error: ${res}`)
+  const rawLog = JSON.parse(res?.rawLog ?? '')
+  const event = rawLog[0].events.find((e: any) => e.type === name)
+  const kv = {}
+  event.attributes.forEach((e: any) => (kv[e.key] = e.value))
+  return kv
 }
