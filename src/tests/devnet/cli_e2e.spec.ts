@@ -3,8 +3,7 @@ import { ethers } from 'ethers'
 import { utils } from '../../lib'
 import { ProcessOutput } from 'zx-cjs'
 import { ChainConfig, RelayerRunObj, CosmosAccount, EvmChainSet } from '../../lib/schemas'
-import { fs, path, $ } from '../../lib/utils'
-import { getTestingLogger } from '../../lib/utils/logger'
+import { fs, path, $, getTestingLogger } from '../../lib/utils'
 
 const log = getTestingLogger()
 

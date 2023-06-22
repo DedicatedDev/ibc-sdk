@@ -3,7 +3,15 @@ build:
 	npm install
 	npx tsc -p tsconfig.json
 
-build-ibctl: build
+build-vibc-core-contracts:
+	@which hardhat > /dev/null || (echo "Hardhat not found. Running npm install..." && npm install)
+	npx hardhat compile --config ./tests/xdapp/hardhat.config.ts --force
+	tar -c -z -f - tests/xdapp/artifacts/contracts | \
+		base64 | \
+		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
+		src/lib/utils/contracts.template.ts
+
+build-ibctl: build-vibc-core-contracts build
 	npx esbuild src/cli/main.ts --bundle --platform=node --outfile=bin/ibctl
 
 test-e2e: build-ibctl
@@ -24,13 +32,6 @@ stop: build-ibctl
 
 clean:
 	rm -rf bin dist node_modules
-
-build-vibc-core-contracts:
-	npx hardhat compile --config ./tests/xdapp/hardhat.config.ts --force
-	tar -c -z -f - tests/xdapp/artifacts/contracts | \
-		base64 | \
-		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
-		src/lib/utils/contracts.template.ts
 
 POLYMER_CHAIN_DIR = ../polymerase/chain
 PROTO_FILES = $(shell find $(POLYMER_CHAIN_DIR)/proto/ -name '*.proto')

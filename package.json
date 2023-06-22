@@ -24,7 +24,9 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "@ava/typescript": "^3.0.1",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@nomiclabs/hardhat-ethers": "^2.1.1",
+    "@openzeppelin/contracts": "^4.9.2",
     "@typechain/ethers-v5": "^10.1.1",
     "@types/dockerode": "^3.3.9",
     "@types/node": "^18.0.3",
@@ -54,7 +56,7 @@
     "esbuild": "^0.17.5",
     "ethers": "^5.7.2",
     "exit": "^0.1.2",
-    "hardhat": "^2.14.1",
+    "hardhat": "^2.15.0",
     "js-yaml": "^4.1.0",
     "just-clone": "^6.0.1",
     "lodash": "^4.17.21",
