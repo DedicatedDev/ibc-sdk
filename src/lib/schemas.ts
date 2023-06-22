@@ -26,6 +26,17 @@ export function isNoneChain(chainType: string): boolean {
   return Object.values(NoneChains).some((c) => chainType === c.toString())
 }
 
+const VibcChains = ['ethereum', 'bsc'] as const
+const IbcChains = ['cosmos', 'polymer'] as const
+
+export function isVIbcChain(chainType: string): boolean {
+  return Object.values(VibcChains).some((c) => chainType === c.toString())
+}
+
+export function isIbcChain(chainType: string): boolean {
+  return Object.values(IbcChains).some((c) => chainType === c.toString())
+}
+
 export enum ImageLabelTypes {
   Main = 'main',
   Genesis = 'genesis',
