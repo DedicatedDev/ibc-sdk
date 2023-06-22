@@ -98,7 +98,7 @@ export async function tracePackets(
   return packets
 }
 
-type EventsFilter = {
+export type EventsFilter = {
   height: number
   minHeight: number
   maxHeight: number
@@ -125,8 +125,15 @@ async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEve
   const result = await tmClient.txSearchAll({ query: query.join(' AND ') })
 
   result.txs.map(({ height, result }) => {
-    const rawLogs = logs.parseRawLog(result.log)
-
+    const rawLogs = (() => {
+      try {
+        return logs.parseRawLog(result.log)
+      } catch {
+        log.warn(`could not parse logs at height ${height}: ${result.log}`)
+        return []
+      }
+    })()
+    if (rawLogs.length === 0) return
     const kv = {}
     for (const log of rawLogs) {
       for (const ev of log.events) {
