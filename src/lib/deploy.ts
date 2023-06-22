@@ -107,7 +107,7 @@ async function deployEvmSmartContract(
   }
 }
 
-// TODO: use the RPC endpoints
+// TODO: use the RPC endpoints or consolidate with chains/cosmos.ts
 class Container {
   id: string
   account: string
@@ -126,6 +126,8 @@ class Container {
       'exec',
       this.id,
       'wasmd',
+      '--home',
+      '/home/heighliner/.wasmd',
       'tx',
       'wasm',
       ...args,
@@ -153,6 +155,8 @@ class Container {
       'exec',
       this.id,
       'wasmd',
+      '--home',
+      '/home/heighliner/.wasmd',
       'query',
       'tx',
       `${receipt.txhash}`,

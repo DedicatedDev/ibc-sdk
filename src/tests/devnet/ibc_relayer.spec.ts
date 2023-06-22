@@ -1,11 +1,11 @@
 import * as self from '../../lib/index.js'
 import * as utils from '../../lib/utils/index.js'
-import { images } from '../../lib/docker'
+import { containerFromId, images } from '../../lib/docker'
 import { getTestingLogger } from '../../lib/utils'
 import { setupIbcRelayer } from '../../lib/relayers'
 import { cleanupRuntime, getWorkspace, runtimeTest } from './test_utils'
 
-getTestingLogger()
+const log = getTestingLogger()
 
 const test = runtimeTest
 
@@ -22,7 +22,7 @@ const configPrefix = `# applicable to all cosmos chains; use polymer
 ChainSets:
 `
 
-const ibcConnectionsTest = test.macro(async (t, config: string) => {
+const ibcConnectionsTestLocalhost = test.macro(async (t, config: string) => {
   const workspace = getWorkspace('test-ibc-relayer')
   const { runObj: runtime, configObj: _ } = await self.runChainSets(utils.readYaml(config), workspace)
   t.truthy(runtime)
@@ -54,7 +54,11 @@ const polymerConfig = `
       Staked: "100000000stake"
 `
 
-test('poly-ibc-relayer creates IBC connections with polymer chain', ibcConnectionsTest, configPrefix + polymerConfig)
+test(
+  'ibc-relayer creates IBC connections with polymer chain',
+  ibcConnectionsTestLocalhost,
+  configPrefix + polymerConfig
+)
 
 const gaiaConfig = `
   - Name: "gaia"
@@ -99,19 +103,37 @@ const junoConfig = `
       Name: validatorRunner
       Staked: "100000000stake"
 `
-test('poly-ibc-relayer creates IBC connections with gaia chain', ibcConnectionsTest, configPrefix + gaiaConfig)
+test('ibc-relayer creates IBC connections with gaia chain', ibcConnectionsTestLocalhost, configPrefix + gaiaConfig)
 
-const ibcConnectionsTest2 = test.macro(async (t, config: string) => {
-  const rawConfig = configPrefix + config
+const ibcConnectionsTest = test.macro(async (t, configStr: string) => {
+  const rawConfig = configPrefix + configStr
   const workspace = getWorkspace('test-ibc-relayer')
   const { runObj: runtime, configObj: _ } = await self.runChainSets(rawConfig, workspace)
   t.truthy(runtime)
   t.context.runtime = runtime
-
   const chain0 = runtime.ChainSets[0] as self.schemas.CosmosChainSet
   const chain1 = runtime.ChainSets[1] as self.schemas.CosmosChainSet
   await setupIbcRelayer(runtime, [[chain0.Name, chain1.Name]])
+  for (const chain of runtime.ChainSets) {
+    const container = await containerFromId(chain.Nodes[0].ContainerId)
+    const binary = chain.Images[0].Bin!
+    t.truthy(binary)
+    await utils.waitUntil(
+      async () => {
+        const out = await container.exec([binary, 'query', 'ibc', 'connection', 'connections', '--output=json'])
+        t.assert(out.exitCode === 0)
+        const connections = JSON.parse(out.stdout).connections
+        if (connections.length === 1) {
+          log.info(connections)
+          return true
+        }
+        return false
+      },
+      20,
+      5_000
+    )
+  }
 })
 
-test('IBC connections between polymer and gaia', ibcConnectionsTest2, polymerConfig + gaiaConfig)
-test.only('IBC connections between juno and gaia', ibcConnectionsTest2, junoConfig + gaiaConfig)
+test('IBC connections between polymer and gaia', ibcConnectionsTest, polymerConfig + gaiaConfig)
+test.only('IBC connections between juno and gaia', ibcConnectionsTest, junoConfig + gaiaConfig)

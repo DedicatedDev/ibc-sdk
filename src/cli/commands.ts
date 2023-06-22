@@ -44,7 +44,8 @@ function filterContainers(runtime: ChainSetsRunObj, name: string) {
 
   runtime.Relayers.forEach((r: any) => r.Name.startsWith(name) && found.push({ name: r.Name, id: r.ContainerId }))
 
-  if (found.length === 0) throw new Error(`Could not find any container by the name ${name}`)
+  if (found.length === 0)
+    throw new Error(`Could not find any container by the name ${name}, use 'ibctl show' to list all containers`)
   if (found.length > 1) {
     throw new Error(`The name '${name}' selected ${found.length} container(s): ${found.map((f) => f.name).join(', ')}`)
   }

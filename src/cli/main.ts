@@ -36,6 +36,7 @@ const connectionOption = new Option(
 
 const defaultWorkspace = path.join(homedir(), '.ibc-sdk')
 const program = new Command()
+  .configureHelp({ showGlobalOptions: true })
   .helpOption('-h, --help', 'Display help command')
   .description('IBC SDK control')
   .addOption(new Option('-l, --log-level <level>', 'Log level').choices(levels).default('info'))
@@ -137,7 +138,7 @@ program
   .description(
     'Fetches the logs from any component of the stack. It mimics the `docker logs` functionality with similar options.'
   )
-  .argument('<chain-name>', nameDescription)
+  .argument('<component-name>', nameDescription)
   .addOption(
     new Option(
       '--since <since>',

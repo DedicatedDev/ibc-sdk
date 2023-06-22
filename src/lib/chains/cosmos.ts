@@ -2,7 +2,7 @@ import { $, utils, clone } from '../deps'
 import { ChainConfig, CosmosChainConfig, imageByLabel, ImageLabelTypes } from '../schemas'
 import { AccountsConfig, CosmosAccount, CosmosAccounts, CosmosAccountsConfig } from '../accounts_config'
 import { EndPoint, RunningChain, RunningChainBase } from './running_chain'
-import { newContainer } from '../docker'
+import { ExecStdinCallback, newContainer } from '../docker'
 import { Writable } from 'stream'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import { getLogger } from '../utils'
@@ -63,46 +63,43 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
     return true
   }
 
+  private get home(): string {
+    return `/home/heighliner/.${imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!}`
+  }
+
+  private async exec(args: string[], tty = false, detach = false, stdincb?: ExecStdinCallback) {
+    return this.getContainer(ImageLabelTypes.Main).exec(
+      [imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!, '--home', this.home, ...args],
+      tty,
+      detach,
+      stdincb
+    )
+  }
+
   private async initGenesis() {
-    log.debug(`init chain db and configs`)
-    await this.getContainer(ImageLabelTypes.Main).exec([
-      imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!,
-      'init',
-      this.config.Moniker,
-      '-o',
-      '--chain-id',
-      this.config.Name
-    ])
-    const script = `
-    set -e;
-    config="$( find "$HOME" -name config.toml -print0 )";
-    if [ -z "$config" ]; then exit 0; fi;
-    sed -i '/^timeout_propose /s/[0-9]\\+[a-z]\\+/200ms/'   "$config";
-    sed -i '/^timeout_prevote /s/[0-9]\\+[a-z]\\+/200ms/'   "$config";
-    sed -i '/^timeout_precommit /s/[0-9]\\+[a-z]\\+/200ms/' "$config";
-    sed -i '/^timeout_commit /s/[0-9]\\+[a-z]\\+/1s/'       "$config";
-    `
-    await this.getContainer(ImageLabelTypes.Main)
-      .exec(['sh', '-c', script])
-      .catch(() => log.warn(`Could not change blocktime on ${this.config.Name} chain`))
+    log.debug(`initializing chain [${this.config.Name}]`)
+    await this.exec(['init', this.config.Moniker, '-o', '--chain-id', this.config.Name])
+    const relativeConfigPath = 'config/config.toml'
+    const container = this.getContainer(ImageLabelTypes.Main)
+    const configStr = (await container.exec(['cat', `${this.home}/${relativeConfigPath}`])).stdout
+    const config = utils.readTomlText(configStr)
+    // TODO: make this configurable
+    config.consensus.timeout_propose = '200ms'
+    config.consensus.timeout_prevote = '200ms'
+    config.consensus.timeout_precommit = '200ms'
+    config.consensus.timeout_commit = '1s'
+    const newConfig = utils.dumpToml(config)
+    const echoCmd = ['echo', newConfig].map($.quote).join(' ')
+    const cmds = ['sh', '-c', `${echoCmd} > ${this.home}/${relativeConfigPath}`]
+    await this.getContainer(ImageLabelTypes.Main).exec(cmds)
   }
 
   private async addNewAccount(account: CosmosAccount) {
-    const cmds = [
-      imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!,
-      'keys',
-      'add',
-      account.Name,
-      '--output',
-      'json',
-      '--keyring-backend',
-      'test'
-    ]
-    const container = this.getContainer(ImageLabelTypes.Main)
+    const args = ['keys', 'add', account.Name, '--output', 'json', '--keyring-backend', 'test']
     let out: any = null
     if (account.Mnemonic) {
-      cmds.push('--interactive')
-      out = await container.exec(cmds, false, false, (stdin: Writable) => {
+      args.push('--interactive')
+      out = await this.exec(args, false, false, (stdin: Writable) => {
         // write the mnemonic
         stdin.write(account.Mnemonic + '\n')
         // and leave an empty passphrase
@@ -110,7 +107,7 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
         stdin.end()
       })
     } else {
-      out = await container.exec(cmds)
+      out = await this.exec(args)
     }
 
     let parsed: any = {}
@@ -139,19 +136,16 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
   }
 
   private async addGenesisAccounts(generatedAccounts: CosmosAccounts) {
-    const binary = imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!
-    const cmdArgs = [binary, '--keyring-backend', 'test', 'add-genesis-account']
-    const container = this.getContainer(ImageLabelTypes.Main)
+    const cmdArgs = ['--keyring-backend', 'test', 'add-genesis-account']
     for (const account of generatedAccounts) {
       if (account.Coins) {
-        await container.exec(cmdArgs.concat(account.Address, account.Coins.join(',')))
+        await this.exec(cmdArgs.concat(account.Address, account.Coins.join(',')))
       }
     }
   }
 
   private async addValidatorGentx(validator: any) {
-    await this.getContainer(ImageLabelTypes.Main).exec([
-      imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!,
+    await this.exec([
       'gentx',
       '--chain-id',
       this.config.Name,
@@ -166,8 +160,7 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
     await this.initGenesis()
     await this.addGenesisAccounts(this.accounts as CosmosAccounts)
     await this.addValidatorGentx(this.config.Validator)
-    const binary = imageByLabel(this.config.Images, ImageLabelTypes.Main).Bin!
-    await this.getContainer(ImageLabelTypes.Main).exec([binary, 'collect-gentxs'])
+    await this.exec(['collect-gentxs'])
   }
 
   protected hostDirPath(...relativePaths: string[]): string {
@@ -179,6 +172,8 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
     const rawCmds = [
       binary,
       'start',
+      '--home',
+      this.home,
       '--rpc.laddr',
       RunningCosmosChain.rpcEndpoint.address,
       '--grpc.address',

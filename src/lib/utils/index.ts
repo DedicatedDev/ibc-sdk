@@ -7,9 +7,10 @@ import * as tar from 'tar'
 
 export { path, fs }
 export { $ } from 'zx-cjs'
-export {createLogger, getLogger, getTestingLogger} from './logger'
+export { createLogger, getLogger, getTestingLogger } from './logger'
 
 export { UrlResolver } from './url.js'
+import toml from '@iarna/toml'
 
 /** Expand the first ~ to the user home dir in a path. Throw and error if no $HOME env var is set */
 export function expandUserHomeDir(path: string): string {
@@ -105,6 +106,23 @@ export function dumpYamlSafe(obj): string {
   const textWithFuncRemoved = JSON.stringify(obj)
   const strippedObj = yaml.load(textWithFuncRemoved)
   return yaml.dump(strippedObj)
+}
+
+export function readTomlFile(path: string): any {
+  return toml.parse(fs.readFileSync(path).toString())
+}
+
+export function readTomlText(text: string): any {
+  return toml.parse(text)
+}
+
+export function dumpToml(obj: any): string {
+  return toml.stringify(obj)
+}
+
+export function dumpTomlToFile(filepath: string, obj: any) {
+  const content = dumpToml(obj)
+  fs.writeFileSync(filepath, content)
 }
 
 export async function sleep(ms: number): Promise<void> {

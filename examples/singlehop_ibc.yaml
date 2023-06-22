@@ -1,13 +1,13 @@
 ChainSets:
 
-  - Name: "osmosis"
+  - Name: "gaia"
     Type: "cosmos"
-    Moniker: "osmosis"
-    Prefix: "osmo"
+    Moniker: "gaia"
+    Prefix: "gaia"
     Images:
-      - Repository: "ghcr.io/strangelove-ventures/heighliner/osmosis"
-        Tag: "v15.1.2"
-        Bin: "osmosisd"
+      - Repository: "ghcr.io/strangelove-ventures/heighliner/gaia"
+        Tag: "v10.0.1"
+        Bin: "gaiad"
     Accounts:
       - Name: bob
         Coins: ["10000token", "100000000stake"]
@@ -28,7 +28,7 @@ ChainSets:
     Prefix: "wasm"
     Images:
       - Repository: "ghcr.io/polymerdao/wasm"
-        Tag: "v0.40.0-multihop-1"
+        Tag: "v0.40.0-multihop-2"
         Bin: "wasmd"
     Accounts:
       - Name: bob

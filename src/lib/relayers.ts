@@ -64,6 +64,8 @@ export async function setupIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) 
     log.error(`Could not setup ibc-relayer: ${reason}`)
     throw new Error(reason)
   })
+  const out = await relayer.start()
+  if (out.exitCode !== 0) throw new Error(`Could not run ibc-relayer: ${out.stderr}`)
 
   runtime.Relayers.push(await relayer.runtime())
   self.saveChainSetsRuntime(runtime)
@@ -145,6 +147,13 @@ export function configurePaths(runtime: ChainSetsRunObj, connections: string[]):
 }
 
 export async function runRelayers(runtime: ChainSetsRunObj, connections: string[]): Promise<ChainSetsRunObj> {
+  if (!connections) {
+    const chainsets = runtime.ChainSets
+    connections = []
+    for (let i = 0; i < chainsets.length - 1; i++) {
+      connections.push(`${chainsets[i].Name}:${chainsets[i + 1].Name}`)
+    }
+  }
   const paths = configurePaths(runtime, connections)
   const promises: Promise<void>[] = []
 
@@ -157,9 +166,13 @@ export async function runRelayers(runtime: ChainSetsRunObj, connections: string[
     promises.push(setupEthRelayer(runtime, paths.eth2[0]))
   }
 
-  // TODO: create one instance of the ibc-relayer per path because the ts-relayer sucks
-  for (const path of paths.ibc) {
-    promises.push(setupIbcTsRelayer(runtime, path))
+  if (process.env.IBC_RELAYER === 'rly') {
+    promises.push(setupIbcRelayer(runtime, paths.ibc))
+  } else {
+    // TODO: create one instance of the ibc-relayer per path because the ts-relayer sucks
+    for (const path of paths.ibc) {
+      promises.push(setupIbcTsRelayer(runtime, path))
+    }
   }
 
   await Promise.all(promises)

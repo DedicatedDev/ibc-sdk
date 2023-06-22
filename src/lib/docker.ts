@@ -246,8 +246,12 @@ export class Container {
       const proc = $`${allArgs}`
       if (typeof stdincb !== 'undefined') stdincb(proc.stdin)
       const out = await proc
-      log.debug(`stdout: ${out.stdout}`)
-      log.debug(`stderr: ${out.stderr}`)
+      if (out.stdout) {
+        log.debug(`stdout: ${out.stdout}`)
+      }
+      if (out.stderr) {
+        log.debug(`stderr: ${out.stderr}`)
+      }
       return out
     } catch (e) {
       log.error(allArgs.map($.quote).join(' '))
@@ -338,5 +342,5 @@ export const images = {
     'genesis'
   ),
   vibcRelayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'v0.0.1-rc1', 'VIBC_RELAYER_DOCKER_IMAGE_TAG'),
-  wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-multihop-1', 'WASM_DOCKER_IMAGE_TAG')
+  wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-multihop-2', 'WASM_DOCKER_IMAGE_TAG')
 }

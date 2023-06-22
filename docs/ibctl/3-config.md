@@ -110,7 +110,7 @@ This is the default configuration for the chains of type 'cosmos'.
   Prefix: 'wasm'
   Images:
     - Repository: 'ghcr.io/polymerdao/wasm'
-      Tag: 'v0.40.0-rc.0-ibcx-noproof'
+      Tag: 'v0.40.0-multihop-1'
       Bin: 'wasmd'
   Accounts:
     - Name: bob
