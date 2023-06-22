@@ -5,6 +5,7 @@ pragma solidity ^0.8.9;
 import './IbcReceiver.sol';
 
 enum ChannelOrder {
+    NONE,
     UNORDERED,
     ORDERED
 }
