@@ -8,7 +8,6 @@ import { homedir } from 'os'
 import { version } from '../.package.json'
 import { getLogger, levels } from '../lib/utils/logger'
 import exit from 'exit'
-import { ProcessOutput } from 'zx-cjs'
 
 const log = getLogger()
 
@@ -16,11 +15,6 @@ const nameDescription =
   'The name can be of the format `name:label` like the one in the `show` output. ' +
   'A partial match is enough to select the chain: i.e. use "poly" to match a container called "polymer-0:main". ' +
   'Only one match is allowed per command.'
-
-function printOutput(out: ProcessOutput) {
-  if (out.stdout.length > 0) process.stdout.write(out.stdout)
-  if (out.stderr.length > 0) process.stderr.write(out.stderr)
-}
 
 const connectionOption = new Option(
   '-c, --connection <path...>',
@@ -59,17 +53,13 @@ program
   .addOption(connectionOption)
   .addOption(useZkMintOption)
   .allowExcessArguments(false)
-  .action(async (opts) => {
-    await commands.start({ ...program.opts(), ...opts })
-  })
+  .action(async (opts) => await commands.start({ ...program.opts(), ...opts }))
 
 program
   .command('show')
   .description('Shows the state of the local stack')
   .allowExcessArguments(false)
-  .action(async (opts) => {
-    console.table(await commands.show({ ...program.opts(), ...opts }))
-  })
+  .action(async (opts) => await commands.show({ ...program.opts(), ...opts }))
 
 program
   .command('stop')
@@ -109,7 +99,7 @@ program
   .allowExcessArguments(false)
   .action(async (opts) => {
     if (opts.length === 0) throw new Error('Name (name:label) is required')
-    printOutput(await commands.exec({ ...program.opts(), name: opts.shift(), args: opts }))
+    await commands.exec({ ...program.opts(), name: opts.shift(), args: opts })
   })
 
 program
@@ -120,8 +110,7 @@ program
   .arguments('<chain-name> <account> <smart-contract-path> [args...]')
   .allowExcessArguments(false)
   .action(async (chain, account, scpath, scargs) => {
-    const deployed = await commands.deploy({ ...program.opts(), chain, account, scpath, scargs })
-    console.log(deployed.Address)
+    await commands.deploy({ ...program.opts(), chain, account, scpath, scargs })
   })
 
 program
@@ -183,9 +172,7 @@ program
   .action(async (a, b, opts) => {
     const endpointA = parseEndpointInfo(a)
     const endpointB = parseEndpointInfo(b)
-    const packets = await commands.tracePackets({ ...program.opts(), endpointA, endpointB, ...opts })
-    if (opts.json) console.log(JSON.stringify(packets))
-    else console.table(packets, ['channelID', 'portID', 'sequence', 'state'])
+    await commands.tracePackets({ ...program.opts(), endpointA, endpointB, ...opts })
   })
 
 program
@@ -197,7 +184,7 @@ program
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
-    printOutput(await commands.channels({ ...program.opts(), name: name, ...opts }))
+    await commands.channels({ ...program.opts(), name: name, ...opts })
   })
 
 program
@@ -221,7 +208,7 @@ program
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
-    printOutput(await commands.clients({ ...program.opts(), name: name, ...opts }))
+    await commands.clients({ ...program.opts(), name: name, ...opts })
   })
 
 program
@@ -232,12 +219,7 @@ program
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, tx, opts) => {
-    const res = await commands.tx({ ...program.opts(), name: name, tx: tx, ...opts })
-    if (typeof res === 'string') {
-      process.stdout.write(res)
-    } else {
-      printOutput(res)
-    }
+    await commands.tx({ ...program.opts(), name: name, tx: tx, ...opts })
   })
 
 program
@@ -249,7 +231,7 @@ program
   .option('--json', 'Output in JSON format')
   .allowExcessArguments(false)
   .action(async (name, opts) => {
-    process.stdout.write(await commands.accounts({ ...program.opts(), name: name, ...opts }))
+    await commands.accounts({ ...program.opts(), name: name, ...opts })
   })
 
 function parseNumber(value: string): number {
@@ -271,13 +253,7 @@ program
   .action(async (name, opts) => {
     if (opts.minHeight && opts.maxHeight && opts.minHeight >= opts.maxHeight)
       throw new Error(`max-height (${opts.maxHeight}) must be greater than min-height (${opts.minHeight})`)
-
-    const events = await commands.events({ ...program.opts(), name: name, ...opts })
-    for (const event of events) {
-      if (!opts.extended) return console.log(event.height, ':', Object.keys(event.events).join(' '))
-      if (!opts.json) return console.log(event.height, ':', event.events)
-    }
-    if (opts.extended && opts.json) console.log(JSON.stringify(events))
+    await commands.events({ ...program.opts(), name: name, ...opts })
   })
 
 process.stdout.on('error', (err) => err.code === 'EPIPE' ?? process.exit(0))

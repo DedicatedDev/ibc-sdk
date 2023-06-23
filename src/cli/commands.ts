@@ -5,7 +5,6 @@ import { channelHandshake } from './channel'
 import { EndpointInfo, Packet, TxEvent, tracePackets as sdkTracePackets } from '../lib/query'
 import {
   ChainSetsRunObj,
-  ChainSetsRunConfig,
   CosmosChainSet,
   imageByLabel,
   ImageLabelTypes,
@@ -28,6 +27,7 @@ import {
 import { getLogger } from '../lib/utils/logger'
 import { tmpdir } from 'os'
 import archiver from 'archiver'
+import { ProcessOutput } from 'zx-cjs'
 
 const log = getLogger()
 
@@ -52,12 +52,6 @@ function filterContainers(runtime: ChainSetsRunObj, name: string) {
   return found[0]
 }
 
-export type WrapCommandsOpts = {
-  workspace: string
-  name: string
-  json: boolean
-}
-
 async function wrapCosmosCommand(args: string[], opts: WrapCommandsOpts) {
   const runtime = loadWorkspace(opts.workspace)
 
@@ -70,7 +64,7 @@ async function wrapCosmosCommand(args: string[], opts: WrapCommandsOpts) {
   const container = await containerFromId(chain.Nodes[0].ContainerId)
   const bin = imageByLabel(chain.Images, ImageLabelTypes.Main)!.Bin!
   const fmt = opts.json ? 'json' : 'text'
-  return await container.exec([bin, '--output', fmt, ...args])
+  printOutput(await container.exec([bin, '--output', fmt, ...args]))
 }
 
 function loadWorkspace(workspace: string): ChainSetsRunObj {
@@ -85,7 +79,12 @@ function loadWorkspace(workspace: string): ChainSetsRunObj {
   return runObj
 }
 
-export type InitOpts = {
+function printOutput(out: ProcessOutput) {
+  if (out.stdout.length > 0) process.stdout.write(out.stdout)
+  if (out.stderr.length > 0) process.stderr.write(out.stderr)
+}
+
+type InitOpts = {
   workspace: string
   configFile: string
 }
@@ -135,13 +134,13 @@ const thenClause = [
   }
 ]
 
-export type StartOpts = {
+type StartOpts = {
   workspace: string
   connection: string[]
   useZkMint: boolean
 }
 
-export async function start(opts: StartOpts): Promise<{ runObj: ChainSetsRunObj; configObj: ChainSetsRunConfig }> {
+export async function start(opts: StartOpts) {
   const configPath = path.join(opts.workspace, configFile)
   if (!fs.existsSync(configPath)) {
     throw new Error(`could not read configuration file: ${configPath}`)
@@ -160,7 +159,6 @@ export async function start(opts: StartOpts): Promise<{ runObj: ChainSetsRunObj;
   }
 
   await runRelayers(runtime, opts.connection).then(...thenClause)
-  return runtime
 }
 
 export async function show(opts: any) {
@@ -196,10 +194,10 @@ export async function show(opts: any) {
     await line(runtime.Prover.Name, runtime.Prover, rows)
   }
 
-  return rows
+  console.table(rows)
 }
 
-export type StopOpts = {
+type StopOpts = {
   workspace: string
   prover: boolean
   all: boolean
@@ -226,7 +224,7 @@ export async function stop(opts: StopOpts) {
   await removeAll()
 }
 
-export type ExecOpts = {
+type ExecOpts = {
   workspace: string
   args: string[]
   name: string
@@ -236,10 +234,10 @@ export async function exec(opts: ExecOpts) {
   const runtime = loadWorkspace(opts.workspace)
   const containerId = filterContainers(runtime, opts.name).id
   const container = await containerFromId(containerId)
-  return await container.exec(opts.args)
+  printOutput(await container.exec(opts.args))
 }
 
-export type DeployOpts = {
+type DeployOpts = {
   workspace: string
   chain: string
   account: string
@@ -249,10 +247,11 @@ export type DeployOpts = {
 
 export async function deploy(opts: DeployOpts) {
   const runtime = loadWorkspace(opts.workspace)
-  return await deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
+  const deployed = await deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
+  console.log(deployed.Address)
 }
 
-export type ChannelOpts = {
+type ChannelOpts = {
   workspace: string
   endpointA: { chainId: string; account: string }
   endpointB: { chainId: string; account: string }
@@ -304,7 +303,7 @@ export async function channel(opts: ChannelOpts) {
   )
 }
 
-export type TracePacketsOpts = {
+type TracePacketsOpts = {
   workspace: string
   endpointA: EndpointInfo
   endpointB: EndpointInfo
@@ -326,10 +325,13 @@ export async function tracePackets(opts: TracePacketsOpts) {
     opts.endpointA,
     opts.endpointB
   ).then(...thenClause)
-  return packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
+  const packets = packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
+
+  if (opts.json) console.log(JSON.stringify(packets))
+  else console.table(packets, ['channelID', 'portID', 'sequence', 'state'])
 }
 
-export type LogsOpts = {
+type LogsOpts = {
   workspace: string
   name: string
   follow: boolean
@@ -343,10 +345,10 @@ export async function logs(opts: LogsOpts) {
   const runtime = loadWorkspace(opts.workspace)
   const containerId = filterContainers(runtime, opts.name).id
   const container = await containerFromId(containerId)
-  return await container.logs({ stdout: process.stdout, stderr: process.stderr, ...opts }).then(...thenClause)
+  await container.logs({ stdout: process.stdout, stderr: process.stderr, ...opts }).then(...thenClause)
 }
 
-export type ArchiveOpts = {
+type ArchiveOpts = {
   workspace: string
   output: string
 }
@@ -392,16 +394,22 @@ export async function archiveLogs(opts: ArchiveOpts) {
   await archive
 }
 
+type WrapCommandsOpts = {
+  workspace: string
+  name: string
+  json: boolean
+}
+
 export async function channels(opts: WrapCommandsOpts) {
-  return await wrapCosmosCommand(['query', 'ibc', 'channel', 'channels'], opts)
+  await wrapCosmosCommand(['query', 'ibc', 'channel', 'channels'], opts)
 }
 
 export async function connections(opts: WrapCommandsOpts) {
-  return await wrapCosmosCommand(['query', 'ibc', 'connection', 'connections'], opts)
+  await wrapCosmosCommand(['query', 'ibc', 'connection', 'connections'], opts)
 }
 
 export async function clients(opts: WrapCommandsOpts) {
-  return await wrapCosmosCommand(['query', 'ibc', 'client', 'states'], opts)
+  await wrapCosmosCommand(['query', 'ibc', 'client', 'states'], opts)
 }
 
 export async function tx(opts: WrapCommandsOpts & { tx: string }) {
@@ -414,13 +422,15 @@ export async function tx(opts: WrapCommandsOpts & { tx: string }) {
     const container = await containerFromId(chain.Nodes[0].ContainerId)
     const bin = imageByLabel(chain.Images, ImageLabelTypes.Main)!.Bin!
     const fmt = opts.json ? 'json' : 'text'
-    return await container.exec([bin, '--output', fmt, 'query', 'tx', opts.tx])
+    printOutput(await container.exec([bin, '--output', fmt, 'query', 'tx', opts.tx]))
+    return
   }
 
   if (isEvmChain(chain.Type)) {
     const eth = newJsonRpcProvider(chain.Nodes[0].RpcHost)
     const tx = await eth.getTransaction(opts.tx)
-    return opts.json ? JSON.stringify(tx) : utils.dumpYamlSafe(tx)
+    process.stdout.write(opts.json ? JSON.stringify(tx) : utils.dumpYamlSafe(tx))
+    return
   }
 
   throw new Error(`Cannot query transactions on chain type: ${chain.Type}`)
@@ -432,10 +442,10 @@ export async function accounts(opts: WrapCommandsOpts) {
   const chain = runtime.ChainSets.find((c) => c.Name === found.name)
   if (!chain) throw new Error(`Expected any chain`)
 
-  return opts.json ? JSON.stringify(chain.Accounts) : utils.dumpYamlSafe(chain.Accounts)
+  process.stdout.write(opts.json ? JSON.stringify(chain.Accounts) : utils.dumpYamlSafe(chain.Accounts))
 }
 
-export type EventsOpts = {
+type EventsOpts = {
   workspace: string
   name: string
   height: number
@@ -445,7 +455,7 @@ export type EventsOpts = {
   json: boolean
 }
 
-export async function events(opts: EventsOpts): Promise<TxEvent[]> {
+export async function events(opts: EventsOpts) {
   const runtime = loadWorkspace(opts.workspace)
   const found = filterContainers(runtime, opts.name)
   const chain = runtime.ChainSets.find((c) => c.Name === found.name)
@@ -453,8 +463,11 @@ export async function events(opts: EventsOpts): Promise<TxEvent[]> {
 
   const events: TxEvent[] = []
   await sdkEvents(chain, opts, (event: TxEvent) => {
+    if (!opts.extended) return console.log(event.height, ':', Object.keys(event.events).join(' '))
+    if (!opts.json) return console.log(event.height, ':', event.events)
+    // this will use more memory since we are buffering all events instead of flushing them to stdout
+    // but it's non-trivial to print a valid json array otherwise.
     events.push(event)
   })
-
-  return events
+  if (opts.extended && opts.json) console.log(JSON.stringify(events))
 }
