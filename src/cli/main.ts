@@ -70,25 +70,25 @@ program
 // TODO: figure out a better way to do this without stepping outside the boundary of -w
 // .option('-c, --clean', 'Removes stale containers created by previous executions.')
 
-function parseChannelEndpoint(value: string, version: string) {
+function parseChannelEndpoint(value: string) {
   const args = value.split(':')
-  if (args.length !== 2)
-    throw new Error('Invalid argument format. Expected a <chain_id:account_name_or_address> tuple separated by a `:`.')
-  return { chainId: args[0], account: args[1], version: version }
+  if (args.length !== 3)
+    throw new Error(
+      'Invalid argument format. Expected a <chain_id:account_name_or_address:version> tuple separated by a `:`.'
+    )
+  return { chainId: args[0], account: args[1], version: args[2] }
 }
 
 program
   .command('channel')
   .description(
-    'Creates an IBC channel between two endpoints. The endpoint format must be `chain_id:account_name_or_address`'
+    'Creates an IBC channel between two endpoints. The endpoint format must be `chain_id:account_name_or_address:version`'
   )
   .arguments('<endpoint-a> <endpoint-b>')
   .allowExcessArguments(false)
-  .option('--version-a <version>', 'IBC version to use during the channel handshake on endpoint A')
-  .option('--version-b <version>', 'IBC version to use during the channel handshake on endpoint B')
-  .action(async (a, b, opts) => {
-    const chainA = parseChannelEndpoint(a, opts.versionA)
-    const chainB = parseChannelEndpoint(b, opts.versionB)
+  .action(async (a, b) => {
+    const chainA = parseChannelEndpoint(a)
+    const chainB = parseChannelEndpoint(b)
     await commands.channel({ ...program.opts(), chainA, chainB })
   })
 
