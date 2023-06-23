@@ -1,4 +1,12 @@
-import { ChainSetsRunObj, CosmosAccount, CosmosChainSet, EvmChainSet, isIbcChain, isVIbcChain } from '../lib/schemas'
+import {
+  ChainSet,
+  ChainSetsRunObj,
+  CosmosAccount,
+  CosmosChainSet,
+  EvmChainSet,
+  isIbcChain,
+  isVIbcChain
+} from '../lib/schemas'
 import * as self from '../lib/index'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { SigningStargateClient } from '@cosmjs/stargate'
@@ -12,7 +20,7 @@ import { getLogger, flatCosmosEvent, waitForBlocks } from 'src/lib/utils'
 const log = getLogger()
 
 type Endpoint = {
-  chain: CosmosChainSet | EvmChainSet
+  chain: ChainSet
   address: string
   version: string
 }
@@ -190,7 +198,7 @@ class IbcChannelHandshaker {
     this.connectionHops = openinit.connection_id.split(/[/\.]/)
   }
 
-  async channOpenTry(counter: IbcChannelHandshaker, connectionHops: string[]) {
+  async channOpenTry(counter: IbcChannelHandshaker, connectionHops: string[], eventName: string) {
     log.info(`executing ChanOpenTry on ${this.chain.Name}`)
 
     const msg: self.cosmos.client.polyibc.MsgChannelOpenTryEncodeObject = {
@@ -222,7 +230,7 @@ class IbcChannelHandshaker {
     log.debug(`sending ChanOpenTry message to ${this.chain.Name}: ${JSON.stringify(msg, null, 2)}`)
     await this.waitForBlocks(2)
     const res = await this.signer.signAndBroadcast(this.account.Address, [msg], 'auto')
-    this.setChannOpenTry(flatCosmosEvent('channel_open_try', res))
+    this.setChannOpenTry(flatCosmosEvent(eventName, res))
     log.info(`ChanOpenTry on ${this.chain.Name}: done`)
   }
 
@@ -231,7 +239,7 @@ class IbcChannelHandshaker {
     this.channelId = opentry.channel_id
   }
 
-  async channOpenAck(counter: IbcChannelHandshaker) {
+  async channOpenAck(counter: IbcChannelHandshaker, eventName: string) {
     log.info(`executing ChanOpenAck on ${this.chain.Name}`)
     const msg: self.cosmos.client.polyibc.MsgChannelOpenAckEncodeObject = {
       typeUrl: '/ibc.core.channel.v1.MsgChannelOpenAck',
@@ -251,13 +259,11 @@ class IbcChannelHandshaker {
     log.debug(`sending ChanOpenAck message to ${this.chain.Name}: ${JSON.stringify(msg, null, 2)}`)
     await this.waitForBlocks(2)
     const res = await this.signer.signAndBroadcast(this.account.Address, [msg], 'auto')
-    self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(
-      flatCosmosEvent('channel_open_ack_pending', res)
-    )
+    self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flatCosmosEvent(eventName, res))
     log.info(`ChanOpenAck on ${this.chain.Name}: done`)
   }
 
-  async channOpenConfirm() {
+  async channOpenConfirm(eventName: string) {
     log.info(`executing ChanOpenConfirm on ${this.chain.Name}`)
     const msg: self.cosmos.client.polyibc.MsgChannelOpenConfirmEncodeObject = {
       typeUrl: '/ibc.core.channel.v1.MsgChannelOpenConfirm',
@@ -275,7 +281,7 @@ class IbcChannelHandshaker {
     log.debug(`sending ChanOpenConfirm message to ${this.chain.Name}: ${JSON.stringify(msg, null, 2)}`)
     await this.waitForBlocks(2)
     const res = await this.signer.signAndBroadcast(this.account.Address, [msg], 'auto')
-    self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flatCosmosEvent('channel_open_confirm', res))
+    self.cosmos.client.polyibc.MsgConnectIBCChannelResponseSchema.parse(flatCosmosEvent(eventName, res))
     log.info(`ChanOpenConfirm on ${this.chain.Name}: done`)
   }
 
@@ -331,15 +337,15 @@ async function vIBC2IBC(config: HandshakeConfig, connectionHops: string[]) {
   await vibcA.startRelaying(connectionHops)
 
   // step 2
-  await ibcB.channOpenTry(polymer, [...connectionHops].reverse())
+  await ibcB.channOpenTry(polymer, [...connectionHops].reverse(), 'channel_open_try')
 
   // step 3
   await ibcB.waitForEvent('channel_open_try')
-  await polymer.channOpenAck(ibcB)
+  await polymer.channOpenAck(ibcB, 'channel_open_ack_pending')
 
   // step 4
   await polymer.waitForEvent('channel_open_ack')
-  await ibcB.channOpenConfirm()
+  await ibcB.channOpenConfirm('channel_open_confirm')
   await ibcB.waitForEvent('channel_open_confirm')
 }
 
@@ -349,8 +355,35 @@ async function vIBC2vIBC(_config: HandshakeConfig) {
 }
 
 // IBC (A) <=> vIBC (B)
-async function IBC2vIBC(_config: HandshakeConfig) {
-  throw new Error('Not implemented yet')
+async function IBC2vIBC(config: HandshakeConfig, connectionHops: string[]) {
+  const portidA = 'wasm.' + config.a.address
+  const ibcA = await IbcChannelHandshaker.create(config.a.chain as CosmosChainSet, config.a.version, portidA)
+
+  const portidB = `polyibc.Ethereum-Devnet.${config.b.address.slice(2)}`
+  const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.b.version, portidB)
+
+  const vibcB = await VIbcChannelHandshaker.create(
+    config.b.chain as EvmChainSet,
+    config.runtime,
+    config.b.address,
+    polymer
+  )
+  await vibcB.startRelaying([...connectionHops].reverse())
+
+  // step 1
+  await ibcA.channOpenInit(polymer, connectionHops)
+
+  // step 2-2
+  await ibcA.waitForEvent('channel_open_init')
+  await polymer.channOpenTry(ibcA, [...connectionHops].reverse(), 'channel_open_try_pending')
+
+  // step 3
+  await polymer.waitForEvent('channel_open_try')
+  await ibcA.channOpenAck(polymer, 'channel_open_ack')
+
+  // step 4
+  await polymer.channOpenConfirm('channel_open_confirm_pending')
+  await polymer.waitForEvent('channel_open_confirm')
 }
 
 // IBC (A) <=> IBC (B)
@@ -388,7 +421,7 @@ export async function channelHandshake(runtime: ChainSetsRunObj, endpointA: Endp
 
   // IBC (A) <=> vIBC (B)
   if (isIbcChain(endpointA.chain.Type) && isVIbcChain(endpointB.chain.Type)) {
-    return IBC2vIBC(config)
+    return IBC2vIBC(config, [ibcConn, vIbcConn])
   }
 
   // IBC (A) <=> IBC (B)

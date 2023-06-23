@@ -5,7 +5,6 @@ import { channelHandshake } from './channel'
 import { EndpointInfo, Packet, TxEvent, tracePackets as sdkTracePackets } from '../lib/query'
 import {
   ChainSetsRunObj,
-  CosmosChainSet,
   imageByLabel,
   ImageLabelTypes,
   isCosmosChain,
@@ -269,12 +268,12 @@ export async function channel(opts: ChannelOpts) {
   await channelHandshake(
     runtime,
     {
-      chain: chainA as CosmosChainSet,
+      chain: chainA,
       address: opts.chainA.account,
       version: opts.chainA.version
     },
     {
-      chain: chainB as CosmosChainSet,
+      chain: chainB,
       address: opts.chainB.account,
       version: opts.chainB.version
     }
