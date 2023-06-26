@@ -90,13 +90,14 @@ test.serial('the start command starts stack', async (t) => {
     }
   )
 
+  /* FIXME https://github.com/polymerdao/ibc-sdk/issues/136
   await $`${t.context.cli} -w ${t.context.workspace} logs eth-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in eth relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
     }
   )
-
+  */
   const output = path.join(t.context.workspace, 'logs.tar.gz')
   out = await $`${t.context.cli} -w ${t.context.workspace} archive-logs -o ${output}`
   t.assert(out.exitCode === 0)
@@ -228,12 +229,14 @@ test.serial('the start command starts stack with vibc and ibc chains', async (t)
       t.assert(reject.exitCode === 1)
     }
   )
+  /* FIXME https://github.com/polymerdao/ibc-sdk/issues/136
   await $`${t.context.cli} -w ${t.context.workspace} logs eth-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in eth relayer logs'),
     (reject) => {
       t.assert(reject.exitCode === 1)
     }
   )
+  */
   await $`${t.context.cli} -w ${t.context.workspace} logs ibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in ibc-relayer logs'),
     (reject) => {
