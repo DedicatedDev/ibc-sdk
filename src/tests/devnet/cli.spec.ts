@@ -175,7 +175,8 @@ test.serial('running the start command twice should fail', async (t) => {
   )
 })
 
-test.serial('the start command starts stack with vibc and ibc chains', async (t) => {
+// TODO: skipped due to https://github.com/polymerdao/ibc-sdk/issues/134
+test.skip('the start command starts stack with vibc and ibc chains', async (t) => {
   t.assert((await runInit(t)).exitCode === 0)
 
   const juno = `  - Name: "juno"
