@@ -34,7 +34,12 @@ export GITHUB_TOKEN=<YOUR_TOKEN>
 echo "$GITHUB_TOKEN" | docker login ghcr.io/polymerdao -u '< your-github-username >' --password-stdin
 ```
 
-2. Run the `npm install` command in your terminal:
+2. Make sure that your Node version >= 16.x
+```bash
+node -v
+```
+
+3. Run the `npm install` command in your terminal:
 
 ```bash
 npm config set @polymerdao:registry=https://npm.pkg.github.com
@@ -48,7 +53,7 @@ If you prefer to install from source, use the command `make` and execute it from
 
 > Note: Windows is not explicitly supported at the moment, although we will gladly accept feedback from brave explorers!
 
-You're all set to go! But maybe you want an example run to showcase a testing workflow? Then go the [quickstart tutorials page](./quickstart/index.md)...
+You're all set to go! But maybe you want an example run to showcase a testing workflow? Then go the [quickstart tutorials page](./docs/quickstart/index.md)...
 
 ## What does this package do?
 
