@@ -114,17 +114,20 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert(out2.exitCode === 0)
 
   // check the channels have been correctly created
-  const polyChannel = await getChannelsFrom(t, 'polymer')
-  const wasmChannel = await getChannelsFrom(t, 'wasm')
+  const newPolyChannel = await getChannelsFrom(t, 'polymer')
+  const newWasmChannel = await getChannelsFrom(t, 'wasm')
 
-  t.assert(polyChannel.channels.length === 1)
-  t.assert(wasmChannel.channels.length === 1)
+  t.assert(newPolyChannel.channels.length === 1)
+  t.assert(newWasmChannel.channels.length === 1)
 
-  t.assert(polyChannel.channels[0].channel_id === wasmChannel.channels[0].counterparty.channel_id)
-  t.assert(wasmChannel.channels[0].channel_id === polyChannel.channels[0].counterparty.channel_id)
+  const wasmChannel = newWasmChannel.channels[0]
+  const polyChannel = newPolyChannel.channels[0]
 
-  t.assert(polyChannel.channels[0].state === 'STATE_OPEN')
-  t.assert(wasmChannel.channels[0].state === 'STATE_OPEN')
+  t.assert(polyChannel.channel_id === wasmChannel.counterparty.channel_id)
+  t.assert(wasmChannel.channel_id === polyChannel.counterparty.channel_id)
+
+  t.assert(polyChannel.state === 'STATE_OPEN')
+  t.assert(wasmChannel.state === 'STATE_OPEN')
 
   const config = {
     runtime: runtime,
@@ -152,9 +155,9 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
 
 async function testTracePackets(t: any, c: any) {
   // TODO: endpoint will throw an invalid port error otherwise
-  const portid = c.wasmChannel.channels[0].port_id.replace(/^wasm\./, '')
-  const endpointA = `${c.wasmChain.Name}:${c.wasmChannel.channels[0].channel_id}:${portid}`
-  const endpointB = `polymer:${c.polyChannel.channels[0].channel_id}:${c.polyChannel.channels[0].port_id}`
+  const portid = c.wasmChannel.port_id.replace(/^wasm\./, '')
+  const endpointA = `${c.wasmChain.Name}:${c.wasmChannel.channel_id}:${portid}`
+  const endpointB = `polymer:${c.polyChannel.channel_id}:${c.polyChannel.port_id}`
 
   const out = await runCommand(t, 'trace-packets', '--json', endpointA, endpointB)
   t.assert(out.exitCode === 0)
@@ -179,7 +182,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   const response = await receiver.greet(
     c.dispatcher.Address,
     JSON.stringify({ message: { m: 'Hello from ETH' } }),
-    ethers.utils.formatBytes32String(c.polyChannel.channels[0].channel_id),
+    ethers.utils.formatBytes32String(c.polyChannel.channel_id),
     ((Date.now() + 60 * 60 * 1000) * 1_000_000).toString(),
     0
   )
@@ -193,10 +196,10 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
     const e = events.recv_packet
     t.assert(e)
     t.assert(JSON.parse(e.packet_data).message.m === 'Hello from ETH')
-    t.assert(e.packet_src_channel === c.polyChannel.channels[0].channel_id)
-    t.assert(e.packet_dst_channel === c.polyChannel.channels[0].counterparty.channel_id)
-    t.assert(e.packet_src_port === c.polyChannel.channels[0].port_id)
-    t.assert(e.packet_dst_port === c.polyChannel.channels[0].counterparty.port_id)
+    t.assert(e.packet_src_channel === c.polyChannel.channel_id)
+    t.assert(e.packet_dst_channel === c.polyChannel.counterparty.channel_id)
+    t.assert(e.packet_src_port === c.polyChannel.port_id)
+    t.assert(e.packet_dst_port === c.polyChannel.counterparty.port_id)
     return true
   })
 
@@ -206,7 +209,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
     t.assert(JSON.parse(e.AckPacket.data).ok.reply === 'Got the message!')
     t.assert(e.AckPacket.success === true)
     t.assert(e.sourcePortAddress === c.receiver.Address)
-    t.assert(e.sourceChannelId === c.polyChannel.channels[0].channel_id)
+    t.assert(e.sourceChannelId === c.polyChannel.channel_id)
     t.assert(e.sequence === ethers.BigNumber.from(sendPacketSequence).toString())
     return true
   })
@@ -220,7 +223,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
 async function testMessagesFromWasmToEth(t: any, c: any) {
   const msg = JSON.stringify({
     send_msg: {
-      channel_id: c.wasmChannel.channels[0].channel_id,
+      channel_id: c.wasmChannel.channel_id,
       msg: 'Hello from WASM'
     }
   })
@@ -237,9 +240,9 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   await waitForEvent(t, c.eth1Chain.Name, 'RecvPacket', (events: any) => {
     const e = events.RecvPacket
     t.assert(e)
-    t.assert(e.srcChannelId === c.wasmChannel.channels[0].channel_id)
-    t.assert(e.destChannelId === c.wasmChannel.channels[0].counterparty.channel_id)
-    t.assert(e.srcPortId === c.wasmChannel.channels[0].port_id)
+    t.assert(e.srcChannelId === c.wasmChannel.channel_id)
+    t.assert(e.destChannelId === c.wasmChannel.counterparty.channel_id)
+    t.assert(e.srcPortId === c.wasmChannel.port_id)
     t.assert(e.destPortAddress === c.receiver.Address)
     t.assert(e.sequence === '1')
     return true
@@ -248,10 +251,10 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   await waitForEvent(t, c.wasmChain.Name, 'acknowledge_packet', (events: any) => {
     const e = events.acknowledge_packet
     t.assert(e)
-    t.assert(e.packet_dst_channel === c.polyChannel.channels[0].channel_id)
-    t.assert(e.packet_src_channel === c.polyChannel.channels[0].counterparty.channel_id)
-    t.assert(e.packet_dst_port === c.polyChannel.channels[0].port_id)
-    t.assert(e.packet_src_port === c.polyChannel.channels[0].counterparty.port_id)
+    t.assert(e.packet_dst_channel === c.polyChannel.channel_id)
+    t.assert(e.packet_src_channel === c.polyChannel.counterparty.channel_id)
+    t.assert(e.packet_dst_port === c.polyChannel.port_id)
+    t.assert(e.packet_src_port === c.polyChannel.counterparty.port_id)
     t.assert(events.wasm.reply === 'got the message')
     return true
   })
