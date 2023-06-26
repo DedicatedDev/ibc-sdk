@@ -1,11 +1,12 @@
 
-build:
+npm-install:
 	npm install
+
+build: npm-install
 	npx tsc -p tsconfig.json
 
-build-vibc-core-contracts:
-	@which hardhat > /dev/null || (echo "Hardhat not found. Running npm install..." && npm install)
-	npx hardhat compile --config ./tests/xdapp/hardhat.config.ts --force
+build-vibc-core-contracts: npm-install
+	$(MAKE) -C tests/xdapp
 	tar -c -z -f - tests/xdapp/artifacts/contracts | \
 		base64 | \
 		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
@@ -32,6 +33,7 @@ stop: build-ibctl
 
 clean:
 	rm -rf bin dist node_modules
+	rm -rf tests/xdapp/artifacts
 
 POLYMER_CHAIN_DIR = ../polymerase/chain
 PROTO_FILES = $(shell find $(POLYMER_CHAIN_DIR)/proto/ -name '*.proto')
