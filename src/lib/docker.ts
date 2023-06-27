@@ -320,7 +320,7 @@ const prysmDefaultTag = 'v4.0.3-light-client-1'
 export const images = {
   bsc: new DockerImage('ghcr.io/polymerdao/bsc', '1.1.10', 'BSC_DOCKER_IMAGE_TAG'),
   ethereum: new DockerImage('ethereum/client-go', 'v1.10.26', 'ETH_DOCKER_IMAGE_TAG'),
-  ethRelayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'v0.0.1-rc3', 'ETH_RELAYER_DOCKER_IMAGE_TAG'),
+  ethRelayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'v0.0.1-rc4', 'ETH_RELAYER_DOCKER_IMAGE_TAG'),
   ibcRelayer: new DockerImage(
     'ghcr.io/polymerdao/ts-relayer',
     'v0.8.0-packet-data-hex-1',
