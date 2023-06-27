@@ -315,8 +315,8 @@ type HandshakeConfig = {
   poly: CosmosChainSet
 }
 
-// vIBC (A) <=> IBC (B)
-async function vIBC2IBC(config: HandshakeConfig, connectionHops: string[]) {
+// vIbc (A) <=> Ibc (B)
+async function vIbcToIbc(config: HandshakeConfig, connectionHops: string[]) {
   // TODO this needs to come from the user or we need to get more clever about it.
   // leaving like this for now but this is far from being ok
   const portidA = `polyibc.Ethereum-Devnet.${config.a.address.slice(2)}`
@@ -349,13 +349,13 @@ async function vIBC2IBC(config: HandshakeConfig, connectionHops: string[]) {
   await ibcB.waitForEvent('channel_open_confirm')
 }
 
-// vIBC (A) <=> vIBC (B)
-async function vIBC2vIBC(_config: HandshakeConfig) {
+// vIbc (A) <=> vIbc (B)
+async function vIbcTovIbc(_config: HandshakeConfig) {
   throw new Error('Not implemented yet')
 }
 
-// IBC (A) <=> vIBC (B)
-async function IBC2vIBC(config: HandshakeConfig, connectionHops: string[]) {
+// Ibc (A) <=> vIbc (B)
+async function ibcTovIbc(config: HandshakeConfig, connectionHops: string[]) {
   const portidA = 'wasm.' + config.a.address
   const ibcA = await IbcChannelHandshaker.create(config.a.chain as CosmosChainSet, config.a.version, portidA)
 
@@ -386,8 +386,8 @@ async function IBC2vIBC(config: HandshakeConfig, connectionHops: string[]) {
   await polymer.waitForEvent('channel_open_confirm')
 }
 
-// IBC (A) <=> IBC (B)
-async function IBC2IBC(_config: HandshakeConfig) {
+// Ibc (A) <=> Ibc (B)
+async function ibcToIbc(_config: HandshakeConfig) {
   throw new Error('Not implemented yet')
 }
 
@@ -409,23 +409,23 @@ export async function channelHandshake(runtime: ChainSetsRunObj, endpointA: Endp
 
   const config: HandshakeConfig = { runtime, a: endpointA, b: endpointB, poly }
 
-  // vIBC (A) <=> vIBC (B)
+  // vIbc (A) <=> vIbc (B)
   if (isVIbcChain(endpointA.chain.Type) && isVIbcChain(endpointB.chain.Type)) {
-    return vIBC2vIBC(config)
+    return vIbcTovIbc(config)
   }
 
-  // vIBC (A) <=> IBC (B)
+  // vIbc (A) <=> Ibc (B)
   if (isVIbcChain(endpointA.chain.Type) && isIbcChain(endpointB.chain.Type)) {
-    return vIBC2IBC(config, [vIbcConn, ibcConn])
+    return vIbcToIbc(config, [vIbcConn, ibcConn])
   }
 
-  // IBC (A) <=> vIBC (B)
+  // Ibc (A) <=> vIbc (B)
   if (isIbcChain(endpointA.chain.Type) && isVIbcChain(endpointB.chain.Type)) {
-    return IBC2vIBC(config, [ibcConn, vIbcConn])
+    return ibcTovIbc(config, [ibcConn, vIbcConn])
   }
 
-  // IBC (A) <=> IBC (B)
+  // Ibc (A) <=> Ibc (B)
   if (isIbcChain(endpointA.chain.Type) && isIbcChain(endpointB.chain.Type)) {
-    return IBC2IBC(config)
+    return ibcToIbc(config)
   }
 }
