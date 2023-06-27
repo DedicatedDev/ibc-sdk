@@ -129,7 +129,6 @@ export class VIBCRelayer {
     version: string,
     order: string,
     connections: string[],
-    counterVersion: string,
     counterPortId: string,
     counterChannelId: string
   ) {
@@ -137,7 +136,6 @@ export class VIBCRelayer {
       '--version': version,
       '--receiver': receiver,
       '--order': order,
-      '--counter-version': counterVersion,
       '--counter-port-id': counterPortId,
       '--connection-hops': connections.join('.')
     }

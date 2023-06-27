@@ -67,7 +67,6 @@ class VIbcChannelHandshaker {
       version,
       order,
       connectionHops,
-      counter.version,
       counter.portid,
       counter.channelId
     )
@@ -245,7 +244,7 @@ class IbcChannelHandshaker {
       typeUrl: '/ibc.core.channel.v1.MsgChannelOpenAck',
       value: {
         portId: this.portid,
-        counterpartyVersion: counter.version,
+        counterpartyVersion: this.version,
         counterpartyChannelId: counter.channelId,
         channelId: this.channelId,
         signer: this.account.Address,

@@ -127,7 +127,9 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert(wasmChannel.channel_id === polyChannel.counterparty.channel_id)
 
   t.assert(polyChannel.state === 'STATE_OPEN')
+  t.assert(polyChannel.version === '1.0')
   t.assert(wasmChannel.state === 'STATE_OPEN')
+  t.assert(wasmChannel.version === 'polymer-demo-v1')
 
   const config = {
     runtime: runtime,
