@@ -2,6 +2,7 @@ import * as self from './index'
 import { IbcExtension, logs, QueryClient, setupIbcExtension } from '@cosmjs/stargate'
 import { ChainSet, CosmosChainSet, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
 import { ethers } from 'ethers'
+import { newJsonRpcProvider } from './ethers'
 import { getLogger } from './utils'
 
 const log = getLogger()
@@ -166,7 +167,7 @@ function parse(event: ethers.utils.LogDescription) {
 }
 
 async function evmEvents(chain: EvmChainSet, opts: EventsFilter, cb: TxEventCb) {
-  const provider = new ethers.providers.JsonRpcProvider(chain.Nodes[0].RpcHost)
+  const provider = newJsonRpcProvider(chain.Nodes[0].RpcHost)
   const dispatcher = chain.Contracts.find((c) => c.Name === 'Dispatcher')
   if (!dispatcher) throw new Error('dispatcher contract not found')
 
