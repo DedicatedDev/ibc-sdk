@@ -27,6 +27,7 @@ import { getLogger } from '../lib/utils/logger'
 import { tmpdir } from 'os'
 import archiver from 'archiver'
 import { ProcessOutput } from 'zx-cjs'
+import { addressify } from '../lib/ethers'
 
 const log = getLogger()
 
@@ -246,7 +247,7 @@ type DeployOpts = {
 
 export async function deploy(opts: DeployOpts) {
   const runtime = loadWorkspace(opts.workspace)
-  const deployed = await deploySmartContract(runtime, opts.chain, opts.account, opts.scpath, opts.scargs)
+  const deployed = await deploySmartContract(runtime, opts.chain, addressify(opts.account), opts.scpath, opts.scargs)
   console.log(deployed.Address)
 }
 
@@ -269,12 +270,12 @@ export async function channel(opts: ChannelOpts) {
     runtime,
     {
       chain: chainA,
-      address: opts.chainA.account,
+      address: addressify(opts.chainA.account),
       version: opts.chainA.version
     },
     {
       chain: chainB,
-      address: opts.chainB.account,
+      address: addressify(opts.chainB.account),
       version: opts.chainB.version
     }
   )

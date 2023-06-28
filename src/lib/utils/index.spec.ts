@@ -1,5 +1,6 @@
 import test from 'ava'
-import * as utils from './index.js'
+import { addressify } from '../ethers'
+import * as utils from './index'
 
 test('url resolution with port only', (t) => {
   const verifyAddress = (addr: string) => {
@@ -21,4 +22,14 @@ test('url resolution with host/port', (t) => {
     t.is(url.hostPort('localhost'), '8.8.8.8:1234')
   }
   verifyAddress('8.8.8.8:1234')
+})
+
+test('addressify', (t) => {
+  const addr = '0x37FA111284FBF97318CBe05C37fEC69071Dd4965'
+  t.is(addr, addressify(addr))
+  t.is(addr, addressify(addr.toLowerCase()))
+  // the .toUpperCase() converts the address to '0X...' which isn't a valid address any more
+  t.is(addr.toUpperCase(), addressify(addr.toUpperCase()))
+  t.is(addr, addressify(addr.toUpperCase().replace('X', 'x')))
+  t.is('fooaddr', addressify('fooaddr'))
 })
