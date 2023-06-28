@@ -74,3 +74,14 @@ export async function cleanupRuntime(t: ExecutionContext<RuntimeContext>) {
 export function getWorkspace(prefix: string): string {
   return `/tmp/${prefix}-${(Math.random() + 1).toString(36).substring(2)}`
 }
+
+export async function showLogsBeforeExit(cli: string, workspace: string) {
+  if (!process.env.TEST_IBCTL_LOGS_BEFORE_EXIT) return
+  const components = ['polymer', 'eth-execution', 'wasm', 'eth-relayer', 'vibc-relayer', 'ibc-relayer']
+  for (const c of components) {
+    log.info(`${c} logs ...`)
+    try {
+      await utils.$`${cli} -w ${workspace} logs ${c}`
+    } catch {}
+  }
+}

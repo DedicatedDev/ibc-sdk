@@ -4,6 +4,7 @@ import { utils } from '../../lib'
 import { ProcessOutput } from 'zx-cjs'
 import { ChainConfig, RelayerRunObj, CosmosAccount, EvmChainSet } from '../../lib/schemas'
 import { fs, path, $, getTestingLogger } from '../../lib/utils'
+import { showLogsBeforeExit } from './test_utils'
 
 const log = getTestingLogger()
 
@@ -20,6 +21,7 @@ test.before((t) => {
 })
 
 test.after.always(async (t) => {
+  await showLogsBeforeExit(t.context.cli, t.context.workspace)
   if (!process.env.TEST_IBCTL_WORKSPACE) {
     const out = await runCommand(t, 'stop')
     t.assert(out.exitCode === 0)

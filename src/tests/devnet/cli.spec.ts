@@ -3,6 +3,7 @@ import { ProcessOutput } from 'zx-cjs'
 import { utils } from '../../lib'
 import { runningChainSetsSchema } from '../../lib/schemas'
 import { fs, path, $, getTestingLogger } from '../../lib/utils'
+import { showLogsBeforeExit } from './test_utils'
 
 getTestingLogger()
 
@@ -23,8 +24,9 @@ test.beforeEach((t) => {
   delete process.env.DO_NOT_DEPLOY_VIBC_SMART_CONTRACTS
 })
 
-test.afterEach(async (t) => {
+test.afterEach.always(async (t) => {
   try {
+    await showLogsBeforeExit(t.context.cli, t.context.workspace)
     await $`${t.context.cli} stop --workspace ${t.context.workspace}`
   } catch {}
 })

@@ -10,6 +10,7 @@ on:
 
 env:
   TEST_IBCTL_WORKSPACE: /tmp/ibctl-e2e-test
+  TEST_IBCTL_LOGS_BEFORE_EXIT: 1
 
 jobs:
   test:
@@ -40,10 +41,4 @@ jobs:
         date
         docker ps -a
         tail /tmp/*/run/*/* || true
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs polymer || true
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs eth-execution || true
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs wasm || true
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs eth-relayer || true
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs vibc-relayer || true
-        ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" logs ibc-relayer || true
         ./bin/ibctl -w "$TEST_IBCTL_WORKSPACE" stop --all || true
