@@ -67,8 +67,6 @@ program
   .allowExcessArguments(false)
   .option('-a, --all', 'Removes the containers and the workspace')
   .action(async (opts) => await commands.stop({ ...program.opts(), ...opts }))
-// TODO: figure out a better way to do this without stepping outside the boundary of -w
-// .option('-c, --clean', 'Removes stale containers created by previous executions.')
 
 function parseChannelEndpoint(value: string) {
   const args = value.split(':')

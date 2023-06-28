@@ -12,7 +12,7 @@ import {
   isEvmChain,
   runningChainSetsSchema
 } from '../lib/schemas'
-import { containerFromId, removeStaleContainers } from '../lib/docker'
+import { containerFromId } from '../lib/docker'
 import {
   cleanupRuntime,
   deploySmartContract,
@@ -207,8 +207,7 @@ export async function stop(opts: StopOpts) {
   const removeAll = async () => {
     fs.rmSync(path.join(opts.workspace, 'run'), { force: true, recursive: true })
     if (!opts.all) return
-    log.info('removing stale containers')
-    await removeStaleContainers()
+    log.info('removing workspace')
     fs.rmSync(opts.workspace, { force: true, recursive: true })
   }
 
