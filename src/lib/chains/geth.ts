@@ -1,8 +1,9 @@
-import { ethers, $, utils, zx } from '../deps'
+import { ethers, $, utils } from '../deps'
 import { AccountsConfig, generateEvmAccounts } from '../accounts_config'
 import { ChainConfig, EvmChainConfig, imageByLabel, ImageLabelTypes } from '../schemas'
 import { EndPoint, RunningChain, RunningChainBase } from './running_chain'
 import { newContainer } from '../docker'
+import { newJsonRpcProvider } from '../ethers'
 
 export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')
@@ -161,8 +162,13 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     const runObj: any = await this.getRunObj()
     await utils.waitUntil(
       async () => {
-        const out = await zx.nothrow($`curl -sf ${runObj.Nodes[0].RpcHost}`)
-        return out.exitCode === 0
+        try {
+          const provider = newJsonRpcProvider(runObj.Nodes[0].RpcHost)
+          const block = await provider.send('eth_getBlockByNumber', ['latest', true])
+          return parseInt(block.number) > 0
+        } catch {
+          return false
+        }
       },
       10,
       5000,
