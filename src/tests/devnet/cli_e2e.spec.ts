@@ -109,7 +109,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
     t,
     'channel',
     'eth-execution:' + mars!.Address + ':1.0',
-    'wasm:' + wasmAddress + ':polymer-demo-v1'
+    'wasm:' + wasmAddress + ':1.0'
   )
   t.assert(out2.exitCode === 0)
 
@@ -129,7 +129,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert(polyChannel.state === 'STATE_OPEN')
   t.assert(polyChannel.version === '1.0')
   t.assert(wasmChannel.state === 'STATE_OPEN')
-  t.assert(wasmChannel.version === 'polymer-demo-v1')
+  t.assert(wasmChannel.version === '1.0')
 
   const config = {
     runtime: runtime,
