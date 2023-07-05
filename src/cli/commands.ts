@@ -1,5 +1,5 @@
 import path from 'path'
-import { $, extractSmartContracts, fs, readYamlFile, readYamlText } from '../lib/utils'
+import { $, extractSmartContracts, fs, readYamlFile, readYamlText, getLogger } from '../lib/utils'
 import { configTemplate } from './config.template'
 import { channelHandshake } from './channel'
 import { EndpointInfo, Packet, TxEvent, tracePackets as sdkTracePackets } from '../lib/query'
@@ -23,7 +23,6 @@ import {
   runRelayers,
   utils
 } from '../lib'
-import { getLogger } from '../lib/utils/logger'
 import { tmpdir } from 'os'
 import archiver from 'archiver'
 import { ProcessOutput } from 'zx-cjs'
@@ -293,16 +292,14 @@ export async function tracePackets(opts: TracePacketsOpts) {
 
   const chainA = runtime.ChainSets.find((c) => c.Name === opts.endpointA.chainID)
   const chainB = runtime.ChainSets.find((c) => c.Name === opts.endpointB.chainID)
-  if (!chainA || !chainB) {
+  const polymerChain = runtime.ChainSets.find((c) => c.Name === 'polymer')
+  if (!chainA || !chainB || !polymerChain) {
     throw new Error('Could not find chain runtime object!')
   }
 
-  const packetsRaw = await sdkTracePackets(
-    chainA.Nodes[0].RpcHost,
-    chainB.Nodes[0].RpcHost,
-    opts.endpointA,
-    opts.endpointB
-  ).then(...thenClause)
+  const packetsRaw = await sdkTracePackets(chainA, chainB, opts.endpointA, opts.endpointB).then(
+    ...thenClause
+  )
   const packets = packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
 
   if (opts.json) console.log(JSON.stringify(packets))

@@ -4,13 +4,14 @@ import * as path from 'path'
 import { contractsTemplate } from './contracts.template'
 import os from 'os'
 import * as tar from 'tar'
+import toml from '@iarna/toml'
+import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
+import { DeliverTxResponse } from '@cosmjs/stargate'
+
 export { path, fs }
 export { $ } from 'zx-cjs'
 export { createLogger, getLogger, getTestingLogger } from './logger'
 export { UrlResolver } from './url.js'
-import toml from '@iarna/toml'
-import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
-import { DeliverTxResponse } from '@cosmjs/stargate'
 
 /** Expand the first ~ to the user home dir in a path. Throw and error if no $HOME env var is set */
 export function expandUserHomeDir(path: string): string {

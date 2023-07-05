@@ -156,18 +156,18 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
 })
 
 async function testTracePackets(t: any, c: any) {
-  // TODO: endpoint will throw an invalid port error otherwise
-  const portid = c.wasmChannel.port_id.replace(/^wasm\./, '')
-  const endpointA = `${c.wasmChain.Name}:${c.wasmChannel.channel_id}:${portid}`
-  const endpointB = `polymer:${c.polyChannel.channel_id}:${c.polyChannel.port_id}`
+  const endpointA = `${c.wasmChain.Name}:${c.wasmChannel.channel_id}:${c.wasmChannel.port_id}`
+  const endpointB = `eth-execution:${c.polyChannel.channel_id}:${c.receiver.Address}`
 
   const out = await runCommand(t, 'trace-packets', '--json', endpointA, endpointB)
   t.assert(out.exitCode === 0)
   const packets = JSON.parse(out.stdout.trim())
 
-  // TODO: this should say "2 packets were received"
-  t.assert(packets.length === 1)
-  t.assert(packets.filter((p: any) => p.state === 'received').length === packets.length)
+  t.assert(packets.length === 4)
+  t.assert(packets.filter((p: any) => p.state === 'acknowledged').length === 2)
+  t.assert(packets.filter((p: any) => p.state === 'received').length === 2)
+  t.assert(packets.find((c) => c.chainID === "wasm"))
+  t.assert(packets.find((c) => c.chainID === "eth-execution"))
 }
 
 // Test the following sequence

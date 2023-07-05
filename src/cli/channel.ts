@@ -15,7 +15,7 @@ import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import { VIBCRelayer } from '../lib/relayers/vibc'
 import { EventsFilter, TxEvent } from '../lib/query'
 import { TextEncoder } from 'util'
-import { getLogger, flatCosmosEvent, waitForBlocks } from 'src/lib/utils'
+import { getLogger, flatCosmosEvent, waitForBlocks } from '../lib/utils'
 
 const log = getLogger()
 

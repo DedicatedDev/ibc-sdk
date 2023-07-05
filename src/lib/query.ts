@@ -1,9 +1,11 @@
 import * as self from './index'
 import { IbcExtension, logs, QueryClient, setupIbcExtension } from '@cosmjs/stargate'
-import { ChainSet, CosmosChainSet, EvmChainSet, isCosmosChain, isEvmChain } from './schemas'
+import { ChainSet, CosmosChainSet, EvmChainSet, isCosmosChain, isEvmChain, isIbcChain } from './schemas'
 import { ethers } from 'ethers'
 import { newJsonRpcProvider } from './ethers'
 import { getLogger } from './utils'
+import * as channel from 'cosmjs-types/ibc/core/channel/v1/channel'
+import Long from 'long'
 
 const log = getLogger()
 
@@ -33,19 +35,20 @@ async function getClient(rpc: string): Promise<QueryClient & IbcExtension> {
   return self.cosmos.client.QueryClient.withExtensions(tmClient, setupIbcExtension)
 }
 
-async function queryPacketsDirectional(
-  clientA: QueryClient & IbcExtension,
-  clientB: QueryClient & IbcExtension,
+function extractPackets(
+  packetCommits: channel.PacketState[],
+  packetReceipts: channel.PacketState[],
+  packetAcks: channel.PacketState[],
   chainA: EndpointInfo,
   chainB: EndpointInfo
-): Promise<Packet[]> {
-  const packetCommits = await clientA.ibc.channel.allPacketCommitments(chainA.portID, chainA.channelID)
-  const packetAcks = await clientB.ibc.channel.allPacketAcknowledgements(chainB.portID, chainB.channelID)
-
-  // NB: Packet data is from the perspective of the sending channel.
+) {
   const packets: Packet[] = []
 
-  packetCommits.commitments.forEach((sent) => {
+  log.info(`Packet commits: ${packetCommits.length}`)
+  log.info(`Packet acks: ${packetAcks.length}`)
+
+  packetCommits.forEach((sent) => {
+    log.info(`Packet commit: ${JSON.stringify(sent)}`)
     packets.push({
       chainID: chainA.chainID,
       channelID: sent.channelId,
@@ -55,21 +58,30 @@ async function queryPacketsDirectional(
     })
   })
 
-  packetAcks.acknowledgements.forEach((ack) => {
+  packetAcks.forEach((ack) => {
+    log.info(`Packet ack: ${JSON.stringify(ack)}`)
     for (let i = 0; i < packets.length; i++) {
-      if (packets[i].sequence === ack.sequence) {
+      if (packets[i].sequence.equals(ack.sequence) && packets[i].state === PacketState.Sent && packets[i].portID === ack.portId) {
         packets[i].state = PacketState.Acknowledged
         return
       }
     }
-    // Acks are committed on the receiving chain using chainB port/channel
-    // but we're writing the data from the perspective of the sender to be consistent.
-    // TODO: Is this the right UX for visualizing packets?
     packets.push({
       chainID: chainA.chainID,
-      channelID: chainA.channelID,
-      portID: chainA.portID,
-      sequence: ack.sequence, // The sequence should be the same.
+      channelID: ack.channelId,
+      portID: ack.portId,
+      sequence: ack.sequence,
+      state: PacketState.Acknowledged
+    })
+  })
+
+  packetReceipts.forEach((receipt) => {
+    log.info(`Packet receipt: ${JSON.stringify(receipt)}`)
+    packets.push({
+      chainID: chainB.chainID,
+      channelID: receipt.channelId,
+      portID: receipt.portId,
+      sequence: receipt.sequence,
       state: PacketState.Received
     })
   })
@@ -77,37 +89,212 @@ async function queryPacketsDirectional(
   return packets
 }
 
-export async function tracePackets(
-  hostA: string,
-  hostB: string,
+export type TxEvent = {
+  height: number
+  events: { [k: string]: {} }
+}
+
+async function queryVibc2IbcPacketsDirectional(
+  chainSetA: ChainSet,
+  clientB: QueryClient & IbcExtension,
+  chainA: EndpointInfo,
+  chainB: EndpointInfo
+) {
+  log.info("Querying packets from Vibc to IBC")
+  const packetCommits: channel.PacketState[] = []
+  const packetAcks: channel.PacketState[] = []
+
+  await evmEvents(
+    chainSetA as EvmChainSet,
+    {
+      height: null,
+      minHeight: 0,
+      maxHeight: await getLatestBlockNumber(chainSetA.Nodes[0].RpcHost)
+    },
+    (event: TxEvent) => {
+      const sendPacketEvent = event.events.SendPacket
+      const ackPacketEvent = event.events.Acknowledgement
+
+      if (sendPacketEvent) {
+        packetCommits.push({
+          channelId: chainA.channelID,
+          portId: chainA.portID,
+          sequence: Long.fromString(sendPacketEvent['sequence']),
+          data: sendPacketEvent['packet']
+        })
+      }
+      if (ackPacketEvent) {
+        packetAcks.push({
+          channelId: chainA.channelID,
+          portId: chainA.portID,
+          sequence: Long.fromString(ackPacketEvent['sequence']),
+          data: ackPacketEvent['AckPacket']['data']
+        })
+      }
+    }
+  )
+
+  const packetReceipts: channel.PacketState[] = []
+
+  const promises = packetCommits.map(async (commit) => {
+    log.info(`Packet commitment: ${JSON.stringify(commit)}`)
+    const receipt = await clientB.ibc.channel.packetReceipt(chainB.portID, chainB.channelID, commit.sequence.toNumber())
+    if (receipt.received) {
+      const packetReceipt = {
+        channelId: chainB.channelID,
+        portId: chainB.portID,
+        sequence: commit.sequence,
+        data: commit.data
+      }
+      packetReceipts.push(packetReceipt)
+      log.info(`Packet receipts: ${JSON.stringify(packetReceipts)}`)
+    }
+  })
+
+  await Promise.all(promises)
+
+  return extractPackets(packetCommits, packetReceipts, packetAcks, chainA, chainB)
+}
+
+async function queryIbc2VibcPacketsDirectional(
+  clientA: QueryClient & IbcExtension,
+  chainSetB: ChainSet,
+  chainA: EndpointInfo,
+  chainB: EndpointInfo
+) {
+  log.info("Querying packets from IBC to Vibc")
+  const packetAcks = await clientA.ibc.channel.allPacketAcknowledgements(chainA.portID, chainA.channelID)
+  const packetCommits = await clientA.ibc.channel.allPacketCommitments(chainA.portID, chainA.channelID)
+
+  const packetReceipts: channel.PacketState[] = []
+
+  await evmEvents(
+    chainSetB as EvmChainSet,
+    {
+      height: null,
+      minHeight: 0,
+      maxHeight: await getLatestBlockNumber(chainSetB.Nodes[0].RpcHost)
+    },
+    (event: TxEvent) => {
+      const recvPacketEvent = event.events.RecvPacket
+      if (recvPacketEvent) {
+        packetReceipts.push({
+          channelId: chainB.channelID,
+          portId: chainB.portID,
+          sequence: Long.fromString(recvPacketEvent['sequence']),
+          data: Uint8Array.from([])
+        })
+      }
+    }
+  )
+
+  return extractPackets(packetCommits.commitments, packetReceipts, packetAcks.acknowledgements, chainA, chainB)
+}
+
+async function queryIbc2IbcPacketsDirectional(
+  clientA: QueryClient & IbcExtension,
+  clientB: QueryClient & IbcExtension,
   chainA: EndpointInfo,
   chainB: EndpointInfo
 ): Promise<Packet[]> {
-  const clientA = await getClient(hostA)
-  const clientB = await getClient(hostB)
+  const packetCommits = await clientA.ibc.channel.allPacketCommitments(chainA.portID, chainA.channelID)
+  const packetAcks = await clientB.ibc.channel.allPacketAcknowledgements(chainB.portID, chainB.channelID)
+
+  const packetReceipts: channel.PacketState[] = []
+
+  const promises = packetCommits.commitments.map(async (commit) => {
+    log.info(`Packet commitment: ${JSON.stringify(commit)}`)
+    const receipt = await clientB.ibc.channel.packetReceipt(chainB.portID, chainB.channelID, commit.sequence.toNumber())
+    if (receipt.received) {
+      const packetReceipt = {
+        channelId: chainB.channelID,
+        portId: chainB.portID,
+        sequence: commit.sequence,
+        data: commit.data
+      }
+      packetReceipts.push(packetReceipt)
+      log.info(`Packet receipts: ${JSON.stringify(packetReceipts)}`)
+    }
+  })
+
+  await Promise.all(promises)
+
+  // NB: Packet data is from the perspective of the sending channel.
+  return extractPackets(packetCommits.commitments, packetReceipts, packetAcks.acknowledgements, chainA, chainB)
+}
+
+async function getLatestBlockNumber(host: string) {
+  // Connect to an Ethereum node using ethers.js
+  const provider = new ethers.providers.JsonRpcProvider(host)
+
+  // Get the latest block number
+  return await provider.getBlockNumber()
+}
+
+export async function tracePackets(
+  chainSetA: ChainSet,
+  chainSetB: ChainSet,
+  chainA: EndpointInfo,
+  chainB: EndpointInfo
+): Promise<Packet[]> {
+  const hostA = chainSetA.Nodes[0].RpcHost
+  const hostB = chainSetB.Nodes[0].RpcHost
+
+  let packets: Packet[]
+  let clientA: QueryClient & IbcExtension
+  let clientB: QueryClient & IbcExtension
+
+  if (isEvmChain(chainSetA.Type) && isEvmChain(chainSetB.Type)) {
+    throw new Error('EVM tracing is not yet supported')
+  } else if (isIbcChain(chainSetA.Type) && isIbcChain(chainSetB.Type)) {
+    clientA = await getClient(hostA)
+    clientB = await getClient(hostB)
+    packets = await queryIbc2IbcPacketsDirectional(clientA, clientB, chainA, chainB)
+    packets = packets.concat(await queryIbc2IbcPacketsDirectional(clientB, clientA, chainB, chainA))
+  } else if (isEvmChain(chainSetA.Type) && isIbcChain(chainSetB.Type)) {
+    clientB = await getClient(hostB)
+    packets = await queryVibc2IbcPacketsDirectional(chainSetA as EvmChainSet, clientB, chainA, chainB)
+    packets = packets.concat(await queryIbc2VibcPacketsDirectional(clientB, chainSetA as EvmChainSet, chainB, chainA))
+  } else if (isIbcChain(chainSetA.Type) && isEvmChain(chainSetB.Type)) {
+    clientA = await getClient(hostA)
+    packets = await queryVibc2IbcPacketsDirectional(chainSetB as EvmChainSet, clientA, chainB, chainA)
+    packets = packets.concat(await queryIbc2VibcPacketsDirectional(clientA, chainSetB as EvmChainSet, chainA, chainB))
+  } else {
+    throw new Error('Unsupported chain types')
+  }
 
   log.info(`endpoint A: chainID: ${chainA.chainID}, portID: ${chainA.portID}, channelID: ${chainA.channelID}`)
   log.info(`endpoint B: chainID: ${chainB.chainID}, portID: ${chainB.portID}, channelID: ${chainB.channelID}`)
 
-  let packets: Packet[] = await queryPacketsDirectional(clientA, clientB, chainA, chainB)
-  packets = packets.concat(await queryPacketsDirectional(clientB, clientA, chainB, chainA))
   // TODO: This won't work for larger numbers.
-  packets.sort((a, b) => a.sequence.compare(b.sequence))
+  const stateOrder: { [key in PacketState]: number } = {
+    [PacketState.Sent]: 1,
+    [PacketState.Received]: 2,
+    [PacketState.Acknowledged]: 3,
+    [PacketState.Timeout]: 4
+  }
 
-  log.info(`Traced ${packets.length} packets`)
+  packets.sort((a, b) => {
+    if (stateOrder[a.state] !== stateOrder[b.state]) {
+      return stateOrder[a.state] - stateOrder[b.state]
+    }
+    return a.sequence.compare(b.sequence)
+  })
+
+  const uniquePacketSet = new Set()
+  packets.forEach((packet) => {
+    uniquePacketSet.add(packet.sequence.toString() + '-' + packet.portID)
+  })
+  const uniquePacketCount = uniquePacketSet.size
+  log.info(`Traced ${uniquePacketCount} packets`)
 
   return packets
 }
 
 export type EventsFilter = {
-  height: number
+  height: number | null
   minHeight: number
   maxHeight: number
-}
-
-export type TxEvent = {
-  height: number
-  events: { [k: string]: {} }
 }
 
 type TxEventCb = (e: TxEvent) => void
