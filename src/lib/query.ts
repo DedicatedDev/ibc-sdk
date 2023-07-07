@@ -109,7 +109,8 @@ async function queryVibc2IbcPacketsDirectional(
     {
       height: null,
       minHeight: 0,
-      maxHeight: await getLatestBlockNumber(chainSetA.Nodes[0].RpcHost)
+      maxHeight: await getLatestBlockNumber(chainSetA.Nodes[0].RpcHost),
+      allEvents: true
     },
     (event: TxEvent) => {
       const sendPacketEvent = event.events.SendPacket
@@ -173,7 +174,8 @@ async function queryIbc2VibcPacketsDirectional(
     {
       height: null,
       minHeight: 0,
-      maxHeight: await getLatestBlockNumber(chainSetB.Nodes[0].RpcHost)
+      maxHeight: await getLatestBlockNumber(chainSetB.Nodes[0].RpcHost),
+      allEvents: true
     },
     (event: TxEvent) => {
       const recvPacketEvent = event.events.RecvPacket
@@ -295,6 +297,7 @@ export type EventsFilter = {
   height: number | null
   minHeight: number
   maxHeight: number
+  allEvents: boolean
 }
 
 type TxEventCb = (e: TxEvent) => void
@@ -311,6 +314,7 @@ async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEve
   }
 
   const result = await tmClient.txSearchAll({ query: query.join(' AND ') })
+  const includeMessageEvent = opts.allEvents
 
   result.txs.map(({ height, result }) => {
     const rawLogs = (() => {
@@ -325,10 +329,17 @@ async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEve
     const kv = {}
     for (const log of rawLogs) {
       for (const ev of log.events) {
+        if (!includeMessageEvent && ev.type === 'message') {
+          continue
+        }
+
         kv[ev.type] = {}
         ev.attributes.forEach((e: any) => (kv[ev.type][e.key] = e.value))
       }
     }
+
+    if (Object.keys(kv).length === 0) return
+
     cb({ height, events: kv })
   })
 }

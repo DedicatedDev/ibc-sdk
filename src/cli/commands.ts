@@ -428,6 +428,7 @@ type EventsOpts = {
   maxHeight: number
   extended: boolean
   json: boolean
+  allEvents: boolean
 }
 
 export async function events(opts: EventsOpts) {

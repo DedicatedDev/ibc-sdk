@@ -249,6 +249,7 @@ program
   .option('-H, --height <height>', 'Get events from this height', parseNumber)
   .option('-x, --extended', 'Show the full content of the events instead of their type', false)
   .option('-j, --json', 'Output in json format', false)
+  .option('-F, --all-events', 'Get all events, including "message" event in cosmos chains', false)
   .allowExcessArguments(false)
   .action(async (name, opts) => {
     if (opts.minHeight && opts.maxHeight && opts.minHeight >= opts.maxHeight)
