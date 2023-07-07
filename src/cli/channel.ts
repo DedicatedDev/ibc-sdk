@@ -15,13 +15,13 @@ import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import { VIBCRelayer } from '../lib/relayers/vibc'
 import { EventsFilter, TxEvent } from '../lib/query'
 import { TextEncoder } from 'util'
-import { getLogger, flatCosmosEvent, waitForBlocks } from '../lib/utils'
+import { flatCosmosEvent, getLogger, waitForBlocks } from '../lib/utils'
 
 const log = getLogger()
 
 type Endpoint = {
   chain: ChainSet
-  address: string
+  portID: string
   version: string
 }
 
@@ -316,20 +316,11 @@ type HandshakeConfig = {
 
 // vIbc (A) <=> Ibc (B)
 async function vIbcToIbc(config: HandshakeConfig, connectionHops: string[]) {
-  // TODO this needs to come from the user or we need to get more clever about it.
-  // leaving like this for now but this is far from being ok
-  const portidA = `polyibc.Ethereum-Devnet.${config.a.address.slice(2)}`
-  const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.a.version, portidA)
+  const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.a.version, config.a.portID)
+  const ibcB = await IbcChannelHandshaker.create(config.b.chain as CosmosChainSet, config.b.version, config.b.portID)
 
-  const portidB = 'wasm.' + config.b.address
-  const ibcB = await IbcChannelHandshaker.create(config.b.chain as CosmosChainSet, config.b.version, portidB)
-
-  const vibcA = await VIbcChannelHandshaker.create(
-    config.a.chain as EvmChainSet,
-    config.runtime,
-    config.a.address,
-    polymer
-  )
+  const address = config.a.portID.split('.')[2]
+  const vibcA = await VIbcChannelHandshaker.create(config.a.chain as EvmChainSet, config.runtime, address, polymer)
 
   // step 1
   await vibcA.openIbcChannel(ibcB, connectionHops, config.a.version, 'unordered')
@@ -355,18 +346,16 @@ async function vIbcTovIbc(_config: HandshakeConfig) {
 
 // Ibc (A) <=> vIbc (B)
 async function ibcTovIbc(config: HandshakeConfig, connectionHops: string[]) {
-  const portidA = 'wasm.' + config.a.address
-  const ibcA = await IbcChannelHandshaker.create(config.a.chain as CosmosChainSet, config.a.version, portidA)
+  const ibcA = await IbcChannelHandshaker.create(config.a.chain as CosmosChainSet, config.a.version, config.a.portID)
 
-  const portidB = `polyibc.Ethereum-Devnet.${config.b.address.slice(2)}`
-  const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.b.version, portidB)
+  const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.b.version, config.b.portID)
 
-  const vibcB = await VIbcChannelHandshaker.create(
-    config.b.chain as EvmChainSet,
-    config.runtime,
-    config.b.address,
-    polymer
-  )
+  if (!/^[^.]*\.[^.]*\.[^.]*$/.test(config.b.portID)) {
+    throw new Error(`Invalid portID ${config.b.portID}`)
+  }
+
+  const address = "0x" + config.b.portID.split('.')[2]
+  const vibcB = await VIbcChannelHandshaker.create(config.b.chain as EvmChainSet, config.runtime, address, polymer)
   await vibcB.startRelaying([...connectionHops].reverse())
 
   // step 1

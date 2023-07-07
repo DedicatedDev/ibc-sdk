@@ -108,8 +108,8 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const out2 = await runCommand(
     t,
     'channel',
-    'eth-execution:' + mars!.Address + ':1.0',
-    'wasm:' + wasmAddress + ':1.0'
+    'eth-execution:polyibc.Ethereum-Devnet.' + mars!.Address.slice(2) + ':1.0',
+    'wasm:wasm.' + wasmAddress + ':1.0'
   )
   t.assert(out2.exitCode === 0)
 

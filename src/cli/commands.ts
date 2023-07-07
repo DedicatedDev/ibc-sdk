@@ -252,29 +252,29 @@ export async function deploy(opts: DeployOpts) {
 
 type ChannelOpts = {
   workspace: string
-  chainA: { chainId: string; account: string; version: string }
-  chainB: { chainId: string; account: string; version: string }
+  chainA: { chainId: string; portID: string; version: string }
+  chainB: { chainId: string; portID: string; version: string }
 }
 
 export async function channel(opts: ChannelOpts) {
   const runtime = loadWorkspace(opts.workspace)
 
-  let chainA = runtime.ChainSets.find((c) => c.Name === opts.chainA.chainId)
+  const chainA = runtime.ChainSets.find((c) => c.Name === opts.chainA.chainId)
   if (!chainA) throw new Error(`Could not find chain ${opts.chainA.chainId} is chain sets`)
 
-  let chainB = runtime.ChainSets.find((c) => c.Name === opts.chainB.chainId)
+  const chainB = runtime.ChainSets.find((c) => c.Name === opts.chainB.chainId)
   if (!chainB) throw new Error(`Could not find chain ${opts.chainB.chainId} is chain sets`)
 
   await channelHandshake(
     runtime,
     {
       chain: chainA,
-      address: addressify(opts.chainA.account),
+      portID: opts.chainA.portID,
       version: opts.chainA.version
     },
     {
       chain: chainB,
-      address: addressify(opts.chainB.account),
+      portID: opts.chainB.portID,
       version: opts.chainB.version
     }
   )

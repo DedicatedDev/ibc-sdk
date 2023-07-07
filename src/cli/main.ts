@@ -74,15 +74,15 @@ function parseChannelEndpoint(value: string) {
   const args = value.split(':')
   if (args.length !== 3)
     throw new Error(
-      'Invalid argument format. Expected a <chain_id:account_name_or_address:version> tuple separated by a `:`.'
+      'Invalid argument format. Expected a <chain_id:port_id:version> tuple separated by a `:`.'
     )
-  return { chainId: args[0], account: args[1], version: args[2] }
+  return { chainId: args[0], portID: args[1], version: args[2] }
 }
 
 program
   .command('channel')
   .description(
-    'Creates an IBC channel between two endpoints. The endpoint format must be `chain_id:account_name_or_address:version`'
+    'Creates an IBC channel between two endpoints. The endpoint format must be `chain_id:port_id:version`'
   )
   .arguments('<endpoint-a> <endpoint-b>')
   .allowExcessArguments(false)

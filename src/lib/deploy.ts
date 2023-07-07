@@ -110,12 +110,12 @@ async function deployEvmSmartContract(
 // TODO: use the RPC endpoints or consolidate with chains/cosmos.ts
 class Container {
   id: string
-  account: string
+  address: string
   name: string
 
-  constructor(id: string, account: string, name: string) {
+  constructor(id: string, portID: string, name: string) {
     this.id = id
-    this.account = account
+    this.address = portID
     this.name = name
   }
 
@@ -139,7 +139,7 @@ class Container {
       'json',
       '--yes',
       '--from',
-      this.account,
+      this.address,
       '--keyring-backend',
       'test',
       '--chain-id',
