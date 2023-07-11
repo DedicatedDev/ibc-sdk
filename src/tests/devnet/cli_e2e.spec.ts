@@ -120,50 +120,58 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.deepEqual((await getChannelsFrom(t, 'polymer')).channels, [])
   t.deepEqual((await getChannelsFrom(t, 'wasm')).channels, [])
 
-  const out2 = await runCommand(
-    t,
-    'channel',
-    'eth-execution:polyibc.Ethereum-Devnet.' + mars!.Address.slice(2) + ':1.0',
-    'wasm:wasm.' + wasmAddress + ':1.0'
-  )
-  t.assert(out2.exitCode === 0)
+  const version = '1.0'
+  const evmEndpoint = 'eth-execution:polyibc.Ethereum-Devnet.' + mars!.Address.slice(2) + ':' + version
+  const wasmEndpoint = 'wasm:wasm.' + wasmAddress + ':' + version
 
-  // check the channels have been correctly created
-  const newPolyChannel = await getChannelsFrom(t, 'polymer')
-  const newWasmChannel = await getChannelsFrom(t, 'wasm')
+  const channelCombos = [
+    [evmEndpoint, wasmEndpoint],
+    [wasmEndpoint, evmEndpoint]
+  ]
 
-  t.assert(newPolyChannel.channels.length === 1)
-  t.assert(newWasmChannel.channels.length === 1)
+  for (let i = 0; i < channelCombos.length; i++) {
+    log.info(`Iteration ${i}, creating channel between ${channelCombos[i].map((e) => e.split(':')[0]).join(' and ')}`)
+    const out = await runCommand(t, 'channel', ...channelCombos[i])
+    t.assert(out.exitCode === 0)
 
-  const wasmChannel = newWasmChannel.channels[0]
-  const polyChannel = newPolyChannel.channels[0]
+    // check the channels have been correctly created
+    const newPolyChannel = await getChannelsFrom(t, 'polymer')
+    const newWasmChannel = await getChannelsFrom(t, 'wasm')
 
-  t.assert(polyChannel.channel_id === wasmChannel.counterparty.channel_id)
-  t.assert(wasmChannel.channel_id === polyChannel.counterparty.channel_id)
+    const numExpectedChannels = i + 1
+    t.assert(newPolyChannel.channels.length === numExpectedChannels)
+    t.assert(newWasmChannel.channels.length === numExpectedChannels)
 
-  t.assert(polyChannel.state === 'STATE_OPEN')
-  t.assert(polyChannel.version === '1.0')
-  t.assert(wasmChannel.state === 'STATE_OPEN')
-  t.assert(wasmChannel.version === '1.0')
+    const wasmChannel = newWasmChannel.channels[i]
+    const polyChannel = newPolyChannel.channels[i]
 
-  const config = {
-    iteration: 0,
-    runtime: runtime,
-    vibcRelayer: vibcRelayer,
-    eth1Chain: eth1Chain,
-    eth1Account: eth1Account,
-    wasmChain: wasmChain,
-    wasmAccount: wasmAccount,
-    wasmChannel: wasmChannel,
-    wasmAddress: wasmAddress,
-    polyChannel: polyChannel,
-    dispatcher: dispatcher,
-    receiver: mars
+    t.assert(polyChannel.channel_id === wasmChannel.counterparty.channel_id)
+    t.assert(wasmChannel.channel_id === polyChannel.counterparty.channel_id)
+
+    t.assert(polyChannel.state === 'STATE_OPEN')
+    t.assert(polyChannel.version === version)
+    t.assert(wasmChannel.state === 'STATE_OPEN')
+    t.assert(wasmChannel.version === version)
+
+    const config = {
+      iteration: i,
+      runtime: runtime,
+      vibcRelayer: vibcRelayer,
+      eth1Chain: eth1Chain,
+      eth1Account: eth1Account,
+      wasmChain: wasmChain,
+      wasmAccount: wasmAccount,
+      wasmChannel: wasmChannel,
+      wasmAddress: wasmAddress,
+      polyChannel: polyChannel,
+      dispatcher: dispatcher,
+      receiver: mars
+    }
+
+    await testMessagesFromWasmToEth(t, config)
+    await testMessagesFromEthToWasm(t, config)
+    await testTracePackets(t, config)
   }
-
-  await testMessagesFromWasmToEth(t, config)
-  await testMessagesFromEthToWasm(t, config)
-  await testTracePackets(t, config)
 
   await runCommand(t, 'show')
   await runCommand(t, 'logs', 'polymer', '-n', '5')
