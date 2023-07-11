@@ -5,6 +5,7 @@ import { ProcessOutput } from 'zx-cjs'
 import { ChainConfig, RelayerRunObj, CosmosAccount, EvmChainSet } from '../../lib/schemas'
 import { fs, path, $, getTestingLogger } from '../../lib/utils'
 import { showLogsBeforeExit } from './test_utils'
+import { newTendermintClient } from '../../lib/cosmos/client'
 
 const log = getTestingLogger()
 
@@ -38,11 +39,23 @@ async function getChannelsFrom(t: any, chain: string) {
   return utils.readYamlText(out.stdout.trim())
 }
 
-async function waitForEvent(t: any, chainName: string, eventName: string, cb: (e: any) => boolean) {
+async function latestEvmHeight(url: string): Promise<string> {
+  const client = new ethers.providers.JsonRpcProvider(url)
+  const block = await client.send('eth_getBlockByNumber', ['latest', true])
+  return parseInt(block.number).toString()
+}
+
+async function latestCosmosHeight(url: string): Promise<string> {
+  const client = await newTendermintClient(url)
+  const block = await client.block()
+  return block.block.header.height.toString()
+}
+
+async function waitForEvent(t: any, chainName: string, minHeight: string, eventName: string, cb: (e: any) => boolean) {
   log.info(`querying event '${eventName}' from ${chainName}`)
   await utils.waitUntil(
     async () => {
-      const out = await runCommand(t, 'events', chainName, '--json', '--extended')
+      const out = await runCommand(t, 'events', chainName, '--min-height', minHeight, '--json', '--extended')
       t.assert(out.exitCode === 0)
       const events = JSON.parse(out.stdout.trim())
       const event = events.find((e: any) => e.events[eventName])
@@ -134,6 +147,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   t.assert(wasmChannel.version === '1.0')
 
   const config = {
+    iteration: 0,
     runtime: runtime,
     vibcRelayer: vibcRelayer,
     eth1Chain: eth1Chain,
@@ -168,8 +182,8 @@ async function testTracePackets(t: any, c: any) {
   t.assert(packets.length === 4)
   t.assert(packets.filter((p: any) => p.state === 'acknowledged').length === 2)
   t.assert(packets.filter((p: any) => p.state === 'received').length === 2)
-  t.assert(packets.find((c) => c.chainID === "wasm"))
-  t.assert(packets.find((c) => c.chainID === "eth-execution"))
+  t.assert(packets.find((c: any) => c.chainID === 'wasm'))
+  t.assert(packets.find((c: any) => c.chainID === 'eth-execution'))
 }
 
 // Test the following sequence
@@ -178,14 +192,18 @@ async function testTracePackets(t: any, c: any) {
 //  - Expect the ibc relayer to relay it to wasm
 //  - Receive the message on wasm
 async function testMessagesFromEthToWasm(t: any, c: any) {
+  const evmHeight = await latestEvmHeight(c.eth1Chain.Nodes[0].RpcHost)
+  const wasmHeight = await latestCosmosHeight(c.wasmChain.Nodes[0].RpcHost)
+
   const provider = new ethers.providers.JsonRpcProvider(c.eth1Chain.Nodes[0].RpcHost)
   const signer = new ethers.Wallet(c.eth1Account.PrivateKey).connect(provider)
 
   log.info('Sending message from ETH to WASM...')
+  const msg = `Hello from ETH, iteration ${c.iteration}`
   const receiver = new ethers.Contract(c.receiver.Address, c.receiver.Abi, signer)
   const response = await receiver.greet(
     c.dispatcher.Address,
-    JSON.stringify({ message: { m: 'Hello from ETH' } }),
+    JSON.stringify({ message: { m: msg } }),
     ethers.utils.formatBytes32String(c.polyChannel.channel_id),
     ((Date.now() + 60 * 60 * 1000) * 1_000_000).toString(),
     0
@@ -196,10 +214,10 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   const parsed = iface.parseLog(receipt.logs[0])
   const [_sourcePortAddress, _sourceChannelId, _packet, sendPacketSequence, _timeout, _fee] = parsed.args
 
-  await waitForEvent(t, c.wasmChain.Name, 'recv_packet', (events: any) => {
+  await waitForEvent(t, c.wasmChain.Name, wasmHeight, 'recv_packet', (events: any) => {
     const e = events.recv_packet
     t.assert(e)
-    t.assert(JSON.parse(e.packet_data).message.m === 'Hello from ETH')
+    t.assert(JSON.parse(e.packet_data).message.m === msg)
     t.assert(e.packet_src_channel === c.polyChannel.channel_id)
     t.assert(e.packet_dst_channel === c.polyChannel.counterparty.channel_id)
     t.assert(e.packet_src_port === c.polyChannel.port_id)
@@ -207,7 +225,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
     return true
   })
 
-  await waitForEvent(t, c.eth1Chain.Name, 'Acknowledgement', (events: any) => {
+  await waitForEvent(t, c.eth1Chain.Name, evmHeight, 'Acknowledgement', (events: any) => {
     const e = events.Acknowledgement
     t.assert(e)
     t.assert(JSON.parse(e.AckPacket.data).ok.reply === 'Got the message!')
@@ -225,10 +243,13 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
 //  - Expect the vibc relayer to relay it to ethereum
 //  - Receive the message on ethereum
 async function testMessagesFromWasmToEth(t: any, c: any) {
+  const evmHeight = await latestEvmHeight(c.eth1Chain.Nodes[0].RpcHost)
+  const wasmHeight = await latestCosmosHeight(c.wasmChain.Nodes[0].RpcHost)
+
   const msg = JSON.stringify({
     send_msg: {
       channel_id: c.wasmChannel.channel_id,
-      msg: 'Hello from WASM'
+      msg: `Hello from WASM, iteration ${c.iteration}`
     }
   })
 
@@ -241,7 +262,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   const out = await runCommand(t, 'exec', ...cmds)
   t.assert(out.exitCode === 0)
 
-  await waitForEvent(t, c.eth1Chain.Name, 'RecvPacket', (events: any) => {
+  await waitForEvent(t, c.eth1Chain.Name, evmHeight, 'RecvPacket', (events: any) => {
     const e = events.RecvPacket
     t.assert(e)
     t.assert(e.srcChannelId === c.wasmChannel.channel_id)
@@ -252,7 +273,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
     return true
   })
 
-  await waitForEvent(t, c.wasmChain.Name, 'acknowledge_packet', (events: any) => {
+  await waitForEvent(t, c.wasmChain.Name, wasmHeight, 'acknowledge_packet', (events: any) => {
     const e = events.acknowledge_packet
     t.assert(e)
     t.assert(e.packet_dst_channel === c.polyChannel.channel_id)
