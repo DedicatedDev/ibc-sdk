@@ -35,9 +35,9 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io/polymerdao -u '< your-github-usernam
 2. Run the `npm install` command in your terminal:
 
 ```bash
-echo "@polymerdao:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "@open-ibc:registry=https://npm.pkg.github.com" >> ~/.npmrc
 echo "//npm.pkg.github.com/:_authToken=$TOKEN" >> ~/.npmrc
-npm install -g @polymerdao/ibc-sdk
+npm install -g @open-ibc/ibc-sdk
 ```
 
 If you prefer to install from source, use the command `make` and execute it from the root of your workspace.
@@ -112,6 +112,6 @@ Furthermore, IBC developers can leverage the IBC SDK's query API to gather high-
 
 ## Want to contribute or need support?
 
-To contribute, report issues, or explore the source code, visit the [IBC SDK GitHub repository](https://github.com/polymerdao/ibc-sdk).
+To contribute, report issues, or explore the source code, visit the [IBC SDK GitHub repository](https://github.com/open-ibc/ibc-sdk).
 
 Join our vibrant community on [Discord](https://discord.gg/PM54RNM8) 🐱‍💻

@@ -1,6 +1,6 @@
 {
-  "name": "@polymerdao/ibc-sdk",
-  "version": "0.0.1-rc9",
+  "name": "@open-ibc/ibc-sdk",
+  "version": "0.0.1-rc10",
   "description": "IBC Control Command",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,7 +14,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/polymerdao/ibc-sdk.git"
+    "url": "https://github.com/open-ibc/ibc-sdk.git"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
