@@ -108,36 +108,27 @@ async function queryVibc2IbcPacketsDirectional(
   const packetCommits: channel.PacketState[] = []
   const packetAcks: channel.PacketState[] = []
 
-  await evmEvents(
-    chainSetA as EvmChainSet,
-    {
-      height: null,
-      minHeight: 0,
-      maxHeight: await getLatestBlockNumber(chainSetA.Nodes[0].RpcHost),
-      allEvents: true
-    },
-    (event: TxEvent) => {
-      const sendPacketEvent = event.events.SendPacket
-      const ackPacketEvent = event.events.Acknowledgement
-
-      if (sendPacketEvent) {
-        packetCommits.push({
-          channelId: chainA.channelID,
-          portId: chainA.portID,
-          sequence: Long.fromString(sendPacketEvent['sequence']),
-          data: sendPacketEvent['packet']
-        })
-      }
-      if (ackPacketEvent) {
-        packetAcks.push({
-          channelId: chainA.channelID,
-          portId: chainA.portID,
-          sequence: Long.fromString(ackPacketEvent['sequence']),
-          data: ackPacketEvent['AckPacket']['data']
-        })
-      }
+  await evmEvents(chainSetA as EvmChainSet, { minHeight: 1 } as EventsFilter, (event: TxEvent) => {
+    const sendPacketEvent = event.events.SendPacket
+    if (sendPacketEvent && sendPacketEvent['sourceChannelId'] === chainA.channelID) {
+      packetCommits.push({
+        channelId: chainA.channelID,
+        portId: chainA.portID,
+        sequence: Long.fromString(sendPacketEvent['sequence']),
+        data: sendPacketEvent['packet']
+      })
     }
-  )
+
+    const ackPacketEvent = event.events.Acknowledgement
+    if (ackPacketEvent && ackPacketEvent['sourceChannelId'] === chainA.channelID) {
+      packetAcks.push({
+        channelId: chainA.channelID,
+        portId: chainA.portID,
+        sequence: Long.fromString(ackPacketEvent['sequence']),
+        data: ackPacketEvent['AckPacket']['data']
+      })
+    }
+  })
 
   const packetReceipts: channel.PacketState[] = []
 
@@ -173,26 +164,17 @@ async function queryIbc2VibcPacketsDirectional(
 
   const packetReceipts: channel.PacketState[] = []
 
-  await evmEvents(
-    chainSetB as EvmChainSet,
-    {
-      height: null,
-      minHeight: 0,
-      maxHeight: await getLatestBlockNumber(chainSetB.Nodes[0].RpcHost),
-      allEvents: true
-    },
-    (event: TxEvent) => {
-      const recvPacketEvent = event.events.RecvPacket
-      if (recvPacketEvent) {
-        packetReceipts.push({
-          channelId: chainB.channelID,
-          portId: chainB.portID,
-          sequence: Long.fromString(recvPacketEvent['sequence']),
-          data: Uint8Array.from([])
-        })
-      }
+  await evmEvents(chainSetB as EvmChainSet, { minHeight: 1 } as EventsFilter, (event: TxEvent) => {
+    const recvPacketEvent = event.events.RecvPacket
+    if (recvPacketEvent && recvPacketEvent['destChannelId'] === chainB.channelID) {
+      packetReceipts.push({
+        channelId: chainB.channelID,
+        portId: chainB.portID,
+        sequence: Long.fromString(recvPacketEvent['sequence']),
+        data: Uint8Array.from([])
+      })
     }
-  )
+  })
 
   return extractPackets(packetCommits.commitments, packetReceipts, packetAcks.acknowledgements, chainA, chainB)
 }
@@ -227,14 +209,6 @@ async function queryIbc2IbcPacketsDirectional(
 
   // NB: Packet data is from the perspective of the sending channel.
   return extractPackets(packetCommits.commitments, packetReceipts, packetAcks.acknowledgements, chainA, chainB)
-}
-
-async function getLatestBlockNumber(host: string) {
-  // Connect to an Ethereum node using ethers.js
-  const provider = new ethers.providers.JsonRpcProvider(host)
-
-  // Get the latest block number
-  return await provider.getBlockNumber()
 }
 
 export async function tracePackets(
