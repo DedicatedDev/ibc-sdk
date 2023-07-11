@@ -97,11 +97,13 @@ class IbcChannelHandshaker {
   portid: string
   connectionHops: string[]
   channelId: string
+  minHeight: number
 
   private constructor(
     chain: CosmosChainSet,
     version: string,
     portid: string,
+    minHeight: number,
     account: CosmosAccount,
     client: Tendermint37Client,
     signer: SigningStargateClient
@@ -114,6 +116,7 @@ class IbcChannelHandshaker {
     this.portid = portid
     this.channelId = ''
     this.connectionHops = []
+    this.minHeight = minHeight
   }
 
   static async create(chain: CosmosChainSet, version: string, portid: string) {
@@ -127,7 +130,8 @@ class IbcChannelHandshaker {
       offlineSigner,
       self.cosmos.client.signerOpts()
     )
-    return new IbcChannelHandshaker(chain, version, portid, account, queryClient, signerClient)
+    const minHeight = (await queryClient.block()).block.header.height
+    return new IbcChannelHandshaker(chain, version, portid, minHeight, account, queryClient, signerClient)
   }
 
   async waitForBlocks(blocks: number) {
@@ -135,9 +139,10 @@ class IbcChannelHandshaker {
   }
 
   async waitForEvent(name: string) {
-    const filter: any = { minHeight: 1 }
+    const filter: any = { minHeight: this.minHeight }
 
     log.info(`waiting for event '${name}' on ${this.chain.Name}`)
+    log.debug(`using filter: ${JSON.stringify(filter)}`)
     let event: any
     await self.utils.waitUntil(
       async () => {
@@ -323,6 +328,7 @@ type HandshakeConfig = {
 
 // vIbc (A) <=> Ibc (B)
 async function vIbcToIbc(config: HandshakeConfig, connectionHops: string[]) {
+  log.debug('vIbc (A) <=> Ibc (B) case')
   const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.a.version, config.a.portID)
   const ibcB = await IbcChannelHandshaker.create(config.b.chain as CosmosChainSet, config.b.version, config.b.portID)
 
@@ -353,6 +359,7 @@ async function vIbcTovIbc(_config: HandshakeConfig) {
 
 // Ibc (A) <=> vIbc (B)
 async function ibcTovIbc(config: HandshakeConfig, connectionHops: string[]) {
+  log.debug('Ibc (A) <=> vIbc (B) case')
   const ibcA = await IbcChannelHandshaker.create(config.a.chain as CosmosChainSet, config.a.version, config.a.portID)
 
   const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.b.version, config.b.portID)
