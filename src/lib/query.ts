@@ -44,11 +44,11 @@ function extractPackets(
 ) {
   const packets: Packet[] = []
 
-  log.info(`Packet commits: ${packetCommits.length}`)
-  log.info(`Packet acks: ${packetAcks.length}`)
+  log.debug(`Packet commits: ${packetCommits.length}`)
+  log.debug(`Packet acks: ${packetAcks.length}`)
 
   packetCommits.forEach((sent) => {
-    log.info(`Packet commit: ${JSON.stringify(sent)}`)
+    log.debug(`Packet commit: ${JSON.stringify(sent)}`)
     packets.push({
       chainID: chainA.chainID,
       channelID: sent.channelId,
@@ -59,9 +59,13 @@ function extractPackets(
   })
 
   packetAcks.forEach((ack) => {
-    log.info(`Packet ack: ${JSON.stringify(ack)}`)
+    log.debug(`Packet ack: ${JSON.stringify(ack)}`)
     for (let i = 0; i < packets.length; i++) {
-      if (packets[i].sequence.equals(ack.sequence) && packets[i].state === PacketState.Sent && packets[i].portID === ack.portId) {
+      if (
+        packets[i].sequence.equals(ack.sequence) &&
+        packets[i].state === PacketState.Sent &&
+        packets[i].portID === ack.portId
+      ) {
         packets[i].state = PacketState.Acknowledged
         return
       }
@@ -76,7 +80,7 @@ function extractPackets(
   })
 
   packetReceipts.forEach((receipt) => {
-    log.info(`Packet receipt: ${JSON.stringify(receipt)}`)
+    log.debug(`Packet receipt: ${JSON.stringify(receipt)}`)
     packets.push({
       chainID: chainB.chainID,
       channelID: receipt.channelId,
@@ -100,7 +104,7 @@ async function queryVibc2IbcPacketsDirectional(
   chainA: EndpointInfo,
   chainB: EndpointInfo
 ) {
-  log.info("Querying packets from Vibc to IBC")
+  log.debug('Querying packets from Vibc to IBC')
   const packetCommits: channel.PacketState[] = []
   const packetAcks: channel.PacketState[] = []
 
@@ -138,7 +142,7 @@ async function queryVibc2IbcPacketsDirectional(
   const packetReceipts: channel.PacketState[] = []
 
   const promises = packetCommits.map(async (commit) => {
-    log.info(`Packet commitment: ${JSON.stringify(commit)}`)
+    log.debug(`Packet commitment: ${JSON.stringify(commit)}`)
     const receipt = await clientB.ibc.channel.packetReceipt(chainB.portID, chainB.channelID, commit.sequence.toNumber())
     if (receipt.received) {
       const packetReceipt = {
@@ -148,7 +152,7 @@ async function queryVibc2IbcPacketsDirectional(
         data: commit.data
       }
       packetReceipts.push(packetReceipt)
-      log.info(`Packet receipts: ${JSON.stringify(packetReceipts)}`)
+      log.debug(`Packet receipts: ${JSON.stringify(packetReceipts)}`)
     }
   })
 
@@ -163,7 +167,7 @@ async function queryIbc2VibcPacketsDirectional(
   chainA: EndpointInfo,
   chainB: EndpointInfo
 ) {
-  log.info("Querying packets from IBC to Vibc")
+  log.debug('Querying packets from IBC to Vibc')
   const packetAcks = await clientA.ibc.channel.allPacketAcknowledgements(chainA.portID, chainA.channelID)
   const packetCommits = await clientA.ibc.channel.allPacketCommitments(chainA.portID, chainA.channelID)
 
@@ -205,7 +209,7 @@ async function queryIbc2IbcPacketsDirectional(
   const packetReceipts: channel.PacketState[] = []
 
   const promises = packetCommits.commitments.map(async (commit) => {
-    log.info(`Packet commitment: ${JSON.stringify(commit)}`)
+    log.debug(`Packet commitment: ${JSON.stringify(commit)}`)
     const receipt = await clientB.ibc.channel.packetReceipt(chainB.portID, chainB.channelID, commit.sequence.toNumber())
     if (receipt.received) {
       const packetReceipt = {
@@ -215,7 +219,7 @@ async function queryIbc2IbcPacketsDirectional(
         data: commit.data
       }
       packetReceipts.push(packetReceipt)
-      log.info(`Packet receipts: ${JSON.stringify(packetReceipts)}`)
+      log.debug(`Packet receipts: ${JSON.stringify(packetReceipts)}`)
     }
   })
 
@@ -288,7 +292,7 @@ export async function tracePackets(
     uniquePacketSet.add(packet.sequence.toString() + '-' + packet.portID)
   })
   const uniquePacketCount = uniquePacketSet.size
-  log.info(`Traced ${uniquePacketCount} packets`)
+  log.debug(`Traced ${uniquePacketCount} packets`)
 
   return packets
 }
