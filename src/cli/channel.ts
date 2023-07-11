@@ -16,6 +16,7 @@ import { VIBCRelayer } from '../lib/relayers/vibc'
 import { EventsFilter, TxEvent } from '../lib/query'
 import { TextEncoder } from 'util'
 import { flatCosmosEvent, getLogger, waitForBlocks } from '../lib/utils'
+import { addressify } from '../lib/ethers'
 
 const log = getLogger()
 
@@ -23,6 +24,12 @@ type Endpoint = {
   chain: ChainSet
   portID: string
   version: string
+}
+
+function portIdToEvmAddress(portId: string) {
+  const parts = portId.split('.')
+  if (parts.length !== 3) throw new Error(`Invalid portID ${portId}`)
+  return addressify(parts[2])
 }
 
 function proof(): any {
@@ -319,7 +326,7 @@ async function vIbcToIbc(config: HandshakeConfig, connectionHops: string[]) {
   const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.a.version, config.a.portID)
   const ibcB = await IbcChannelHandshaker.create(config.b.chain as CosmosChainSet, config.b.version, config.b.portID)
 
-  const address = config.a.portID.split('.')[2]
+  const address = portIdToEvmAddress(config.a.portID)
   const vibcA = await VIbcChannelHandshaker.create(config.a.chain as EvmChainSet, config.runtime, address, polymer)
 
   // step 1
@@ -350,11 +357,7 @@ async function ibcTovIbc(config: HandshakeConfig, connectionHops: string[]) {
 
   const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.b.version, config.b.portID)
 
-  if (!/^[^.]*\.[^.]*\.[^.]*$/.test(config.b.portID)) {
-    throw new Error(`Invalid portID ${config.b.portID}`)
-  }
-
-  const address = "0x" + config.b.portID.split('.')[2]
+  const address = portIdToEvmAddress(config.b.portID)
   const vibcB = await VIbcChannelHandshaker.create(config.b.chain as EvmChainSet, config.runtime, address, polymer)
   await vibcB.startRelaying([...connectionHops].reverse())
 
