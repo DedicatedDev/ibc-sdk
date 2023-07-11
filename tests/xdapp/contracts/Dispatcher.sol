@@ -47,12 +47,11 @@ contract Dispatcher is IbcDispatcher, Ownable {
 
     event OpenIbcChannel(
         address indexed portAddress,
-        bytes32 indexed counterpartyChannelId,
-        bytes32 version,
+        string version,
         ChannelOrder ordering,
         string[] connectionHops,
         string counterpartyPortId,
-        bytes32 counterpartyVersion
+        string counterpartyChannelId
     );
 
     event ConnectIbcChannel(
@@ -273,30 +272,29 @@ contract Dispatcher is IbcDispatcher, Ownable {
      */
     function openIbcChannel(
         IbcReceiver portAddress,
-        bytes32 version,
+        string calldata version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
-        bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        bytes32 counterpartyVersion
+        string calldata counterpartyChannelId,
+        string calldata counterpartyVersion
     ) external {
-        bytes32 selectedVersion = portAddress.onOpenIbcChannel(
+        string memory selectedVersion = portAddress.onOpenIbcChannel(
             version,
             ordering,
             connectionHops,
-            counterpartyChannelId,
             counterpartyPortId,
+            counterpartyChannelId,
             counterpartyVersion
         );
 
         emit OpenIbcChannel(
             address(portAddress),
-            counterpartyChannelId,
             selectedVersion,
             ordering,
             connectionHops,
             counterpartyPortId,
-            counterpartyVersion
+            counterpartyChannelId
         );
     }
 

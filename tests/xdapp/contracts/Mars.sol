@@ -12,7 +12,8 @@ contract Mars is IbcReceiver, Ownable {
     IbcPacket[] public timeoutPackets;
     bytes32[] public connectedChannels;
 
-    bytes32[] supportedVersions = [bytes32('1.0'), bytes32('2.0')];
+    string[] supportedVersions = ['1.0', '2.0'];
+    bytes32[] supportedVersionsBytes = [bytes32('1.0'), bytes32('2.0')]; // Temp solution, will be removed.
 
     function onRecvPacket(IbcPacket calldata packet) external returns (AckPacket memory ackPacket) {
         recvedPackets.push(packet);
@@ -28,13 +29,13 @@ contract Mars is IbcReceiver, Ownable {
     }
 
     function onOpenIbcChannel(
-        bytes32 version,
+        string calldata version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
-        bytes32 counterpartyChannelId,
         string calldata counterpartyPortId,
-        bytes32 counterpartyVersion
-    ) external returns (bytes32 selectedVersion) {
+        string calldata counterpartyChannelId,
+        string calldata counterpartyVersion
+    ) external returns (string memory selectedVersion) {
         require(bytes(counterpartyPortId).length > 8, 'Invalid counterpartyPortId');
         /**
          * Version selection is determined by if the callback is invoked on behalf of ChanOpenInit or ChanOpenTry.
@@ -43,9 +44,9 @@ contract Mars is IbcReceiver, Ownable {
          * In both cases, the selected version should be in the supported versions list.
          */
         bool foundVersion = false;
-        selectedVersion = version == bytes32('') ? counterpartyVersion : version;
+        selectedVersion = keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked('')) ? counterpartyVersion : version;
         for (uint i = 0; i < supportedVersions.length; i++) {
-            if (selectedVersion == supportedVersions[i]) {
+            if (keccak256(abi.encodePacked(selectedVersion)) == keccak256(abi.encodePacked(supportedVersions[i]))) {
                 foundVersion = true;
                 break;
             }
@@ -63,7 +64,7 @@ contract Mars is IbcReceiver, Ownable {
         // ensure negotiated version is supported
         bool foundVersion = false;
         for (uint i = 0; i < supportedVersions.length; i++) {
-            if (counterpartyVersion == supportedVersions[i]) {
+            if (counterpartyVersion == supportedVersionsBytes[i]) {
                 foundVersion = true;
                 break;
             }

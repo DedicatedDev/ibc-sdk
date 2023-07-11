@@ -50,13 +50,13 @@ interface IbcReceiver {
     //
 
     function onOpenIbcChannel(
-        bytes32 version,
+        string calldata version,
         ChannelOrder ordering,
         string[] calldata connectionHops,
-        bytes32 counterPartyChannelId,
         string calldata counterpartyPortId,
-        bytes32 counterpartyVersion
-    ) external returns (bytes32 selectedVersion);
+        string calldata counterPartyChannelId,
+        string calldata counterpartyVersion
+    ) external returns (string memory selectedVersion);
 
     function onConnectIbcChannel(
         bytes32 channelId,

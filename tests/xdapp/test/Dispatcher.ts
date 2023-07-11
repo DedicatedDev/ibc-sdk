@@ -86,9 +86,12 @@ describe('IBC Core Smart Contract', function () {
     UpgradeClientMsg: { clientState: toBytes32('clientState'), consensusState: genState(0, 0, 0, 0) },
     ConnHops1: ['connection-0', 'connection-2'],
     ConnHops2: ['connection-1', 'connection-3'],
-    EmptyVersion: toBytes32(''),
-    V1: toBytes32('1.0'),
-    V2: toBytes32('2.0'),
+    EmptyVersion: '',
+    V1: '1.0',
+    V2: '2.0',
+    BEmptyVersion: toBytes32(''), // TODO: will be deleted after API re-design
+    BV1: toBytes32('1.0'),// TODO: will be deleted after API re-design
+    BV2: toBytes32('2.0'),// TODO: will be deleted after API re-design
     InvalidVersion: toBytes32('invalid-version'),
     Unordered: 0,
     Ordered: 1,
@@ -164,7 +167,7 @@ describe('IBC Core Smart Contract', function () {
     const channel = {
       portAddress: mars.address,
       channelId: C.ChannelIds[0],
-      version: C.V1,
+      version: C.BV1,
       ordering: C.Unordered,
       connectionHops: C.ConnHops1,
       counterpartyPortId: C.BscPortId,
@@ -254,10 +257,10 @@ describe('IBC Core Smart Contract', function () {
       await expect(
         dispatcher
           .connect(accounts.relayer)
-          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.EmptyChannelId, C.BscPortId, C.EmptyVersion)
+          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.BscPortId, C.EmptyChannelId, C.EmptyVersion)
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
-        .withArgs(mars.address, C.EmptyChannelId, C.V1, C.Unordered, C.ConnHops1, C.BscPortId, C.EmptyVersion)
+        .withArgs(mars.address, C.V1, C.Unordered, C.ConnHops1, C.BscPortId, C.EmptyChannelId)
     })
 
     it('ChanOpenTry', async function () {
@@ -271,13 +274,13 @@ describe('IBC Core Smart Contract', function () {
             C.EmptyVersion,
             C.Ordered,
             C.ConnHops2,
-            C.RemoteChannelIds[0],
             C.BscPortId,
+            C.RemoteChannelIds[0],
             C.V2
           )
       )
         .to.emit(dispatcher, 'OpenIbcChannel')
-        .withArgs(mars.address, C.RemoteChannelIds[0], C.V2, C.Ordered, C.ConnHops2, C.BscPortId, C.V2)
+        .withArgs(mars.address, C.V2, C.Ordered, C.ConnHops2, C.BscPortId, C.RemoteChannelIds[0])
     })
 
     it('unsupported version', async function () {
@@ -320,7 +323,7 @@ describe('IBC Core Smart Contract', function () {
       await expect(
         dispatcher
           .connect(accounts.relayer)
-          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, C.RemoteChannelIds[0], 'portX', C.EmptyVersion)
+          .openIbcChannel(mars.address, C.V1, C.Unordered, C.ConnHops1, 'portX', C.RemoteChannelIds[0], C.EmptyVersion)
       ).to.be.revertedWith('Invalid counterpartyPortId')
     })
 
@@ -338,7 +341,7 @@ describe('IBC Core Smart Contract', function () {
               C.Ordered,
               C.BscPortId,
               C.RemoteChannelIds[0],
-              C.V1,
+              C.BV1,
               C.ValidProof
             )
         )
@@ -347,7 +350,7 @@ describe('IBC Core Smart Contract', function () {
 
         // confirm channel is owned by the port address
         const channel = await dispatcher.getChannel(mars.address, C.ChannelIds[0])
-        expect(channel).deep.equal([C.V1, C.Ordered, C.ConnHops1, C.BscPortId, C.RemoteChannelIds[0]])
+        expect(channel).deep.equal([C.BV1, C.Ordered, C.ConnHops1, C.BscPortId, C.RemoteChannelIds[0]])
       })
 
       it('invalid proof', async function () {
@@ -362,7 +365,7 @@ describe('IBC Core Smart Contract', function () {
               C.Ordered,
               C.BscPortId,
               C.RemoteChannelIds[0],
-              C.V1,
+              C.BV1,
               C.InvalidProof
             )
         ).to.be.revertedWith('Fail to prove channel state')
