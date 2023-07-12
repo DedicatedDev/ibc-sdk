@@ -1,6 +1,6 @@
 # IBC SDK
 
-![Tests](https://github.com/polymerdao/ibc-sdk/actions/workflows/test.yml/badge.svg?branch=main)
+![Tests](https://github.com/open-ibc/ibc-sdk/actions/workflows/test.yml/badge.svg?branch=main)
 
 The IBC SDK is a powerful NodeJS package designed to streamline cross-chain dapp (xdapp) development using the [Inter-Blockchain Communication (IBC) protocol](https://ibcprotocol.org/).
 
@@ -35,6 +35,7 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io/polymerdao -u '< your-github-usernam
 ```
 
 2. Make sure that your Node version >= 16.x
+
 ```bash
 node -v
 ```
@@ -42,9 +43,9 @@ node -v
 3. Run the `npm install` command in your terminal:
 
 ```bash
-npm config set @polymerdao:registry=https://npm.pkg.github.com
+npm config set @open-ibc:registry=https://npm.pkg.github.com
 npm config set //npm.pkg.github.com/:_authToken=$GITHUB_TOKEN
-npm install -g @polymerdao/ibc-sdk
+npm install -g @open-ibc/ibc-sdk
 ```
 
 Note that if you use `sudo` for any of the above commands, you need to do it for all of them.
@@ -121,6 +122,6 @@ Furthermore, IBC developers can leverage the IBC SDK's query API to gather high-
 
 ## Want to contribute or need support?
 
-To contribute, report issues, or explore the source code, visit the [IBC SDK GitHub repository](https://github.com/polymerdao/ibc-sdk).
+To contribute, report issues, or explore the source code, visit the [IBC SDK GitHub repository](https://github.com/open-ibc/ibc-sdk).
 
 Join our vibrant community on [Discord](https://discord.gg/PM54RNM8) 🐱‍💻
