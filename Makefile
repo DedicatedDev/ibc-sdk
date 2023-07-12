@@ -26,7 +26,6 @@ stop: build-ibctl
 
 clean:
 	rm -rf bin dist node_modules
-	rm -rf tests/xdapp/artifacts
 
 POLYMER_CHAIN_DIR = ../polymerase/chain
 PROTO_FILES = $(shell find $(POLYMER_CHAIN_DIR)/proto/ -name '*.proto')
