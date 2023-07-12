@@ -2,9 +2,10 @@ import * as self from '../../lib/index'
 import path from 'path'
 import anyTest, { TestFn } from 'ava'
 import { gethConfig } from './simple_geth_config'
-import { getTestingLogger, extractSmartContracts } from '../../lib/utils'
+import { getTestingLogger } from '../../lib/utils'
+import { extractVibcCoreSmartContracts } from '@open-ibc/vibc-core-smart-contracts'
 import { ChainSetsRunObj } from '../../lib/schemas'
-import os from "os";
+import os from 'os'
 import fs from 'fs'
 import { getWorkspace } from './test_utils'
 
@@ -19,7 +20,7 @@ const test = anyTest as TestFn<{
 test.beforeEach(async (t) => {
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'contracts-'))
   t.context.contractsDir = tempDir
-  await extractSmartContracts(tempDir)
+  await extractVibcCoreSmartContracts(tempDir)
   t.context.workspace = getWorkspace('test-evm-deploy')
 })
 

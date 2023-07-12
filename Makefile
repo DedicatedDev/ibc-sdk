@@ -5,14 +5,7 @@ npm-install:
 build: npm-install
 	npx tsc -p tsconfig.json
 
-build-vibc-core-contracts: npm-install
-	$(MAKE) -C tests/xdapp
-	tar -c -z -f - tests/xdapp/artifacts/contracts | \
-		base64 | \
-		awk 'BEGIN {print "export const contractsTemplate = `"} {print} END {print "`"}' > \
-		src/lib/utils/contracts.template.ts
-
-build-ibctl: build-vibc-core-contracts build
+build-ibctl: build
 	npx esbuild src/cli/main.ts --bundle --platform=node --outfile=bin/ibctl
 
 test-e2e: build-ibctl
@@ -50,19 +43,14 @@ proto-gen:
 		--proto_path="$(POLYMER_CHAIN_DIR)/third_party/proto/ibc-go@v7_dep" \
 		--ts_proto_out=./src/lib/cosmos/client/_generated $(PROTO_FILES)
 
-test-vibc-core-contracts:
-	$(MAKE) -C tests/xdapp test
-
-test: build-ibctl
+test-all: build-ibctl
 	npx ava
-
-test-all: test-vibc-core-contracts test
 
 clean-docker:
 	docker ps -a --format json | grep 'org.polymerlabs.runner=ibc-sdk' | jq .ID | xargs docker rm -f || true
 	rm -rf ~/.ibc-sdk
 
-.PHONY: test test-e2e test-cli test-vibc-relayer-config test-evm-deploy
-.PHONY: clean build-vibc-core-contracts build-ibctl
+.PHONY: test test-e2e test-cli test-evm-deploy
+.PHONY: clean build-ibctl
 
 .DEFAULT_GOAL := build-ibctl

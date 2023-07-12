@@ -2,7 +2,6 @@
 /dist/
 /bin/
 .idea/*
-src/lib/utils/contracts.template.ts
 
 .DS_Store
 coverage

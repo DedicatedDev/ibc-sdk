@@ -1,5 +1,6 @@
 import path from 'path'
-import { $, extractSmartContracts, fs, readYamlFile, readYamlText, getLogger } from '../lib/utils'
+import { $, fs, readYamlFile, readYamlText, getLogger } from '../lib/utils'
+import { extractVibcCoreSmartContracts } from '@open-ibc/vibc-core-smart-contracts'
 import { configTemplate } from './config.template'
 import { channelHandshake } from './channel'
 import { EndpointInfo, Packet, TxEvent, tracePackets as sdkTracePackets } from '../lib/query'
@@ -119,7 +120,7 @@ export async function init(opts: InitOpts) {
   const contractsDir = path.join(workspace, vibcCoreContracts)
   fs.mkdirSync(contractsDir)
 
-  await extractSmartContracts(contractsDir)
+  await extractVibcCoreSmartContracts(contractsDir)
 
   log.info('workspace created at: %s', workspace)
   log.info('configuration file is available at: %s', configPath)
@@ -297,9 +298,7 @@ export async function tracePackets(opts: TracePacketsOpts) {
     throw new Error('Could not find chain runtime object!')
   }
 
-  const packetsRaw = await sdkTracePackets(chainA, chainB, opts.endpointA, opts.endpointB).then(
-    ...thenClause
-  )
+  const packetsRaw = await sdkTracePackets(chainA, chainB, opts.endpointA, opts.endpointB).then(...thenClause)
   const packets = packetsRaw.map((p: Packet) => ({ ...p, sequence: p.sequence.toString() }))
 
   if (opts.json) console.log(JSON.stringify(packets))

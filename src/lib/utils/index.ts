@@ -1,9 +1,6 @@
 import fs from 'fs'
 import yaml from 'js-yaml'
 import * as path from 'path'
-import { contractsTemplate } from './contracts.template'
-import os from 'os'
-import * as tar from 'tar'
 import toml from '@iarna/toml'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
 import { DeliverTxResponse } from '@cosmjs/stargate'
@@ -168,32 +165,6 @@ export async function waitUntil(checkFunc: () => Promise<boolean>, retry: number
     }
   }
   throw new Error(`failed after ${retry} retries.\n${msg}`)
-}
-
-export async function extractSmartContracts(contractsDir: string): Promise<void> {
-  // Create a unique temporary directory
-  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'contracts-'))
-
-  // Write the decoded template to a temporary tar file
-  const tempTarPath = path.join(tempDir, 'temp.tar')
-
-  try {
-    // Decode the base64-encoded contracts template
-    const decodedTemplate = Buffer.from(contractsTemplate.trim(), 'base64')
-
-    fs.writeFileSync(tempTarPath, decodedTemplate, 'binary')
-
-    // Extract the tar file contents into the contracts directory
-    await tar.extract({
-      strip: 4,
-      file: tempTarPath,
-      cwd: contractsDir
-    })
-  } finally {
-    // Delete the temporary tar file and directory
-    fs.unlinkSync(tempTarPath)
-    fs.rmdirSync(tempDir)
-  }
 }
 
 export async function waitForBlocks(client: Tendermint37Client, blocks: number) {

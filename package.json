@@ -51,6 +51,7 @@
     "@cosmjs/stargate": "^0.30.0",
     "@cosmjs/tendermint-rpc": "^0.30.0",
     "@iarna/toml": "^2.2.5",
+    "@open-ibc/vibc-core-smart-contracts": "^0.0.3",
     "@types/archiver": "^5.3.2",
     "@types/exit": "^0.1.31",
     "@types/tar": "^6.1.5",
@@ -62,7 +63,6 @@
     "js-yaml": "^4.1.0",
     "just-clone": "^6.0.1",
     "lodash": "^4.17.21",
-    "tar": "^6.1.15",
     "winston": "^3.3.3",
     "zod": "^3.17.3",
     "zx-cjs": "^7.0.7-0"

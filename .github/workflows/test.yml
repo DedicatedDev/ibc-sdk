@@ -11,6 +11,7 @@ on:
 env:
   TEST_IBCTL_WORKSPACE: /tmp/ibctl-e2e-test
   TEST_IBCTL_LOGS_BEFORE_EXIT: 1
+  NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 
 jobs:
   test:
@@ -20,6 +21,12 @@ jobs:
 
     - name: Checkout
       uses: actions/checkout@v3
+
+    - name: Authenticate Nodejs
+      uses: actions/setup-node@v3
+      with:
+        registry-url: 'https://npm.pkg.github.com'
+        scope: '@open-ibc'
 
     - name: Authenticate Docker
       uses: docker/login-action@v2
