@@ -1,6 +1,6 @@
 {
   "name": "@open-ibc/ibc-sdk",
-  "version": "0.0.1-rc11",
+  "version": "0.0.1-rc12",
   "description": "IBC Control Command",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
