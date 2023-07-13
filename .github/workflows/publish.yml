@@ -7,6 +7,8 @@ on:
   release:
     types: [ published ]
 
+env:
+  NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 
 jobs:
   publish:
@@ -21,6 +23,12 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18.15'
+
+      - name: Authenticate Nodejs
+        uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@open-ibc'
 
       - name: Build ibctl
         run: make build-ibctl
