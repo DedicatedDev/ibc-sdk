@@ -1,6 +1,6 @@
 {
   "name": "@open-ibc/ibc-sdk",
-  "version": "0.0.1-rc12",
+  "version": "0.0.1-rc13",
   "description": "IBC Control Command",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -51,7 +51,7 @@
     "@cosmjs/stargate": "^0.30.0",
     "@cosmjs/tendermint-rpc": "^0.30.0",
     "@iarna/toml": "^2.2.5",
-    "@open-ibc/vibc-core-smart-contracts": "^0.0.4",
+    "@open-ibc/vibc-core-smart-contracts": "^0.0.5",
     "@types/archiver": "^5.3.2",
     "@types/exit": "^0.1.31",
     "@types/tar": "^6.1.5",

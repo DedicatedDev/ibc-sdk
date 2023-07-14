@@ -214,7 +214,11 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
     JSON.stringify({ message: { m: msg } }),
     ethers.utils.formatBytes32String(c.polyChannel.channel_id),
     ((Date.now() + 60 * 60 * 1000) * 1_000_000).toString(),
-    0
+    {
+      recvFee: 0,
+      ackFee: 0,
+      timeoutFee: 0
+    }
   )
   // Get the sequence number from the emitted SendPacket event
   const receipt = await response.wait()
