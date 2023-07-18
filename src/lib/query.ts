@@ -125,7 +125,7 @@ async function queryVibc2IbcPacketsDirectional(
         channelId: chainA.channelID,
         portId: chainA.portID,
         sequence: Long.fromString(ackPacketEvent['sequence']),
-        data: ackPacketEvent['AckPacket']['data']
+        data: new Uint8Array() // `Acknowledgement` event does not contain packet data any more, so we set it to empty
       })
     }
   })

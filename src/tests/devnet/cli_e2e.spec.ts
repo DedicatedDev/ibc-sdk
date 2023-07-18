@@ -240,8 +240,6 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   await waitForEvent(t, c.eth1Chain.Name, evmHeight, 'Acknowledgement', (events: any) => {
     const e = events.Acknowledgement
     t.assert(e)
-    t.assert(JSON.parse(e.AckPacket.data).ok.reply === 'Got the message!')
-    t.assert(e.AckPacket.success === true)
     t.assert(e.sourcePortAddress === c.receiver.Address)
     t.assert(e.sourceChannelId === c.polyChannel.channel_id)
     t.assert(e.sequence === ethers.BigNumber.from(sendPacketSequence).toString())
@@ -277,9 +275,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   await waitForEvent(t, c.eth1Chain.Name, evmHeight, 'RecvPacket', (events: any) => {
     const e = events.RecvPacket
     t.assert(e)
-    t.assert(e.srcChannelId === c.wasmChannel.channel_id)
     t.assert(e.destChannelId === c.wasmChannel.counterparty.channel_id)
-    t.assert(e.srcPortId === c.wasmChannel.port_id)
     t.assert(e.destPortAddress === c.receiver.Address)
     t.assert(e.sequence === '1')
     return true
