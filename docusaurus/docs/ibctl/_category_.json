@@ -1,0 +1,8 @@
+{
+  "label": "ibctl CLI tool",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Become an IBC SDK CLI power user."
+  }
+}

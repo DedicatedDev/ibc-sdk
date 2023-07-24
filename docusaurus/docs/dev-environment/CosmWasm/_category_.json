@@ -1,0 +1,8 @@
+{
+  "label": "CosmWasm",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "How to interact with IBC SDK for CosmWasm chains"
+  }
+}

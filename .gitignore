@@ -120,6 +120,7 @@ dist
 
 # Docusaurus cache and generated files
 .docusaurus
+docusaurus/build/
 
 # Serverless directories
 .serverless/

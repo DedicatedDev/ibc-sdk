@@ -1,15 +1,20 @@
-# IBC SDK
+---
+sidebar_position: 1
+sidebar_label: 'Introduction'
+---
 
-![Tests](https://github.com/open-ibc/ibc-sdk/actions/workflows/test.yml/badge.svg?branch=main)
+# IBC SDK
 
 The IBC SDK is a powerful NodeJS package designed to streamline cross-chain dapp (xdapp) development using the [Inter-Blockchain Communication (IBC) protocol](https://ibcprotocol.org/).
 
-### Navigate the docs
+:::note Navigate the docs
 
-- [Quickstart tutorials](./docusaurus/docs/quickstart/index.md)
-- [Concepts](./docusaurus/docs/concepts/index.md)
-- [Supported dev environments](./docusaurus/docs/dev-environment/index.md)
-- [ibctl CLI tool](./docusaurus/docs/ibctl/index.md)
+- [Quickstart tutorials](quickstart/): Do you know IBC already and want to jump straight into using the `ibctl` CLI tool?
+- [Concepts](category/concepts/): Find out the essentials about the underlying protocols that drive IBC SDK, the IBC and Polymer protocols
+- [Supported dev environments](dev-environment/): Need to freshen up on the basics of one of the supported developer environments of the supported chains?
+- [ibctl CLI tool](ibctl/): Learn the commands of the CLI tool you'll be interacting with.
+
+:::
 
 ## What does this package do?
 
@@ -23,33 +28,43 @@ Here's an overview of what the package offers:
 - **Account Funding**: Automatically funds developer accounts for testing and relaying purposes.
 - **Off-chain Relayers**: Starts off-chain relayer processes to facilitate cross-chain communication and have them monitor the right channels.
 - **IBC Connectivity**: Establishes IBC clients and connections (configurable) to prepare for cross-chain communication between xdapps.
-- **Virtual IBC integration**: Deploys the required [smart contracts on _virtual chains_](./docusaurus/docs/concepts/polymer/vibc.md) to establish quick and easy IBC integration.
+- **Virtual IBC integration**: Deploys the required [smart contracts on _virtual chains_](./concepts/polymer/vibc.md) to establish quick and easy IBC integration.
 
 ### Essential functionality
 
-- **CLI Commands**: easy-to-use [CLI tool `ibctl`](./docusaurus/docs/ibctl/index.md) to cover most use cases, and the ability to exec into the docker containers for more granular control
+- **CLI Commands**: easy-to-use [CLI tool `ibctl`](./ibctl/index.md) to cover most use cases, and the ability to exec into the docker containers for more granular control
 - **Providing API endpoints**: interact with the IBC SDK from your client environment
 - **Status Queries**: Provides convenient queries for monitoring the status of xdapp ports and messages.
 
-> 🔋 The guiding principle through all of this? _Batteries included, customization at your service!_ Start with the default configuration, deploy and get to testing. Customize later.
+:::tip Batteries included 🔋
+
+The guiding principle through all of this? _Batteries included, customization at your service!_
+
+Start with the default configuration, deploy and get to testing. Customize later.
+
+:::
 
 ### Who uses this package?
 
 The IBC SDK is designed to cater to two primary user groups:
 
 1. **xDapp Developers**: Developers who utilize the IBC SDK to test their xdapps before releasing them on public testnets or mainnets.
-2. **Polymer Developers**: Developers working on the [Polymer Protocol](./docusaurus/docs/concepts/index.md) who rely on the IBC SDK to ensure compliance with specifications.
+2. **Polymer Developers**: Developers working on the [Polymer Protocol](./concepts/polymer/index.md) who rely on the IBC SDK to ensure compliance with specifications.
 
 ## Supported chains
 
-| Chain                 | Resources                                                     | Dev environment docs                                        |
-| --------------------- | ------------------------------------------------------------- | ----------------------------------------------------------- |
-| Ethereum              | [Ethereum Developer Hub](https://ethereum.org/en/developers/) | [Link](./docusaurus/docs/dev-environment/EVM/index.md)      |
-| CosmWasm (Cosmos SDK) | [wasmd GitHub](https://github.com/cosmwasm/wasmd)             | [Link](./docusaurus/docs/dev-environment/CosmWasm/index.md) |
+| Chain                 | Resources                                                     | Dev environment docs                        |
+| --------------------- | ------------------------------------------------------------- | ------------------------------------------- |
+| Ethereum              | [Ethereum Developer Hub](https://ethereum.org/en/developers/) | [Link](./dev-environment/EVM/index.md)      |
+| CosmWasm (Cosmos SDK) | [wasmd GitHub](https://github.com/cosmwasm/wasmd)             | [Link](./dev-environment/CosmWasm/index.md) |
 
-> Note: In theory, any Cosmos SDK with CosmWasm enabled can be used. However, an image should be available to list in the configuration file.
+:::info CosmWasm chain image
 
-Additionally, **if you want to connect to a [virtual chain](./docusaurus/docs/concepts/polymer/vibc.md) through Polymer, the Cosmos chain will have to support multi-hop**.
+In theory, any Cosmos SDK with CosmWasm enabled can be used. However, an image should be available to list in the configuration file.
+
+Additionally, **if you want to connect to a [virtual chain](./concepts/polymer/vibc.md) through Polymer, the Cosmos chain will have to support multi-hop**.
+
+:::
 
 ## Installation and quick start
 
@@ -90,7 +105,7 @@ If you prefer to install from source, use the command `make` and execute it from
 Windows is not explicitly supported at the moment, although we will gladly accept feedback from brave explorers!
 :::
 
-You're all set to go! But maybe you want an example run to showcase a testing workflow? Then go the [quickstart tutorials page](./docusaurus/docs/quickstart/index.md)...
+You're all set to go! But maybe you want an example run to showcase a testing workflow? Then go the [quickstart tutorials page](./quickstart/index.md)...
 
 ## Key Benefits
 
@@ -118,7 +133,7 @@ The IBC SDK is not only valuable during local development and testing but also o
 
 - **Starting from snapshots**: support for bootstrapping from chain snapshots, allowing dapp developers to test their application logic locally against existing state and applications that exist on mainnet.
 
-- **IBC Dashboards**: We can leverage the IBC SDK's query API to gather high-level data related to the [Polymer Protocol](./docusuarus/docs/concepts/index.md), IBC, and vIBC that's running under the hood.This aggregated data can be visualized in a dashboard, providing valuable insights into the traffic and performance of your cross-chain communication.
+- **IBC Dashboards**: We can leverage the IBC SDK's query API to gather high-level data related to the [Polymer Protocol](./concepts/polymer/index.md), IBC, and vIBC that's running under the hood.This aggregated data can be visualized in a dashboard, providing valuable insights into the traffic and performance of your cross-chain communication.
 
 ## Want to contribute or need support?
 

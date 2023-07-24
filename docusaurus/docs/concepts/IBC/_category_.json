@@ -1,0 +1,8 @@
+{
+  "label": "IBC",
+  "position": 1,
+  "link": {
+    "type": "generated-index",
+    "description": "IBC architecture basics to understand for IBC SDK devs"
+  }
+}
