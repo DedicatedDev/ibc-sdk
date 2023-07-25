@@ -11,6 +11,12 @@ The IBC SDK is a powerful NodeJS package designed to streamline cross-chain dapp
 - [Supported dev environments](./docusaurus/docs/dev-environment/index.md)
 - [ibctl CLI tool](./docusaurus/docs/ibctl/index.md)
 
+To run the docs locally at `localhost:3000``, run:
+
+```bash
+cd docusaurus && npm start
+```
+
 ## What does this package do?
 
 The IBC SDK simplifies the development process for xdapps by automating various tasks and providing essential functionalities in only a few API/CLI calls.
@@ -60,27 +66,9 @@ Prerequisites:
 
 To quickly get started with the IBC SDK, follow these steps:
 
-<!-- TODO: after open-sourcing, remove the permissioning instructions -->
-
-**1. Obtain a GitHub token to access the necessary containers.**
-
-Create a GitHub personal access token to authenticate to the Container registry, please refer to the [GitHub docs](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-in-a-github-actions-workflow) for more info.
-
-Make sure to select at least the `read:packages` scope when creating the token.
+**Run the `npm install` command in your terminal:**
 
 ```bash
-# Store your access token in an environment variable:
-export GITHUB_TOKEN=<YOUR_TOKEN>
-
-# Authenticate to the container registry
-echo "$GITHUB_TOKEN" | docker login ghcr.io/polymerdao -u '< your-github-username >' --password-stdin
-```
-
-**2. Run the `npm install` command in your terminal:**
-
-```bash
-echo "@open-ibc:registry=https://npm.pkg.github.com" >> ~/.npmrc
-echo "//npm.pkg.github.com/:_authToken=$TOKEN" >> ~/.npmrc
 npm install -g @open-ibc/ibc-sdk
 ```
 
@@ -122,6 +110,6 @@ The IBC SDK is not only valuable during local development and testing but also o
 
 ## Want to contribute or need support?
 
-To contribute, report issues, or explore the source code, visit the [IBC SDK GitHub repository](https://github.com/open-ibc/ibc-sdk).
+To contribute, report issues, or explore the source code, check out the [contribution guidelines](./CONTRIBUTOR_GUIDLINES.md).
 
 Follow the [OpenIBC forum](https://forum.openibc.com/) to stay up-to-date on all developments regarding IBC, including IBC SDK.

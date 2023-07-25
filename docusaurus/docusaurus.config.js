@@ -41,7 +41,7 @@ const config = {
           sidebarPath: require.resolve('./sidebars.js'),
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl: 'https://github.com/open-ibc/ibc-sdk/'
+          editUrl: 'https://github.com/open-ibc/ibc-sdk/blob/main/docusaurus'
         },
         // blog: {
         //   showReadingTime: true,
