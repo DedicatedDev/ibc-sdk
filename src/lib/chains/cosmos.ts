@@ -128,11 +128,15 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
 
   override async generateAccounts(accountsConfig: AccountsConfig) {
     const accounts = accountsConfig as CosmosAccountsConfig
-    const generatedAccounts = accounts.List.map(async (actConfig: any) => {
+
+    const result : any[] = []
+    for (const actConfig of accounts.List) {
       const createNew = !actConfig.Address
-      return createNew ? await this.addNewAccount(actConfig) : actConfig
-    })
-    return await Promise.all(generatedAccounts)
+      const account = createNew ? await this.addNewAccount(actConfig as CosmosAccount) : actConfig
+      result.push(account)
+    }
+
+    return result
   }
 
   private async addGenesisAccounts(generatedAccounts: CosmosAccounts) {
