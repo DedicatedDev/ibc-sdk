@@ -137,7 +137,7 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
       nodes.push({
         Label: label,
         ContainerId: container.containerId,
-        RpcHost: this.rpcEndpoint.withHost('localhost').withPort(rpcHostPort).address,
+        RpcHost: this.rpcEndpoint.withHost('127.0.0.1').withPort(rpcHostPort).address,
         RpcContainer: this.rpcEndpoint.withHost(containerIp).address
       })
     }

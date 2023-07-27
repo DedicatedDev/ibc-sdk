@@ -57,7 +57,7 @@ export class ZkMintProver {
     const rpcPort = await this.getRPCPort()
     await utils.waitUntil(
       async () => {
-        const out = await zx.nothrow($`curl -sf http://localhost:${rpcPort}`)
+        const out = await zx.nothrow($`curl -sf http://127.0.0.1:${rpcPort}`)
         // 22 means the prover is accepting requests but the parameters are not correct
         return out.exitCode === 22
       },
@@ -73,7 +73,7 @@ export class ZkMintProver {
     return {
       Name: 'zkmint-prover',
       ContainerId: this.container.containerId,
-      RpcHost: ZkMintProver.rpcEndpoint.withHost('localhost').withPort(await this.getRPCPort()).address,
+      RpcHost: ZkMintProver.rpcEndpoint.withHost('127.0.0.1').withPort(await this.getRPCPort()).address,
       RpcContainer: ZkMintProver.rpcEndpoint.withHost(containerIp).address
     }
   }
