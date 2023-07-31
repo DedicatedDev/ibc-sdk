@@ -11,7 +11,7 @@ The IBC SDK is a powerful NodeJS package designed to streamline cross-chain dapp
 - [Supported dev environments](./docusaurus/docs/dev-environment/index.md)
 - [ibctl CLI tool](./docusaurus/docs/ibctl/index.md)
 
-To run the docs locally at `localhost:3000``, run:
+To run the docs locally at `localhost:3000`, run:
 
 ```bash
 cd docusaurus && npm start
@@ -37,7 +37,9 @@ Here's an overview of what the package offers:
 - **Providing API endpoints**: interact with the IBC SDK from your client environment
 - **Status Queries**: Provides convenient queries for monitoring the status of xdapp ports and messages.
 
-> 🔋 The guiding principle through all of this? _Batteries included, customization at your service!_ Start with the default configuration, deploy and get to testing. Customize later.
+> **🔋 The guiding principle through all of this?**
+>
+> _Batteries included, customization at your service!_ Start with the default configuration, deploy and get to testing. Customize later.
 
 ### Who uses this package?
 
@@ -53,7 +55,8 @@ The IBC SDK is designed to cater to two primary user groups:
 | Ethereum              | [Ethereum Developer Hub](https://ethereum.org/en/developers/) | [Link](./docusaurus/docs/dev-environment/EVM/index.md)      |
 | CosmWasm (Cosmos SDK) | [wasmd GitHub](https://github.com/cosmwasm/wasmd)             | [Link](./docusaurus/docs/dev-environment/CosmWasm/index.md) |
 
-> Note: In theory, any Cosmos SDK with CosmWasm enabled can be used. However, an image should be available to list in the configuration file.
+> **Note**
+> In theory, any Cosmos SDK with CosmWasm enabled can be used. However, an image should be available to list in the configuration file.
 
 Additionally, **if you want to connect to a [virtual chain](./docusaurus/docs/concepts/polymer/vibc.md) through Polymer, the Cosmos chain will have to support multi-hop**.
 
@@ -74,9 +77,8 @@ npm install -g @open-ibc/ibc-sdk
 
 If you prefer to install from source, use the command `make` and execute it from the root of your workspace.
 
-:::caution Windows support
-Windows is not explicitly supported at the moment, although we will gladly accept feedback from brave explorers!
-:::
+> **Warning**
+> Windows is not explicitly supported at the moment, although we will gladly accept feedback from brave explorers!
 
 You're all set to go! But maybe you want an example run to showcase a testing workflow? Then go the [quickstart tutorials page](./docusaurus/docs/quickstart/index.md)...
 
