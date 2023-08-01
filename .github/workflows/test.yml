@@ -22,12 +22,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Authenticate Nodejs
-      uses: actions/setup-node@v3
-      with:
-        registry-url: 'https://npm.pkg.github.com'
-        scope: '@open-ibc'
-
     - name: Authenticate Docker
       uses: docker/login-action@v2
       with:
