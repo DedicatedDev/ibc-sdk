@@ -1,6 +1,6 @@
 {
   "name": "@open-ibc/ibc-sdk",
-  "version": "0.0.1-rc16",
+  "version": "0.0.1-rc17",
   "description": "IBC Control Command",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,9 +15,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/open-ibc/ibc-sdk.git"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "prepack": "rm -rf ./dist",
@@ -51,7 +48,7 @@
     "@cosmjs/stargate": "^0.30.0",
     "@cosmjs/tendermint-rpc": "^0.30.0",
     "@iarna/toml": "^2.2.5",
-    "@open-ibc/vibc-core-smart-contracts": "^0.0.8",
+    "@open-ibc/vibc-core-smart-contracts": "^0.0.10",
     "@types/archiver": "^5.3.2",
     "@types/exit": "^0.1.31",
     "@types/tar": "^6.1.5",
