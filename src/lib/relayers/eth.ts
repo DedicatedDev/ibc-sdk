@@ -89,20 +89,6 @@ export class EthRelayer {
     // make the vIBC SC ABI available to the relayer
     fs.writeFileSync(path.join(containerDir, 'abi.json'), config.ibcCoreAbi, { encoding: 'utf-8' })
 
-    // TODO: this is horribly hacky. The altair lc running on polymer expects to find a random config file
-    //       with the smart contract abi and the dispatcher address. So, we are adding that file here.
-    //       So this adding a file within the polymer container for the lc (running in there) to work.
-    //       Let's get rid of this ASAP
-    {
-      const polyDir = path.join(runObj.WorkDir, poly.Name)
-      fs.writeFileSync(path.join(polyDir, 'abi.json'), config.ibcCoreAbi, { encoding: 'utf-8' })
-      const lcConfig: any = {
-        sc_address: config.ibcCoreAddress,
-        abi_path: '/tmp/abi.json'
-      }
-      fs.writeFileSync(path.join(polyDir, 'altair.json'), JSON.stringify(lcConfig), { encoding: 'utf-8' })
-    }
-
     log.verbose(`host dir: ${containerDir}`)
     const runtime: EthRelayerRuntime = {
       config: config
