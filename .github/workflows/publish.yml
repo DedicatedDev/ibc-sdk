@@ -5,7 +5,7 @@ on:
     tags:
       - 'v*.*.*'
   release:
-    types: [ published ]
+    types: [published]
 
 jobs:
   publish:
@@ -29,3 +29,4 @@ jobs:
         with:
           token: ${{ secrets.NPM_TOKEN }}
           access: public
+          ignore-scripts: false
