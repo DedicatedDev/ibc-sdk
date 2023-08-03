@@ -1,6 +1,6 @@
 {
   "name": "@open-ibc/ibc-sdk",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "IBC Control Command",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,6 +18,7 @@
   },
   "scripts": {
     "prepack": "rm -rf ./dist",
+    "publish": "npm publish --access public",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx"
   },
   "author": "Polymer Labs",
