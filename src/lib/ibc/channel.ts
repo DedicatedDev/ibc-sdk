@@ -82,18 +82,17 @@ export class IbcChannelHandshaker {
 
     log.info(`waiting for event '${name}' on ${this.chain.Name}`)
     log.debug(`using filter: ${JSON.stringify(filter)}`)
-    let event: any
-    await self.utils.waitUntil(
+    return await self.utils.waitUntil(
       async () => {
-        let height: number | undefined
-        await self.events(this.chain, filter as EventsFilter, (e: TxEvent) => {
-          if (!event && e.events[name]) event = e.events[name]
-          height = e.height
-          filter.minHeight = height
+        let found: any
+        await self.events(this.chain, filter as EventsFilter, (event: TxEvent) => {
+          if (found) return
+          found = event.events.find((e) => e[name])
+          filter.minHeight = event.height
         })
-        if (event !== undefined) {
-          log.info(`event '${name}' found at height ${height}`)
-          return true
+        if (found) {
+          log.info(`event '${name}' found at height ${filter.minHeight}`)
+          return found[name]
         }
         return false
       },
@@ -101,7 +100,6 @@ export class IbcChannelHandshaker {
       10_000,
       `could not find event '${name}' on chain '${this.chain.Name}'`
     )
-    return event
   }
 
   async registerPort(clientID: string, remoteSenderAddress: string) {

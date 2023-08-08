@@ -55,10 +55,10 @@ async function waitForEvent(t: any, chainName: string, minHeight: string, eventN
   log.info(`querying event '${eventName}' from ${chainName}`)
   await utils.waitUntil(
     async () => {
-      const out = await runCommand(t, 'events', chainName, '--min-height', minHeight, '--json', '--extended')
+      const out = await runCommand(t, 'events', chainName, '--min-height', minHeight, '--json')
       t.assert(out.exitCode === 0)
       const events = JSON.parse(out.stdout.trim())
-      const event = events.find((e: any) => e.events[eventName])
+      let event = events.find((e: any) => e.events.find((e1: any) => e1[eventName]))
       if (!event) return false
       log.info(`got event from ${chainName}: ${JSON.stringify(event)}`)
       return cb(event.events)
@@ -233,7 +233,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   log.info(`sent tx on eth ${_packet}`)
 
   await waitForEvent(t, c.wasmChain.Name, wasmHeight, 'recv_packet', (events: any) => {
-    const e = events.recv_packet
+    const e = events.find((e: any) => e.recv_packet).recv_packet
     t.assert(e)
     t.assert(JSON.parse(e.packet_data).message.m === msg)
     t.assert(e.packet_src_channel === c.polyChannel.channel_id)
@@ -244,7 +244,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   })
 
   await waitForEvent(t, c.eth1Chain.Name, evmHeight, 'Acknowledgement', (events: any) => {
-    const e = events.Acknowledgement
+    const e = events.find((e: any) => e.Acknowledgement).Acknowledgement
     t.assert(e)
     t.assert(e.sourcePortAddress === c.receiver.Address)
     t.assert(e.sourceChannelId === c.polyChannel.channel_id)
@@ -279,7 +279,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   t.assert(out.exitCode === 0)
 
   await waitForEvent(t, c.eth1Chain.Name, evmHeight, 'RecvPacket', (events: any) => {
-    const e = events.RecvPacket
+    const e = events.find((e: any) => e.RecvPacket).RecvPacket
     t.assert(e)
     t.assert(e.destChannelId === c.wasmChannel.counterparty.channel_id)
     t.assert(e.destPortAddress === c.receiver.Address)
@@ -288,13 +288,16 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   })
 
   await waitForEvent(t, c.wasmChain.Name, wasmHeight, 'acknowledge_packet', (events: any) => {
-    const e = events.acknowledge_packet
+    const e = events.find((e: any) => e.acknowledge_packet).acknowledge_packet
     t.assert(e)
     t.assert(e.packet_dst_channel === c.polyChannel.channel_id)
     t.assert(e.packet_src_channel === c.polyChannel.counterparty.channel_id)
     t.assert(e.packet_dst_port === c.polyChannel.port_id)
     t.assert(e.packet_src_port === c.polyChannel.counterparty.port_id)
-    t.assert(events.wasm.reply === 'got the message')
+
+    const w = events.find((e: any) => e.wasm).wasm
+    t.assert(w)
+    t.assert(w.reply === 'got the message')
     return true
   })
 }

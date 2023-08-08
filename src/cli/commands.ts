@@ -482,11 +482,18 @@ export async function events(opts: EventsOpts) {
 
   const events: TxEvent[] = []
   await sdkEvents(chain, opts, (event: TxEvent) => {
-    if (!opts.extended) return console.log(event.height, ':', Object.keys(event.events).join(' '))
-    if (!opts.json) return console.log(event.height, ':', event.events)
+    if (!opts.extended && !opts.json) {
+      console.log(event.height, ':', event.events.map((o) => Object.keys(o)[0]).join(' '))
+      return
+    }
+    if (opts.extended) {
+      console.log('height:', event.height)
+      console.dir(event.events, { depth: null, colors: true })
+      return
+    }
     // this will use more memory since we are buffering all events instead of flushing them to stdout
     // but it's non-trivial to print a valid json array otherwise.
     events.push(event)
   })
-  if (opts.extended && opts.json) console.log(JSON.stringify(events))
+  if (opts.json) console.log(JSON.stringify(events))
 }

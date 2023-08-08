@@ -93,11 +93,6 @@ function extractPackets(
   return packets
 }
 
-export type TxEvent = {
-  height: number
-  events: { [k: string]: {} }
-}
-
 async function queryVibc2IbcPacketsDirectional(
   chainSetA: ChainSet,
   clientB: QueryClient & IbcExtension,
@@ -109,22 +104,22 @@ async function queryVibc2IbcPacketsDirectional(
   const packetAcks: channel.PacketState[] = []
 
   await evmEvents(chainSetA as EvmChainSet, { minHeight: 1 } as EventsFilter, (event: TxEvent) => {
-    const sendPacketEvent = event.events.SendPacket
-    if (sendPacketEvent && sendPacketEvent['sourceChannelId'] === chainA.channelID) {
+    const s = event.events.find((e) => e.SendPacket)
+    if (s && s.SendPacket['sourceChannelId'] === chainA.channelID) {
       packetCommits.push({
         channelId: chainA.channelID,
         portId: chainA.portID,
-        sequence: Long.fromString(sendPacketEvent['sequence']),
-        data: sendPacketEvent['packet']
+        sequence: Long.fromString(s.SendPacket['sequence']),
+        data: s.SendPacket['packet']
       })
     }
 
-    const ackPacketEvent = event.events.Acknowledgement
-    if (ackPacketEvent && ackPacketEvent['sourceChannelId'] === chainA.channelID) {
+    const a = event.events.find((e) => e.Acknowledgement)
+    if (a && a.Acknowledgement['sourceChannelId'] === chainA.channelID) {
       packetAcks.push({
         channelId: chainA.channelID,
         portId: chainA.portID,
-        sequence: Long.fromString(ackPacketEvent['sequence']),
+        sequence: Long.fromString(a.Acknowledgement['sequence']),
         data: new Uint8Array() // `Acknowledgement` event does not contain packet data any more, so we set it to empty
       })
     }
@@ -165,17 +160,16 @@ async function queryIbc2VibcPacketsDirectional(
   const packetReceipts: channel.PacketState[] = []
 
   await evmEvents(chainSetB as EvmChainSet, { minHeight: 1 } as EventsFilter, (event: TxEvent) => {
-    const recvPacketEvent = event.events.RecvPacket
-    if (recvPacketEvent && recvPacketEvent['destChannelId'] === chainB.channelID) {
+    const e = event.events.find((e) => e.RecvPacket)
+    if (e && e.RecvPacket['destChannelId'] === chainB.channelID) {
       packetReceipts.push({
         channelId: chainB.channelID,
         portId: chainB.portID,
-        sequence: Long.fromString(recvPacketEvent['sequence']),
+        sequence: Long.fromString(e.RecvPacket['sequence']),
         data: Uint8Array.from([])
       })
     }
   })
-
   return extractPackets(packetCommits.commitments, packetReceipts, packetAcks.acknowledgements, chainA, chainB)
 }
 
@@ -278,6 +272,15 @@ export type EventsFilter = {
   allEvents: boolean
 }
 
+export type TxNamedEvent = {
+  [name: string]: {}
+}
+
+export type TxEvent = {
+  height: number
+  events: TxNamedEvent[]
+}
+
 type TxEventCb = (e: TxEvent) => void
 
 async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEventCb) {
@@ -294,6 +297,7 @@ async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEve
   const result = await tmClient.txSearchAll({ query: query.join(' AND ') })
   const includeMessageEvent = opts.allEvents
 
+  const events: { [h: number]: TxNamedEvent[] } = {}
   result.txs.map(({ height, result }) => {
     const rawLogs = (() => {
       try {
@@ -303,23 +307,20 @@ async function cosmosEvents(chain: CosmosChainSet, opts: EventsFilter, cb: TxEve
         return []
       }
     })()
-    if (rawLogs.length === 0) return
-    const kv = {}
     for (const log of rawLogs) {
       for (const ev of log.events) {
         if (!includeMessageEvent && ev.type === 'message') {
           continue
         }
 
-        kv[ev.type] = {}
-        ev.attributes.forEach((e: any) => (kv[ev.type][e.key] = e.value))
+        const kv = {}
+        ev.attributes.forEach((e: any) => (kv[e.key] = e.value))
+        events[height] = events[height] ?? []
+        events[height].push({ [ev.type]: kv })
       }
     }
-
-    if (Object.keys(kv).length === 0) return
-
-    cb({ height, events: kv })
   })
+  for (const [height, evs] of Object.entries(events)) cb({ height: parseInt(height), events: evs })
 }
 
 function doParseOne(param: ethers.utils.ParamType, value: any) {
@@ -354,21 +355,17 @@ async function evmEvents(chain: EvmChainSet, opts: EventsFilter, cb: TxEventCb) 
   if (opts.height) filter.fromBlock = filter.toBlock = opts.height
 
   const logs = await contract.provider.getLogs(filter)
-  if (logs.length === 0) return
-
-  let event: TxEvent = { height: logs[0].blockNumber, events: {} }
+  const events: { [h: number]: TxNamedEvent[] } = {}
   for (const l of logs) {
-    const parsed = iface.parseLog(l)
-    if (l.blockNumber === event.height) {
-      event.events[parsed.name] = parse(parsed)
+    try {
+      const parsed = iface.parseLog(l)
+      events[l.blockNumber] = events[l.blockNumber] ?? []
+      events[l.blockNumber].push({ [parsed.name]: parse(parsed) })
+    } catch (e) {
       continue
     }
-
-    cb(event)
-    event = { height: l.blockNumber, events: {} }
-    event.events[parsed.name] = parse(parsed)
   }
-  cb(event)
+  for (const [height, evs] of Object.entries(events)) cb({ height: parseInt(height), events: evs })
 }
 
 export async function events(chain: ChainSet, opts: EventsFilter, cb: TxEventCb) {

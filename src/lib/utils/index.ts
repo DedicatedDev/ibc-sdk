@@ -158,11 +158,9 @@ export function getRelativeFilePath(
 
 export async function waitUntil(checkFunc: () => Promise<boolean>, retry: number, intervalMs: number, msg = '') {
   for (let i = 0; i < retry; i++) {
-    await sleep(intervalMs)
     const ready = await checkFunc()
-    if (ready) {
-      return true
-    }
+    if (ready) return ready
+    await sleep(intervalMs)
   }
   throw new Error(`failed after ${retry} retries.\n${msg}`)
 }
