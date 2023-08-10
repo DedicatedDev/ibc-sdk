@@ -233,7 +233,7 @@ export async function exec(opts: ExecOpts) {
   const runtime = loadWorkspace(opts.workspace)
   const containerId = filterContainers(runtime, opts.name).id
   const container = await containerFromId(containerId)
-  printOutput(await container.exec(opts.args))
+  printOutput(await container.execNoThrow(opts.args))
 }
 
 type DeployOpts = {

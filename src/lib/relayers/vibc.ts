@@ -106,6 +106,14 @@ export class VIBCRelayer {
 
   async start(): Promise<ProcessOutput> {
     const start = await this.exec([this.binary, 'start'], true, true)
+
+    let started = false
+    for (let i = 0; i < 10 && !started; i++) {
+      const out = await this.container.execNoThrow(['test', '-f', '/root/.vibc-relayer/pid'])
+      if (!(started = out.exitCode === 0)) await utils.sleep(1_000)
+    }
+    if (!started) throw new Error('vibc-relayer did not start after 10s')
+
     log.info('vibc-relayer started')
     return start
   }

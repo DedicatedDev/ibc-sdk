@@ -233,8 +233,22 @@ export class Container {
    * @param detach default false means wait for command to finish and capture stdout/stderr
    * @param stdincb default null. When set, this callback is called with a reference to the child process' stdin
    * @returns zx.ProcessOutput where stdout/stderr are captured
+   * @throws zx.ProcessOutput if the command's exit code is non-zero
    */
   async exec(cmds: string[], tty = false, detach = false, stdincb?: ExecStdinCallback) {
+    const out = await this.execNoThrow(cmds, tty, detach, stdincb)
+    if (out.exitCode !== 0) {
+      log.error(`command: ${cmds.map($.quote).join(' ')}, returned: ${out.exitCode}`)
+      throw out
+    }
+    return out
+  }
+
+  /**
+   * Same as `exec()` but it never throws. It's up to the caller to check for the return code
+   * @returns zx.ProcessOutput where stdout/stderr are captured
+   */
+  async execNoThrow(cmds: string[], tty = false, detach = false, stdincb?: ExecStdinCallback) {
     const allArgs = ['docker', 'container', 'exec']
     if (typeof stdincb !== 'undefined') allArgs.push('--interactive')
     if (tty) allArgs.push('--tty')
@@ -242,21 +256,16 @@ export class Container {
     allArgs.push(this.containerId)
     allArgs.push(...cmds)
     log.debug(allArgs.map($.quote).join(' '))
-    try {
-      const proc = $`${allArgs}`
-      if (typeof stdincb !== 'undefined') stdincb(proc.stdin)
-      const out = await proc
-      if (out.stdout) {
-        log.debug(`stdout: ${out.stdout}`)
-      }
-      if (out.stderr) {
-        log.debug(`stderr: ${out.stderr}`)
-      }
-      return out
-    } catch (e) {
-      log.error(allArgs.map($.quote).join(' '))
-      throw e
-    }
+
+    const proc = nothrow($`${allArgs}`)
+    if (typeof stdincb !== 'undefined') stdincb(proc.stdin)
+
+    const out = await proc
+    if (out.stdout) log.debug(`stdout: ${out.stdout}`)
+    if (out.stderr) log.debug(`stderr: ${out.stderr}`)
+
+    log.debug(`command: ${allArgs.map($.quote).join(' ')}, returned: ${out.exitCode}`)
+    return out
   }
 
   async logs(config: LogsConfiguration) {
@@ -341,6 +350,6 @@ export const images = {
     'PRYSM_GENESIS_DOCKER_IMAGE_TAG',
     'genesis'
   ),
-  vibcRelayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'v0.0.1', 'VIBC_RELAYER_DOCKER_IMAGE_TAG'),
+  vibcRelayer: new DockerImage('ghcr.io/polymerdao/vibc-relayer', 'v0.0.2', 'VIBC_RELAYER_DOCKER_IMAGE_TAG'),
   wasm: new DockerImage('ghcr.io/polymerdao/wasm', 'v0.40.0-multihop-4', 'WASM_DOCKER_IMAGE_TAG')
 }
