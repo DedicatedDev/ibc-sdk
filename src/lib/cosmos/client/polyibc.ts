@@ -89,7 +89,7 @@ export const MsgOpenIBCChannelResponseSchema = z.object({
   port_id: z.string(),
   channel_id: z.string(),
   connection_id: z.string(),
-  version: z.string(),
+  version: z.string().optional(),
   counterparty_channel_id: z.string().optional(),
   counterparty_port_id: z.string().optional()
 })

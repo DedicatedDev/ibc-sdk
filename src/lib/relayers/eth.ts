@@ -30,7 +30,8 @@ export const EthRelayerRuntimeSchema = z.object({
   config: EthRelayerConfigSchema,
   nativeClientId: z.string().nullish(),
   virtualClientId: z.string().nullish(),
-  virtualConnectionId: z.string().nullish()
+  virtualConnectionId: z.string().nullish(),
+  virtualCounterpartyConnectionId: z.string().nullish()
 })
 
 export type EthRelayerConfig = z.infer<typeof EthRelayerConfigSchema>
@@ -187,7 +188,7 @@ export class EthRelayer {
       }
     }
     await waitForBlocks(client, 2)
-    let res = await signer.signAndBroadcast(address, [createClientMsg], 'auto')
+    const res = await signer.signAndBroadcast(address, [createClientMsg], 'auto')
     const virtualLightClient = self.cosmos.client.polyibc.MsgCreateVibcClientResponseSchema.parse(
       flatCosmosEvent('create_vibc_client', res)
     )
@@ -210,6 +211,7 @@ export class EthRelayer {
       flatCosmosEvent('create_vibc_connection', res)
     )
     this.run.virtualConnectionId = vConnection.connection_id
+    this.run.virtualCounterpartyConnectionId = vConnection.counterparty_connection_id
   }
 
   async connect(runtime: ChainSetsRunObj) {

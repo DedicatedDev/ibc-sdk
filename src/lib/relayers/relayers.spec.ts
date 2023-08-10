@@ -58,29 +58,35 @@ test('configure duplicated paths with virtual chains and polymer', (t) => {
 
 test('configuring with unsupported virtual chains should fail', (t) => {
   let err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['bsc:poly']))
-  t.assert(err?.message === 'Invalid relaying path configuration: bsc -> poly')
+  t.assert(err?.message === 'Invalid relay path configuration: bsc (type: bsc) -> poly (type: polymer)', err?.message)
 
   err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:bsc']))
-  t.assert(err?.message === 'Invalid relaying path configuration: poly -> bsc')
+  t.assert(err?.message === 'Invalid relay path configuration: poly (type: polymer) -> bsc (type: bsc)', err?.message)
 
   err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['prysm:poly']))
-  t.assert(err?.message === 'Invalid relaying path configuration: prysm -> poly')
+  t.assert(
+    err?.message === 'Invalid relay path configuration: prysm (type: ethereum2) -> poly (type: polymer)',
+    err?.message
+  )
 
   err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:prysm']))
-  t.assert(err?.message === 'Invalid relaying path configuration: poly -> prysm')
+  t.assert(
+    err?.message === 'Invalid relay path configuration: poly (type: polymer) -> prysm (type: ethereum2)',
+    err?.message
+  )
 })
 
 test('configuring paths only with virtual chains should fail', (t) => {
   const err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['bsc:eth']))
-  t.assert(err?.message === 'Invalid relaying path configuration: bsc -> eth')
+  t.assert(err?.message === 'Invalid relay path configuration: bsc (type: bsc) -> eth (type: ethereum)', err?.message)
 })
 
 test('configuring paths with unkonwn virutal chain ids', (t) => {
   let err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['foo:eth']))
-  t.assert(err?.message === 'Invalid path end: unknown chain foo')
+  t.assert(err?.message === 'Invalid path end: unknown chain foo', err?.message)
 
   err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['eth:foo']))
-  t.assert(err?.message === 'Invalid path end: unknown chain foo')
+  t.assert(err?.message === 'Invalid path end: unknown chain foo', err?.message)
 })
 
 const runWithIbcChains = {

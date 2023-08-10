@@ -14,14 +14,14 @@ const test = anyTest as TestFn<{
   cli: string
 }>
 
-test.before((t) => {
+test.beforeEach((t) => {
   t.context.cli = path.resolve(__dirname, '..', '..', '..', 'bin', 'ibctl')
   $.verbose = true
   process.env.TEST_LOG_LEVEL = 'verbose'
   t.context.workspace = process.env.TEST_IBCTL_WORKSPACE ?? fs.mkdtempSync(path.join('/tmp', 'ibctl-tests-'))
 })
 
-test.after.always(async (t) => {
+test.afterEach(async (t) => {
   await showLogsBeforeExit(t.context.cli, t.context.workspace)
   if (!process.env.TEST_IBCTL_WORKSPACE) {
     const out = await runCommand(t, 'stop')
@@ -64,11 +64,12 @@ async function waitForEvent(t: any, chainName: string, minHeight: string, eventN
       return cb(event.events)
     },
     10,
-    6_000
+    6_000,
+    `failed to find event '${eventName}' on ${chainName}`
   )
 }
 
-test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
+async function testEndToEnd(t: any, vIbcToIbc: boolean) {
   t.assert((await runCommand(t, 'init')).exitCode === 0)
   t.assert((await runCommand(t, 'start', '-c', 'wasm:polymer', '-c', 'polymer:eth-execution')).exitCode === 0)
 
@@ -97,7 +98,7 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   // deploy wasm contract
   const wasm = path.resolve(__dirname, '..', '..', '..', 'src', 'tests', 'devnet', 'demo.wasm')
   t.assert(fs.existsSync(wasm))
-  const out = await runCommand(t, 'deploy', 'wasm', wasmAccount.Address, wasm)
+  let out = await runCommand(t, 'deploy', 'wasm', wasmAccount.Address, wasm)
   t.assert(out.exitCode === 0)
   const wasmAddress = out.stdout.trim()
   t.assert(wasmAddress.startsWith('wasm'))
@@ -123,60 +124,64 @@ test('cli end to end: eth <-> polymer <-> wasm', async (t) => {
   const version = '1.0'
   const evmEndpoint = 'eth-execution:polyibc.Ethereum-Devnet.' + mars!.Address.slice(2) + ':' + version
   const wasmEndpoint = 'wasm:wasm.' + wasmAddress + ':' + version
-
-  const channelCombos = [
-    [evmEndpoint, wasmEndpoint],
-    [wasmEndpoint, evmEndpoint]
-  ]
-
-  for (let i = 0; i < channelCombos.length; i++) {
-    log.info(`Iteration ${i}, creating channel between ${channelCombos[i].map((e) => e.split(':')[0]).join(' and ')}`)
-    const out = await runCommand(t, 'channel', ...channelCombos[i])
-    t.assert(out.exitCode === 0)
-
-    // check the channels have been correctly created
-    const newPolyChannel = await getChannelsFrom(t, 'polymer')
-    const newWasmChannel = await getChannelsFrom(t, 'wasm')
-
-    const numExpectedChannels = i + 1
-    t.assert(newPolyChannel.channels.length === numExpectedChannels)
-    t.assert(newWasmChannel.channels.length === numExpectedChannels)
-
-    const wasmChannel = newWasmChannel.channels[i]
-    const polyChannel = newPolyChannel.channels[i]
-
-    t.assert(polyChannel.channel_id === wasmChannel.counterparty.channel_id)
-    t.assert(wasmChannel.channel_id === polyChannel.counterparty.channel_id)
-
-    t.assert(polyChannel.state === 'STATE_OPEN')
-    t.assert(polyChannel.version === version)
-    t.assert(wasmChannel.state === 'STATE_OPEN')
-    t.assert(wasmChannel.version === version)
-
-    const config = {
-      iteration: i,
-      runtime: runtime,
-      vibcRelayer: vibcRelayer,
-      eth1Chain: eth1Chain,
-      eth1Account: eth1Account,
-      wasmChain: wasmChain,
-      wasmAccount: wasmAccount,
-      wasmChannel: wasmChannel,
-      wasmAddress: wasmAddress,
-      polyChannel: polyChannel,
-      dispatcher: dispatcher,
-      receiver: mars
-    }
-
-    await testMessagesFromWasmToEth(t, config)
-    await testMessagesFromEthToWasm(t, config)
-    await testTracePackets(t, config)
+  let channels = [evmEndpoint, wasmEndpoint]
+  if (!vIbcToIbc) {
+    channels = [wasmEndpoint, evmEndpoint]
   }
+
+  log.info(`Creating channel between ${channels.map((e) => e.split(':')[0]).join(' and ')}`)
+  out = await runCommand(t, 'channel', ...channels)
+  t.assert(out.exitCode === 0)
+
+  // check the channels have been correctly created
+  const newPolyChannel = await getChannelsFrom(t, 'polymer')
+  const newWasmChannel = await getChannelsFrom(t, 'wasm')
+
+  const numExpectedChannels = 1
+  t.assert(newPolyChannel.channels.length === numExpectedChannels)
+  t.assert(newWasmChannel.channels.length === numExpectedChannels)
+
+  const wasmChannel = newWasmChannel.channels[0]
+  const polyChannel = newPolyChannel.channels[0]
+
+  t.assert(polyChannel.channel_id === wasmChannel.counterparty.channel_id)
+  t.assert(wasmChannel.channel_id === polyChannel.counterparty.channel_id)
+
+  t.assert(polyChannel.state === 'STATE_OPEN')
+  t.assert(polyChannel.version === version)
+  t.assert(wasmChannel.state === 'STATE_OPEN')
+  t.assert(wasmChannel.version === version)
+
+  const config = {
+    runtime: runtime,
+    vibcRelayer: vibcRelayer,
+    eth1Chain: eth1Chain,
+    eth1Account: eth1Account,
+    wasmChain: wasmChain,
+    wasmAccount: wasmAccount,
+    wasmChannel: wasmChannel,
+    wasmAddress: wasmAddress,
+    polyChannel: polyChannel,
+    dispatcher: dispatcher,
+    receiver: mars
+  }
+
+  await testMessagesFromWasmToEth(t, config)
+  await testMessagesFromEthToWasm(t, config)
+  await testTracePackets(t, config)
 
   await runCommand(t, 'show')
   await runCommand(t, 'logs', 'polymer', '-n', '5')
   await runCommand(t, 'logs', 'wasm', '-n', '5')
   await runCommand(t, 'logs', 'eth-exec', '-n', '5')
+}
+
+test.serial('cli end to end: eth -> polymer -> wasm', async (t) => {
+  await testEndToEnd(t, true)
+})
+
+test.serial('cli end to end: wasm -> polymer -> eth', async (t) => {
+  await testEndToEnd(t, false)
 })
 
 async function testTracePackets(t: any, c: any) {
@@ -225,6 +230,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
   const iface = new ethers.utils.Interface(c.dispatcher.Abi)
   const parsed = iface.parseLog(receipt.logs[0])
   const [_sourcePortAddress, _sourceChannelId, _packet, sendPacketSequence, _timeout, _fee] = parsed.args
+  log.info(`sent tx on eth ${_packet}`)
 
   await waitForEvent(t, c.wasmChain.Name, wasmHeight, 'recv_packet', (events: any) => {
     const e = events.recv_packet

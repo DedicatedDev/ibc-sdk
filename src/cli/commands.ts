@@ -2,14 +2,18 @@ import path from 'path'
 import { $, fs, readYamlFile, readYamlText, getLogger } from '../lib/utils'
 import { extractVibcCoreSmartContracts } from '@open-ibc/vibc-core-smart-contracts'
 import { configTemplate } from './config.template'
-import { channelHandshake } from './channel'
 import { EndpointInfo, Packet, TxEvent, tracePackets as sdkTracePackets } from '../lib/query'
+import { Endpoint, HandshakeConfig, ibcToIbc } from '../lib/ibc/channel'
+import { vIbcToIbc, vIbcTovIbc, ibcTovIbc } from '../lib/vibc/channel'
 import {
   ChainSetsRunObj,
+  CosmosChainSet,
   imageByLabel,
   ImageLabelTypes,
   isCosmosChain,
   isEvmChain,
+  isIbcChain,
+  isVIbcChain,
   runningChainSetsSchema
 } from '../lib/schemas'
 import { containerFromId } from '../lib/docker'
@@ -50,6 +54,12 @@ function filterContainers(runtime: ChainSetsRunObj, name: string) {
     throw new Error(`The name '${name}' selected ${found.length} container(s): ${found.map((f) => f.name).join(', ')}`)
   }
   return found[0]
+}
+
+type WrapCommandsOpts = {
+  workspace: string
+  name: string
+  json: boolean
 }
 
 async function wrapCosmosCommand(args: string[], opts: WrapCommandsOpts) {
@@ -256,6 +266,47 @@ type ChannelOpts = {
   chainB: { chainId: string; portID: string; version: string }
 }
 
+async function channelHandshake(runtime: ChainSetsRunObj, endpointA: Endpoint, endpointB: Endpoint) {
+  const poly = runtime.ChainSets.find((c) => c.Type === 'polymer') as CosmosChainSet
+  if (!poly) throw new Error('could not find polymer chain is chain sets')
+
+  const ethRelayer = runtime.Relayers.find((r) => r.Name === 'eth-relayer')
+  if (!ethRelayer) throw new Error('could not find eth-relayer runtime')
+
+  const vIbcConfig = ethRelayer.Configuration
+  if (!vIbcConfig) throw new Error('could not find virtual connection')
+
+  let ibcConn = ''
+  if (process.env.IBC_RELAYER === 'ts-relayer') {
+    const ibcRelayer = runtime.Relayers.find((r) => r.Name.startsWith('ibc-relayer-'))
+    if (!ibcRelayer) throw new Error('could not find ibc-relayer runtime')
+    ibcConn = ibcRelayer.Configuration.connections.srcConnection
+    if (!ibcConn) throw new Error('could not find ibc connection')
+  }
+
+  const config: HandshakeConfig = { runtime, a: endpointA, b: endpointB, poly }
+
+  // vIbc (A) <=> vIbc (B)
+  if (isVIbcChain(endpointA.chain.Type) && isVIbcChain(endpointB.chain.Type)) {
+    return vIbcTovIbc(config)
+  }
+
+  // vIbc (A) <=> Ibc (B)
+  if (isVIbcChain(endpointA.chain.Type) && isIbcChain(endpointB.chain.Type)) {
+    return vIbcToIbc(config, [vIbcConfig.virtualConnectionId])
+  }
+
+  // Ibc (A) <=> vIbc (B)
+  if (isIbcChain(endpointA.chain.Type) && isVIbcChain(endpointB.chain.Type)) {
+    return ibcTovIbc(config, vIbcConfig.virtualConnectionId, vIbcConfig.virtualCounterpartyConnectionId)
+  }
+
+  // Ibc (A) <=> Ibc (B)
+  if (isIbcChain(endpointA.chain.Type) && isIbcChain(endpointB.chain.Type)) {
+    return ibcToIbc(config)
+  }
+}
+
 export async function channel(opts: ChannelOpts) {
   const runtime = loadWorkspace(opts.workspace)
 
@@ -365,12 +416,6 @@ export async function archiveLogs(opts: ArchiveOpts) {
   }).then(...thenClause)
 
   await archive
-}
-
-type WrapCommandsOpts = {
-  workspace: string
-  name: string
-  json: boolean
 }
 
 export async function channels(opts: WrapCommandsOpts) {

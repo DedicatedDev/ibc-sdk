@@ -9,7 +9,6 @@ on:
       - main
 
 env:
-  TEST_IBCTL_WORKSPACE: /tmp/ibctl-e2e-test
   TEST_IBCTL_LOGS_BEFORE_EXIT: 1
   NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 

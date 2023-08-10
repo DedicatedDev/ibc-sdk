@@ -4,11 +4,12 @@ import { VIBCRelayer } from './relayers/vibc'
 import * as self from './index'
 import { EthRelayer } from './relayers/eth'
 import { getLogger } from './utils'
-import { IBCRelayer } from './relayers/ibc'
+import { IbcRelayer } from './relayers/ibc'
+import { Path } from './ibc/path'
 
 const log = getLogger()
 
-type Tuple = [string, string]
+export type Tuple = [string, string]
 
 function findRelayerAccount(runtime: ChainSetsRunObj, src: string, dst: string): CosmosAccount | undefined {
   for (const chain of runtime.ChainSets) {
@@ -56,21 +57,30 @@ async function setupIbcTsRelayer(runtime: ChainSetsRunObj, relayPath: Tuple) {
   log.info('ibc-relayer started')
 }
 
-export async function setupIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) {
-  log.info(`setting up ibc-relayer with path(s) ${paths.map((p) => `${p[0]} -> ${p[1]}`).join(', ')}`)
+export async function setupIbcRelayer(
+  relayer: IbcRelayer | undefined,
+  runtime: ChainSetsRunObj,
+  paths: Path[],
+  start: boolean = true
+): Promise<IbcRelayer> {
+  log.info(`setting up ibc-relayer with path(s) ${paths.map((p) => `${p.src.name} -> ${p.dst.name}`).join(', ')}`)
 
-  const relayer = await IBCRelayer.create(runtime.WorkDir, paths)
-  await relayer.init(runtime).catch((reason) => {
+  if (relayer === undefined) {
+    relayer = await IbcRelayer.create(runtime.WorkDir, paths)
+  } else {
+    relayer.paths = paths
+  }
+  await relayer!.init(runtime).catch((reason) => {
     log.error(`Could not setup ibc-relayer: ${reason}`)
     throw new Error(reason)
   })
-  const out = await relayer.start()
-  if (out.exitCode !== 0) throw new Error(`Could not run ibc-relayer: ${out.stderr}`)
-
-  runtime.Relayers.push(await relayer.runtime())
-  self.saveChainSetsRuntime(runtime)
-
-  log.info('ibc-relayer started')
+  if (start) {
+    const out = await relayer!.start()
+    if (out.exitCode !== 0) throw new Error(`Could not run ibc-relayer: ${out.stderr}`)
+    runtime.Relayers.push(await relayer!.runtime())
+    self.saveChainSetsRuntime(runtime)
+  }
+  return relayer!
 }
 
 async function setupVIbcRelayer(runtime: ChainSetsRunObj, paths: Tuple[]) {
@@ -141,7 +151,9 @@ export function configurePaths(runtime: ChainSetsRunObj, connections: string[]):
     }
 
     // anything else, throw an error!
-    throw new Error(`Invalid relaying path configuration: ${chainA} -> ${chainB}`)
+    throw new Error(
+      `Invalid relay path configuration: ${chainA} (type: ${chainType[chainA]}) -> ${chainB} (type: ${chainType[chainB]})`
+    )
   }
 
   const list = (s: Set<string>): Tuple[] => Array.from(s).map((a) => a.split(':')) as Tuple[]
@@ -149,13 +161,6 @@ export function configurePaths(runtime: ChainSetsRunObj, connections: string[]):
 }
 
 export async function runRelayers(runtime: ChainSetsRunObj, connections: string[]): Promise<ChainSetsRunObj> {
-  if (!connections) {
-    const chainsets = runtime.ChainSets
-    connections = []
-    for (let i = 0; i < chainsets.length - 1; i++) {
-      connections.push(`${chainsets[i].Name}:${chainsets[i + 1].Name}`)
-    }
-  }
   const paths = configurePaths(runtime, connections)
   const promises: Promise<void>[] = []
 
@@ -168,16 +173,15 @@ export async function runRelayers(runtime: ChainSetsRunObj, connections: string[
     promises.push(setupEthRelayer(runtime, paths.eth2[0]))
   }
 
-  if (process.env.IBC_RELAYER === 'rly') {
-    promises.push(setupIbcRelayer(runtime, paths.ibc))
-  } else {
+  // We need to wait for the eth light client to be created before attempting to configure the IBC relayer
+  await Promise.all(promises)
+
+  if (process.env.IBC_RELAYER === 'ts-relayer') {
     // TODO: create one instance of the ibc-relayer per path because the ts-relayer sucks
     for (const path of paths.ibc) {
-      promises.push(setupIbcTsRelayer(runtime, path))
+      await setupIbcTsRelayer(runtime, path)
     }
   }
-
-  await Promise.all(promises)
 
   return runtime
 }

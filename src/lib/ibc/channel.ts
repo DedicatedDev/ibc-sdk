@@ -1,35 +1,19 @@
-import {
-  ChainSet,
-  ChainSetsRunObj,
-  CosmosAccount,
-  CosmosChainSet,
-  EvmChainSet,
-  isIbcChain,
-  isVIbcChain
-} from '../lib/schemas'
-import * as self from '../lib/index'
+import { ChainSet, ChainSetsRunObj, CosmosAccount, CosmosChainSet } from '../schemas'
+import * as self from '../index'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { SigningStargateClient } from '@cosmjs/stargate'
 import Long from 'long'
 import { Tendermint37Client } from '@cosmjs/tendermint-rpc'
-import { VIBCRelayer } from '../lib/relayers/vibc'
-import { EventsFilter, TxEvent } from '../lib/query'
+import { EventsFilter, TxEvent } from '../query'
 import { TextEncoder } from 'util'
-import { flatCosmosEvent, getLogger, waitForBlocks } from '../lib/utils'
-import { addressify } from '../lib/ethers'
+import { flatCosmosEvent, getLogger, waitForBlocks } from '../utils'
 
 const log = getLogger()
 
-type Endpoint = {
+export type Endpoint = {
   chain: ChainSet
   portID: string
   version: string
-}
-
-function portIdToEvmAddress(portId: string) {
-  const parts = portId.split('.')
-  if (parts.length !== 3) throw new Error(`Invalid portID ${portId}`)
-  return addressify(parts[2])
 }
 
 function proof(): any {
@@ -43,52 +27,7 @@ function proof(): any {
   }
 }
 
-class VIbcChannelHandshaker {
-  polymer: IbcChannelHandshaker
-  relayer: VIBCRelayer
-  chain: EvmChainSet
-  address: string
-  pathname: string
-
-  private constructor(chain: EvmChainSet, relayer: VIBCRelayer, address: string, polymer: IbcChannelHandshaker) {
-    this.polymer = polymer
-    this.relayer = relayer
-    this.chain = chain
-    this.address = address
-    this.pathname = `${polymer.chain.Name}-${chain.Name}`
-  }
-
-  static async create(chain: EvmChainSet, runtime: ChainSetsRunObj, address: string, polymer: IbcChannelHandshaker) {
-    const vibcruntime = runtime.Relayers.find((r) => r.Name === 'vibc-relayer')
-    if (!vibcruntime) throw new Error('could not find vibc-relayer runtime')
-    const relayer = await VIBCRelayer.reuse(vibcruntime)
-    return new VIbcChannelHandshaker(chain, relayer, address, polymer)
-  }
-
-  // TODO add interface so counter can be ibc or vibc
-  async openIbcChannel(counter: IbcChannelHandshaker, connectionHops: string[], version: string, order: string) {
-    log.info(`executing OpenIbcChannel on ${this.chain.Name}`)
-    await this.relayer.channel(
-      this.pathname,
-      this.address,
-      version,
-      order,
-      connectionHops,
-      counter.portid,
-      counter.channelId
-    )
-
-    this.polymer.setChannOpenInit(await this.polymer.waitForEvent('channel_open_init'))
-    log.info(`OpenIbcChannel on ${this.chain.Name}: done`)
-  }
-
-  async startRelaying(connectionHops: string[]) {
-    await this.relayer.update(this.pathname, connectionHops.join('/'))
-    await this.relayer.start()
-  }
-}
-
-class IbcChannelHandshaker {
+export class IbcChannelHandshaker {
   chain: CosmosChainSet
   account: CosmosAccount
   client: Tendermint37Client
@@ -146,17 +85,22 @@ class IbcChannelHandshaker {
     let event: any
     await self.utils.waitUntil(
       async () => {
+        let height: number | undefined
         await self.events(this.chain, filter as EventsFilter, (e: TxEvent) => {
           if (!event && e.events[name]) event = e.events[name]
-          filter.minHeight = e.height
+          height = e.height
+          filter.minHeight = height
         })
-        return event !== undefined
+        if (event !== undefined) {
+          log.info(`event '${name}' found at height ${height}`)
+          return true
+        }
+        return false
       },
       20,
       10_000,
       `could not find event '${name}' on chain '${this.chain.Name}'`
     )
-    log.info(`waiting for event '${name}' on ${this.chain.Name} done`)
     return event
   }
 
@@ -206,7 +150,7 @@ class IbcChannelHandshaker {
     const openinit = self.cosmos.client.polyibc.MsgOpenIBCChannelResponseSchema.parse(event)
     log.debug(`openinit: ${JSON.stringify(openinit, null, 2)}`)
     this.channelId = openinit.channel_id
-    this.connectionHops = openinit.connection_id.split(/[/\.]/)
+    this.connectionHops = openinit.connection_id.split(/[/.]/)
   }
 
   async channOpenTry(counter: IbcChannelHandshaker, connectionHops: string[], eventName: string) {
@@ -319,111 +263,15 @@ class IbcChannelHandshaker {
   }
 }
 
-type HandshakeConfig = {
+export type HandshakeConfig = {
   runtime: ChainSetsRunObj
   a: Endpoint
   b: Endpoint
   poly: CosmosChainSet
 }
 
-// vIbc (A) <=> Ibc (B)
-async function vIbcToIbc(config: HandshakeConfig, connectionHops: string[]) {
-  log.debug('vIbc (A) <=> Ibc (B) case')
-  const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.a.version, config.a.portID)
-  const ibcB = await IbcChannelHandshaker.create(config.b.chain as CosmosChainSet, config.b.version, config.b.portID)
-
-  const address = portIdToEvmAddress(config.a.portID)
-  const vibcA = await VIbcChannelHandshaker.create(config.a.chain as EvmChainSet, config.runtime, address, polymer)
-
-  // step 1
-  await vibcA.openIbcChannel(ibcB, connectionHops, config.a.version, 'unordered')
-  await vibcA.startRelaying(connectionHops)
-
-  // step 2
-  await ibcB.channOpenTry(polymer, [...connectionHops].reverse(), 'channel_open_try')
-
-  // step 3
-  await ibcB.waitForEvent('channel_open_try')
-  await polymer.channOpenAck(ibcB, 'channel_open_ack_pending')
-
-  // step 4
-  await polymer.waitForEvent('channel_open_ack')
-  await ibcB.channOpenConfirm('channel_open_confirm')
-  await ibcB.waitForEvent('channel_open_confirm')
-}
-
-// vIbc (A) <=> vIbc (B)
-async function vIbcTovIbc(_config: HandshakeConfig) {
-  throw new Error('Not implemented yet')
-}
-
-// Ibc (A) <=> vIbc (B)
-async function ibcTovIbc(config: HandshakeConfig, connectionHops: string[]) {
-  log.debug('Ibc (A) <=> vIbc (B) case')
-  const ibcA = await IbcChannelHandshaker.create(config.a.chain as CosmosChainSet, config.a.version, config.a.portID)
-
-  const polymer = await IbcChannelHandshaker.create(config.poly as CosmosChainSet, config.b.version, config.b.portID)
-
-  const address = portIdToEvmAddress(config.b.portID)
-  const vibcB = await VIbcChannelHandshaker.create(config.b.chain as EvmChainSet, config.runtime, address, polymer)
-  await vibcB.startRelaying([...connectionHops].reverse())
-
-  // step 1
-  await ibcA.channOpenInit(polymer, connectionHops)
-
-  // step 2-2
-  await ibcA.waitForEvent('channel_open_init')
-  await polymer.channOpenTry(ibcA, [...connectionHops].reverse(), 'channel_open_try_pending')
-
-  // step 3
-  await polymer.waitForEvent('channel_open_try')
-  await ibcA.channOpenAck(polymer, 'channel_open_ack')
-
-  // step 4
-  await polymer.channOpenConfirm('channel_open_confirm_pending')
-  await polymer.waitForEvent('channel_open_confirm')
-}
-
 // Ibc (A) <=> Ibc (B)
-async function ibcToIbc(_config: HandshakeConfig) {
+export async function ibcToIbc(_config: HandshakeConfig) {
+  // TODO: configure and start relayer
   throw new Error('Not implemented yet')
-}
-
-export async function channelHandshake(runtime: ChainSetsRunObj, endpointA: Endpoint, endpointB: Endpoint) {
-  const poly = runtime.ChainSets.find((c) => c.Type === 'polymer') as CosmosChainSet
-  if (!poly) throw new Error('could not find polymer chain is chain sets')
-
-  const ibcRelayer = runtime.Relayers.find((r) => r.Name.startsWith('ibc-relayer-'))
-  if (!ibcRelayer) throw new Error('could not find ibc-relayer runtime')
-
-  const ethRelayer = runtime.Relayers.find((r) => r.Name === 'eth-relayer')
-  if (!ethRelayer) throw new Error('could not find eth-relayer runtime')
-
-  const vIbcConn = ethRelayer.Configuration.virtualConnectionId
-  if (!vIbcConn) throw new Error('could not find virtual connection')
-
-  const ibcConn = ibcRelayer.Configuration.connections.srcConnection
-  if (!ibcConn) throw new Error('could not find ibc connection')
-
-  const config: HandshakeConfig = { runtime, a: endpointA, b: endpointB, poly }
-
-  // vIbc (A) <=> vIbc (B)
-  if (isVIbcChain(endpointA.chain.Type) && isVIbcChain(endpointB.chain.Type)) {
-    return vIbcTovIbc(config)
-  }
-
-  // vIbc (A) <=> Ibc (B)
-  if (isVIbcChain(endpointA.chain.Type) && isIbcChain(endpointB.chain.Type)) {
-    return vIbcToIbc(config, [vIbcConn, ibcConn])
-  }
-
-  // Ibc (A) <=> vIbc (B)
-  if (isIbcChain(endpointA.chain.Type) && isVIbcChain(endpointB.chain.Type)) {
-    return ibcTovIbc(config, [ibcConn, vIbcConn])
-  }
-
-  // Ibc (A) <=> Ibc (B)
-  if (isIbcChain(endpointA.chain.Type) && isIbcChain(endpointB.chain.Type)) {
-    return ibcToIbc(config)
-  }
 }
