@@ -6,39 +6,38 @@
 
 /* You can override the default Infima variables here. */
 :root {
-  /* --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e; */
-  --ifm-color-primary: #3589f8;
-  --ifm-color-primary-dark: #1878f7;
-  --ifm-color-primary-darker: #0970f6;
-  --ifm-color-primary-darkest: #075ccc;
-  --ifm-color-primary-light: #529af9;
-  --ifm-color-primary-lighter: #61a2fa;
-  --ifm-color-primary-lightest: #8cbcfb;
-  --ifm-code-font-size: 95%;
+  --ifm-color-primary: #242fcc;
+  --ifm-color-primary-dark: #202ab8;
+  --ifm-color-primary-darker: #1f28ad;
+  --ifm-color-primary-darkest: #19218f;
+  --ifm-color-primary-light: #2e39da;
+  --ifm-color-primary-lighter: #3843dc;
+  --ifm-color-primary-lightest: #5760e1;
+
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  /* --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf; */
-  --ifm-color-primary: #79a5fb;
-  --ifm-color-primary-dark: #558dfa;
-  --ifm-color-primary-darker: #4381f9;
-  --ifm-color-primary-darkest: #0d5cf8;
-  --ifm-color-primary-light: #9dbdfc;
-  --ifm-color-primary-lighter: #afc9fd;
-  --ifm-color-primary-lightest: #e5eefe;
+  --ifm-color-primary: #a8abff;
+  --ifm-color-primary-dark: #7e82ff;
+  --ifm-color-primary-darker: #696eff;
+  --ifm-color-primary-darkest: #2930ff;
+  --ifm-color-primary-light: #d2d4ff;
+  --ifm-color-primary-lighter: #e7e8ff;
+  --ifm-color-primary-lightest: #ffffff;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+.hero--primary {
+  --ifm-hero-background-color: #000;
+  --ifm-hero-text-color: #fff;
+}
+
+.footer--dark {
+  background-color: #000;
+}
+
+[data-theme='dark'] .themedImage--dark_node_modules-\@docusaurus-theme-classic-lib-theme-ThemedImage-styles-module {
+  filter: invert(85%);
 }

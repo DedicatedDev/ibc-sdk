@@ -38,6 +38,12 @@ Clone [this repo](https://github.com/open-ibc/quickstart-ibc-sdk) to obtain:
 - A CosmWasm project or a simple IBC messenger app, taken from [the ibc-go wiki](https://github.com/cosmos/ibc-go/wiki/Cosmwasm-and-IBC). You'll find the contract .wasm bytecode in the `/artifacts` folder.
 - An folder with EVM artifacts for the `Mars.sol` contract from the [vIBC core smart contract repo](https://github.com/open-ibc/vibc-core-smart-contracts/tree/main).
 
+:::note
+
+Set the path to the root directory of this project as an environment variable `ROOT_DIR` to be able to follow along with the tutorial by copy-pasting the commands.
+
+:::
+
 ## Starting the IBC SDK
 
 ### Initialization
@@ -94,7 +100,11 @@ ibctl start \
 
 For the purposes of the quickstart you'll be using the default setup Ethereum <-> Polymer <-> Wasmd. If you want to read up more about the Polymer architecture, please refer to the [Polymer protocol section](../concepts/polymer/index.md) of the docs.
 
+:::tip How to set up connections?
+
 When using the IBC SDK, it suffices to add the IBC connections you want to have by specifying the chain names in the `<chain-name-1>:<chain-name2>` format. Under the hood, the IBC SDK is smart enough to figure out what type of relayers to use for each connection.
+
+:::
 
 ### Watch the terminal output
 
@@ -108,16 +118,20 @@ To interact with the contracts, first you'll need to deploy them. The SDK offers
 
 ### EVM
 
+You can always check the (funded) accounts that have been created and are at your disposal to interact with the chain:
+
 ```bash
-# check the dev accounts created
+# (optional) check the dev accounts created
 ibctl accounts eth-execution
 ```
 
 Copy one of the accounts from the output and use it as the address to deploy the contract, along with the path to the contract artifact JSON file:
 
+For the tutorial, we picked the first account (it's deterministic).
+
 ```bash
 # deploy the contract with this command
-ibctl deploy eth-execution 0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934 <path>/artifacts/contracts/Mars.sol/Mars.json
+ibctl deploy eth-execution 0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934 $ROOT_DIR/race-to-send-packets-EVM/artifacts/contracts/Mars.sol/Mars.json
 
 # resuts in this terminal output
 [08:41:16.587 info]: Deployed contract Mars on chain eth-execution at 0xB10c73e50B9bdB51f3504F7104a411174B9C3aa3 with tx hash 0x6ad71b0617bb6c03c4404bd2fa117fb1b524b04259853362e66a459a53e9adb9 by address 0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934
@@ -128,17 +142,20 @@ Now, let's do the same thing on the Wasmd chain
 
 ### CosmWasm
 
+Also on the wasmd chain, we can query the generated (and funded) accounts:
+
 ```bash
 # check the dev accounts created
  ibctl accounts wasm
 ```
 
-Copy one of the accounts from the output and use it as the address to deploy the contract, along with the path to the contract `.wasm` file:
+Copy one of the accounts from the output and use it as the address to deploy the contract, along with the path to the contract `.wasm` file.
+
+For the tutorial, we've picked the 'relayer' account that is deterministic.
 
 ```bash
 # deploy the contract with this command
-ibctl deploy wasm <owner-address> \
-<path>/ibc_messenger.wasm
+ibctl deploy wasm wasm158z04naus5r3vcanureh7u0ngs5q4l0gkwegr4 $ROOT_DIR/race-to-send-packets-CW/artifacts/race_to_send_packets.wasm
 
 # resuts in this terminal output
 [09:01:17.820 info]: Deployed contract ibc_messenger.wasm on chain wasm at wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d with tx hash <tx-hash> by address <owner-address>
@@ -206,7 +223,7 @@ And similarly use the channel query from above to set the port IDs as environmen
 Now use the following command to send the packet from the Wasmd chain (pay attention to have all the args present!):
 
 ```bash
-ibctl exec wasm wasmd tx wasm execute <address-that-deployed-contract> $EXECUTE_MSG -- --from <account-on-wasm> --keyring-backend test --chain-id wasm --gas auto --gas-adjustment 1.2 --yes
+ibctl exec wasm wasmd tx wasm execute wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d $EXECUTE_MSG -- --from wasm158z04naus5r3vcanureh7u0ngs5q4l0gkwegr4 --keyring-backend test --chain-id wasm --gas auto --gas-adjustment 1.2 --yes
 ```
 
 You should see the transaction confirmed in the terminal output, although this does not show you much about the IBC packet yet.

@@ -22,7 +22,7 @@ For this tutorial the lending/borrowing will happen on Ethereum, the polling con
 :::note Feature overview
 
 - Deploy contracts (IBC enabled `IbcLendingBorrowing` contract + 3 Token contracts) on ETH using Hardhat
-- Interact with the deployed contracts through client library (Harhat/ethers.js in this case)
+- Interact with the deployed contracts through client library ([Harhat](https://hardhat.org/)/[ethers.js](https://docs.ethers.org/v5/) in this case)
 - Have IBC enabled contracts on Ethereum send and receive packets, enabled by virtual IBC
 - Deploy and interact CosmWasm contract through `ibctl` CLI tool
 - Advanced event and packet tracing to check the status of your IBC packets
@@ -46,20 +46,36 @@ Now, for the quickstart tutorial you can follow along with the example projects/
 
 **Example contracts**:
 
-Clone the following GitHub repos to follow along with the tutorial:
+Clone the [Quickstart tutorials for IBC SDK GitHub repo](https://github.com/open-ibc/quickstart-ibc-sdk) to follow along with the tutorial:
 
-- The [EVM project](https://github.com/tmsdkeys/hardhat-ibc-sdk-tutorial/tree/main) with the IBC enabled `IbcLendingBorrowing` contract + 3 Token contracts. It's a Hardhat project, so to be able to run `npx hardhat [command]`, make sure to run `npm install` first.
-- The [CosmWasm project](https://github.com/tmsdkeys/ibc-sdk-cw-tutorial/tree/main) with the polling contract. You'll find the contract .wasm bytecode in the `/artifacts` folder if you don't want to bother checking out the code.
+- The EVM project side of the project can be found in the `lending-borrowing-EVM` folder. It includes the IBC enabled `IbcLendingBorrowing` contract + 3 Token contracts. It's a Hardhat project, so to be able to run `npx hardhat [command]`, make sure to run `npm install` first.
+- The CosmWasm side of the project can be found in the `lending-borrowing-CW` folder. It includes the polling contract. You'll find the contract .wasm bytecode in the `/artifacts` subfolder if you don't want to bother checking out the code (the tutorial allows you to follow along without doing so).
 
 ## Starting the IBC SDK
 
-Starting the CLI tool:
+If this is the first time you're running the IBC SDK or you've deleted your [configuration file](../ibctl/3-config.md) you'll need to initialize your workspace:
+
+```bash
+ibctl init
+```
+
+Now you can get to work. Start the CLI tool:
 
 ```bash
 ibctl start -c wasm:polymer -c polymer:eth-execution
 ```
 
-when everything is set up, check the running containers:
+:::danger Unable to reproduce the tutorial?
+
+Note that for simplicity reasons, the tutorial is designed in such a way that it should reliably reproduce the same results if you follow all the steps in **exact order**. The contract addresses that are assigned to the contracts of the project are deterministic and hard coded in some places, as well as the the address of signers of some messages when interacting with the CLI.
+
+Therefore, if you run into trouble or had to run through a step twice due to an error (e.g. the channel handshake got interrupted for some reason), it might be wise to stop the IBC SDK with `ibctl stop` and start from scratch.
+
+Nevertheless, it IS possible to continue without stopping if you understand what to update.
+
+:::
+
+When everything is set up, check the running containers:
 
 ```bash
 ibctl show
@@ -71,19 +87,39 @@ During development, you'll likely want to connect your development environment w
 
 :::
 
-For Hardhat specifically, find the endpoint where 'eth-execution' is exposed and add it to the hardhat config file:
+For example, when using Hardhat you find the endpoint where 'eth-execution' is exposed and you can set it to an environment variable `ENDPOINT`:
+
+```bash
+export ENDPOINT=$(ibctl show | grep 'eth-execution:main'| awk -F"│" '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}' | awk -F"'" '{print $2}')
+```
+
+:::caution
+
+Make sure you're **storing the environment variable in the terminal tab you use to run the Hardhat commands** from (as you may want to split up the different sides of the project and execute them in different terminal tabs or windows).
+
+In case the above command doesn't work for your shell, either find an alternative to automatically retrieve the endpoint
+or fill it in manually:
+
+```bash
+export ENDPOINT='http://127.0.0.1:<variable-port>'
+```
+
+:::
+
+The Hardhat config in the project you've cloned, reads this environment variable to ensure your Hardhat network is set to the IBC SDK spun up network.
 
 ```js
-require('@nomicfoundation/hardhat-toolbox')
+// ...
+const endpoint = process.env.ENDPOINT
+// ...
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: '0.8.19',
   networks: {
     localibcsdk: {
-      url: 'http://localhost:<fill-in-port>',
+      url: endpoint,
       accounts: [
-        '0x826cccccf88094269e637c816d8895f138b89e03dfa2fdd8b5d9e1feea1cb9aa',
         '0x15188f87d4fd462b13c8f3b81c3a818ceb68fb596da273d6b7ee9f05f588e207',
         '0x75558cf96f6f28bb489fd33cbfc38aa2311bcb6586a9742f9586da809dd57fe2',
         '0xea6ad02a06e84b195f65a7e01ab32440a8914e523d53be71aba370167ce94ae9',
@@ -94,20 +130,35 @@ module.exports = {
 }
 ```
 
-The accounts (unless you want to add more) can be left as is and will provide you 5 default funded accounts.
+The accounts (unless you want to add more) can be left as is and will provide you 4 (technically 5 but we reserve one for the relayer) default funded accounts.
+
+:::tip Using IBC SDK config private keys in Hardhat config
+
+You can use the following command to get more information about the accounts the IBC SDK has created on the ETH chain:
+
+```bash
+ibctl accounts eth-execution
+```
+
+You'll notice that the private keys for the last 4 accounts there are the same private keys used in the Hardhat config.
+
+:::
 
 ## Deployment and channel creation
 
-Now, you can deploy the contracts on the EVM:
+Now, you can deploy the contracts on the EVM.
+
+First, run `npm install` in the project's root directory. Then run the following script:
 
 ```bash
 npx hardhat run scripts/deploy.js --network localibcsdk
 ```
 
-and on the Cosmos side:
+On the Cosmos side, store the project's root directory as `ROOT_DIR` environment variable and run:
 
 ```bash
-ibctl deploy wasm wasm158z04naus5r3vcanureh7u0ngs5q4l0gkwegr4 <path>/artifacts/ibc_poll_messenger.wasm
+export ROOT_DIR=$PWD
+ibctl deploy wasm wasm158z04naus5r3vcanureh7u0ngs5q4l0gkwegr4 $ROOT_DIR/artifacts/ibc_poll_messenger.wasm
 ```
 
 :::tip
@@ -125,7 +176,7 @@ ibctl [clients/channels/connections] <chain-name>
 Create a channel between the IBC enabled contracts on the EVM and Wasm side:
 
 ```bash
-ibctl channel $'eth-execution:polyibc.Ethereum-Devnet.B10c73e50B9bdB51f3504F7104a411174B9C3aa3:1.0' $'wasm:wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d:1.0'
+ibctl channel $'eth-execution:polyibc.Ethereum-Devnet.37FA111284FBF97318CBe05C37fEC69071Dd4965:1.0' $'wasm:wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d:1.0'
 ```
 
 You'll see the terminal output the different steps of the channel handshake. If successful, you now have a channel set up to send IBC packets over! 📦
@@ -165,6 +216,19 @@ npx hardhat run scripts/send-message.js --network localibcsdk
 
 It will send the message `"Collateral has been supplied"`. The polling contract on the wasm side will receive this message so the poll on what asset to borrow can begin...
 
+:::info Check the events
+
+Now you've given the instructions to send a packet, but how do you know if it was successful? And equally important, how to check if it was received on the destination?
+
+To investigate this, the `events` command gives a list of events. For example, to check if the packet got received on the destination (the wasmd chain in this instance):
+
+```bash
+ibctl events wasm -x
+```
+
+Note that the flag `-x` shows more details and is optional. Similarly you can check the source chain and Polymer middle hop for events.
+:::
+
 ### CosmWasm side
 
 :::note
@@ -183,7 +247,8 @@ On the Wasm side, we need to do the following:
 This functionality is included in the `polling.sh` script.
 
 ```bash
-sh ./polling.sh
+# Update according to the shell you're using
+zsh ./polling.sh
 ```
 
 The last command there is a message that should send an IBC packet with the information of the poll to execute the loan on the EVM side.
@@ -207,18 +272,20 @@ If this shows "10n" you're good!
 To look at the events for more fine grained details, run one of:
 
 ```bash
-ibctl events polymer <-x>
-ibctl events wasm <-x>
-ibctl events eth-execution <-x>
+ibctl events polymer -x
+ibctl events wasm -x
+ibctl events eth-execution -x
 ```
 
-The `events`` command focuses on all IBC events on a particular chain, alternatively you can trace the packets:
+Note that the flag `-x` shows more details and is optional.
+
+The `events` command focuses on all IBC events on a particular chain, alternatively you can trace the packets:
 
 ```bash
-ibctl trace-packets $'eth-execution:channel-0:polyibc.Ethereum-Devnet.B10c73e50B9bdB51f3504F7104a411174B9C3aa3' $'wasm:channel-0:wasm.wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d'
+ibctl trace-packets $'eth-execution:channel-0:polyibc.Ethereum-Devnet.37FA111284FBF97318CBe05C37fEC69071Dd4965' $'wasm:channel-0:wasm.wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d'
 ```
 
-Packet tracing aggregates packet related queries between two "endpoints" essentially a (channel, port) pair on two chains.
+Packet tracing aggregates packet related queries between two "endpoints"; essentially a (channel, port) pair on two chains.
 
 ## Conclusion
 
