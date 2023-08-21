@@ -49,6 +49,12 @@ export function imageByLabel(images: ImageConfigSchema[], label: ImageLabelTypes
   return image
 }
 
+export function nodeByLabel(chain: ChainSet, label: ImageLabelTypes): RunningNodeConfig {
+  const node = chain.Nodes.find((n) => n.Label === label.toString())
+  if (!node) throw new Error(`Chain ${chain.Name} has no node with label ${label}`)
+  return node
+}
+
 export const imageConfigSchema = z.object({
   Label: z.nativeEnum(ImageLabelTypes).optional().default(ImageLabelTypes.Main),
   Repository: z.string(),

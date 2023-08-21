@@ -2,7 +2,7 @@ import * as self from '../index'
 import { z } from 'zod'
 import { utils } from '../deps'
 import { Container, containerFromId, newContainer, images } from '../docker'
-import { ChainSetsRunObj, CosmosChainSet, RelayerRunObj } from '../schemas'
+import { ChainSetsRunObj, CosmosChainSet, ImageLabelTypes, nodeByLabel, RelayerRunObj } from '../schemas'
 import path from 'path'
 import { $, ProcessOutput } from 'zx-cjs'
 import { flatCosmosEvent, fs, waitForBlocks, getLogger } from '../utils'
@@ -65,15 +65,15 @@ export class EthRelayer {
     if (!dispatcher) throw new Error(`Dispatcher contract not deployed on ${eth1.Name}?`)
 
     const config = {
-      consensusHostUrl: eth2.Nodes[0].RpcContainer.replace(/:[0-9]+$/, ':3500'),
-      executionHostUrl: eth1.Nodes[0].RpcContainer,
+      consensusHostUrl: nodeByLabel(eth2, ImageLabelTypes.Main).RpcContainer.replace(/:[0-9]+$/, ':3500'),
+      executionHostUrl: nodeByLabel(eth1, ImageLabelTypes.Main).RpcContainer,
       ibcCoreAddress: dispatcher.Address,
       ibcCoreAbi: dispatcher.Abi ?? '',
       rpcAddressUrl: poly.Nodes[0].RpcContainer,
       routerHostUrl: poly.Nodes[0].RpcContainer.replace(/:[0-9]+$/, ':9090'),
       polymerMnemonic: poly.Accounts[0].Mnemonic ?? '',
       localDevNet: true,
-      ethcontainer: eth1.Nodes[0].ContainerId
+      ethcontainer: nodeByLabel(eth1, ImageLabelTypes.Main).ContainerId
     }
 
     const containerDir = utils.ensureDir(utils.path.join(runObj.WorkDir, 'eth-relayer'))
