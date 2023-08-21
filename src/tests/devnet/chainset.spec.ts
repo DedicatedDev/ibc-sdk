@@ -191,19 +191,17 @@ test('start eth node with labels and dependencies', async (t) => {
   t.context.runtime = runtime.runObj
   t.truthy(runtime)
 
-  t.assert(runtime.runObj.ChainSets.length === 2)
+  t.assert(runtime.runObj.ChainSets.length === 1)
   const eth = runtime.runObj.ChainSets[0]
   t.is(eth.Name, 'eth')
   t.is(eth.Images[0].Label, ImageLabelTypes.Main)
-  t.is(eth.Nodes[0].Label, ImageLabelTypes.Main.toString())
+  t.is(eth.Images[1].Label, ImageLabelTypes.Beacon)
+  t.is(eth.Images[2].Label, ImageLabelTypes.Genesis)
+  t.is(eth.Images[3].Label, ImageLabelTypes.Validator)
 
-  const prysm = runtime.runObj.ChainSets[1]
-  t.is(prysm.Name, 'eth2')
-  t.is(prysm.Images[0].Label, ImageLabelTypes.Main)
-  t.is(prysm.Images[1].Label, ImageLabelTypes.Genesis)
-  t.is(prysm.Images[2].Label, ImageLabelTypes.Validator)
-  t.is(prysm.Nodes[0].Label, ImageLabelTypes.Main.toString())
-  t.is(prysm.Nodes[1].Label, ImageLabelTypes.Validator.toString())
+  t.is(eth.Nodes[0].Label, ImageLabelTypes.Main.toString())
+  t.is(eth.Nodes[1].Label, ImageLabelTypes.Beacon.toString())
+  t.is(eth.Nodes[2].Label, ImageLabelTypes.Validator.toString())
 
   const provider = newJsonRpcProvider(eth.Nodes[0].RpcHost)
   const wallet = new ethers.Wallet(eth.Accounts![0]['PrivateKey']).connect(provider)

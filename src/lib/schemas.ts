@@ -39,6 +39,7 @@ export function isIbcChain(chainType: string): boolean {
 
 export enum ImageLabelTypes {
   Main = 'main',
+  Beacon = 'beacon',
   Genesis = 'genesis',
   Validator = 'validator'
 }

@@ -52,28 +52,25 @@ export class EthRelayer {
   static async create(runObj: ChainSetsRunObj, paths: string[]): Promise<EthRelayer> {
     const [src, dst] = paths
 
-    const eth1 = runObj.ChainSets.find((c) => c.Name === src)
-    if (!eth1 || eth1.Type !== 'ethereum') throw new Error('Expected to find an ethereum chain as source!')
+    const eth = runObj.ChainSets.find((c) => c.Name === src)
+    if (!eth || eth.Type !== 'ethereum') throw new Error('Expected to find an ethereum chain as source!')
 
     const poly = runObj.ChainSets.find((c) => c.Name === dst)
     if (!poly || poly.Type !== 'polymer') throw new Error('Expected to find a polymer chain as destination!')
 
-    const eth2 = runObj.ChainSets.find((c) => c.Type === 'ethereum2')
-    if (!eth2) throw new Error('Expected to find an ethereum2 chain!')
-
-    const dispatcher = eth1.Contracts.find((c) => c.Name === 'Dispatcher')
-    if (!dispatcher) throw new Error(`Dispatcher contract not deployed on ${eth1.Name}?`)
+    const dispatcher = eth.Contracts.find((c) => c.Name === 'Dispatcher')
+    if (!dispatcher) throw new Error(`Dispatcher contract not deployed on ${eth.Name}?`)
 
     const config = {
-      consensusHostUrl: nodeByLabel(eth2, ImageLabelTypes.Main).RpcContainer.replace(/:[0-9]+$/, ':3500'),
-      executionHostUrl: nodeByLabel(eth1, ImageLabelTypes.Main).RpcContainer,
+      consensusHostUrl: nodeByLabel(eth, ImageLabelTypes.Beacon).RpcContainer.replace(/:[0-9]+$/, ':3500'),
+      executionHostUrl: nodeByLabel(eth, ImageLabelTypes.Main).RpcContainer,
       ibcCoreAddress: dispatcher.Address,
       ibcCoreAbi: dispatcher.Abi ?? '',
       rpcAddressUrl: poly.Nodes[0].RpcContainer,
       routerHostUrl: poly.Nodes[0].RpcContainer.replace(/:[0-9]+$/, ':9090'),
       polymerMnemonic: poly.Accounts[0].Mnemonic ?? '',
       localDevNet: true,
-      ethcontainer: nodeByLabel(eth1, ImageLabelTypes.Main).ContainerId
+      ethcontainer: nodeByLabel(eth, ImageLabelTypes.Main).ContainerId
     }
 
     const containerDir = utils.ensureDir(utils.path.join(runObj.WorkDir, 'eth-relayer'))

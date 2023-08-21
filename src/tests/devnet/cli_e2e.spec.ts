@@ -71,12 +71,12 @@ async function waitForEvent(t: any, chainName: string, minHeight: string, eventN
 
 async function testEndToEnd(t: any, vIbcToIbc: boolean) {
   t.assert((await runCommand(t, 'init')).exitCode === 0)
-  t.assert((await runCommand(t, 'start', '-c', 'wasm:polymer', '-c', 'polymer:eth-execution')).exitCode === 0)
+  t.assert((await runCommand(t, 'start', '-c', 'wasm:polymer', '-c', 'polymer:eth')).exitCode === 0)
 
   let runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
   t.assert(runtime)
 
-  let eth1Chain: EvmChainSet = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-execution')
+  let eth1Chain: EvmChainSet = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth')
   t.assert(eth1Chain)
 
   const vibcRelayer = runtime.Relayers.find((r: RelayerRunObj) => r.Name === 'vibc-relayer')
@@ -106,12 +106,12 @@ async function testEndToEnd(t: any, vIbcToIbc: boolean) {
   // deploy evm contract
   const marsPath = path.join(t.context.workspace, 'vibc-core-smart-contracts', 'Mars.sol', 'Mars.json')
   t.assert(fs.existsSync(marsPath))
-  const out1 = await runCommand(t, 'deploy', 'eth-execution', eth1Account.Address, marsPath)
+  const out1 = await runCommand(t, 'deploy', 'eth', eth1Account.Address, marsPath)
   t.assert(out1.exitCode === 0)
 
   runtime = JSON.parse(fs.readFileSync(path.join(t.context.workspace, 'run', 'run.json'), 'utf-8'))
   t.assert(runtime)
-  eth1Chain = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth-execution')
+  eth1Chain = runtime.ChainSets.find((c: ChainConfig) => c.Name === 'eth')
   t.assert(eth1Chain)
 
   const mars = eth1Chain.Contracts.find((c: any) => c.Name === 'Mars')
@@ -122,7 +122,7 @@ async function testEndToEnd(t: any, vIbcToIbc: boolean) {
   t.deepEqual((await getChannelsFrom(t, 'wasm')).channels, [])
 
   const version = '1.0'
-  const evmEndpoint = 'eth-execution:polyibc.Ethereum-Devnet.' + mars!.Address.slice(2) + ':' + version
+  const evmEndpoint = 'eth:polyibc.Ethereum-Devnet.' + mars!.Address.slice(2) + ':' + version
   const wasmEndpoint = 'wasm:wasm.' + wasmAddress + ':' + version
   let channels = [evmEndpoint, wasmEndpoint]
   if (!vIbcToIbc) {
@@ -173,7 +173,7 @@ async function testEndToEnd(t: any, vIbcToIbc: boolean) {
   await runCommand(t, 'show')
   await runCommand(t, 'logs', 'polymer', '-n', '5')
   await runCommand(t, 'logs', 'wasm', '-n', '5')
-  await runCommand(t, 'logs', 'eth-exec', '-n', '5')
+  await runCommand(t, 'logs', 'eth:main', '-n', '5')
 }
 
 test.serial('cli end to end: eth -> polymer -> wasm', async (t) => {
@@ -186,7 +186,7 @@ test.serial('cli end to end: wasm -> polymer -> eth', async (t) => {
 
 async function testTracePackets(t: any, c: any) {
   const endpointA = `${c.wasmChain.Name}:${c.wasmChannel.channel_id}:${c.wasmChannel.port_id}`
-  const endpointB = `eth-execution:${c.polyChannel.channel_id}:${c.receiver.Address}`
+  const endpointB = `eth:${c.polyChannel.channel_id}:${c.receiver.Address}`
 
   const out = await runCommand(t, 'trace-packets', '--json', endpointA, endpointB)
   t.assert(out.exitCode === 0)
@@ -196,7 +196,7 @@ async function testTracePackets(t: any, c: any) {
   t.assert(packets.filter((p: any) => p.state === 'acknowledged').length === 2)
   t.assert(packets.filter((p: any) => p.state === 'received').length === 2)
   t.assert(packets.find((c: any) => c.chainID === 'wasm'))
-  t.assert(packets.find((c: any) => c.chainID === 'eth-execution'))
+  t.assert(packets.find((c: any) => c.chainID === 'eth'))
 }
 
 // Test the following sequence
@@ -243,7 +243,7 @@ async function testMessagesFromEthToWasm(t: any, c: any) {
     return true
   })
 
-  await waitForEvent(t, c.eth1Chain.Name, evmHeight, 'Acknowledgement', (events: any) => {
+  await waitForEvent(t, c.eth1Chain.Name + ':main', evmHeight, 'Acknowledgement', (events: any) => {
     const e = events.find((e: any) => e.Acknowledgement).Acknowledgement
     t.assert(e)
     t.assert(e.sourcePortAddress === c.receiver.Address)
@@ -278,7 +278,7 @@ async function testMessagesFromWasmToEth(t: any, c: any) {
   const out = await runCommand(t, 'exec', ...cmds)
   t.assert(out.exitCode === 0)
 
-  await waitForEvent(t, c.eth1Chain.Name, evmHeight, 'RecvPacket', (events: any) => {
+  await waitForEvent(t, c.eth1Chain.Name + ':main', evmHeight, 'RecvPacket', (events: any) => {
     const e = events.find((e: any) => e.RecvPacket).RecvPacket
     t.assert(e)
     t.assert(e.destChannelId === c.wasmChannel.counterparty.channel_id)

@@ -1,6 +1,6 @@
 import { RunningBSCChain } from './chains/bsc'
 import { utils } from './deps'
-import { RunningGethChain } from './chains/geth'
+import { RunningEthChain } from './chains/eth'
 import {
   ChainConfig,
   ChainSetsRunConfig,
@@ -11,7 +11,6 @@ import {
 import { RunningCosmosChain } from './chains/cosmos'
 import { NodeAccounts, RunningChain, RunningChainCreator } from './chains/running_chain'
 import { fs, getLogger } from './utils'
-import { RunningPrysmChain } from './chains/prysm'
 import { containerFromId } from './docker'
 import path from 'path'
 
@@ -245,8 +244,7 @@ export class RunningChainSets {
 
     utils.ignoreUnused(RunningCosmosChain)
     const chainFactories = new Map<string, RunningChainCreator>([
-      ['ethereum', RunningGethChain.newNode],
-      ['ethereum2', RunningPrysmChain.newNode],
+      ['ethereum', RunningEthChain.newNode],
       ['bsc', RunningBSCChain.newNode],
       ['polymer', RunningCosmosChain.newNode],
       ['cosmos', RunningCosmosChain.newNode]

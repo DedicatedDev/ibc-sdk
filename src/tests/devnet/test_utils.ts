@@ -77,7 +77,7 @@ export function getWorkspace(prefix: string): string {
 
 export async function showLogsBeforeExit(cli: string, workspace: string) {
   if (!process.env.TEST_IBCTL_LOGS_BEFORE_EXIT) return
-  const components = ['polymer', 'eth-execution', 'wasm', 'eth-relayer', 'vibc-relayer', 'ibc-relayer']
+  const components = ['polymer', 'eth', 'wasm', 'eth-relayer', 'vibc-relayer', 'ibc-relayer']
   for (const c of components) {
     log.info(`${c} logs ...`)
     try {

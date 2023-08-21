@@ -300,7 +300,7 @@ export class Container {
 
     if (metadata) {
       if (metadata.binaries.length > 0)
-        await this.exec(['killall', ...metadata.binaries]).catch((e) => log.warn(e.toString().trim()))
+        await this.exec(['pkill', '-f', ...metadata.binaries]).catch((e) => log.warn(e.toString().trim()))
       if (metadata.remove.length > 0)
         await this.exec(['rm', '-rf', ...metadata.remove]).catch((e) => log.warn(e.toString().trim()))
     }
@@ -325,10 +325,10 @@ class DockerImage {
   }
 }
 
-const prysmDefaultTag = 'v4.0.3-light-client-1'
+const prysmDefaultTag = 'v4.0.7-fast-devnet-2'
 export const images = {
   bsc: new DockerImage('ghcr.io/polymerdao/bsc', '1.1.10', 'BSC_DOCKER_IMAGE_TAG'),
-  ethereum: new DockerImage('ethereum/client-go', 'v1.10.26', 'ETH_DOCKER_IMAGE_TAG'),
+  ethereum: new DockerImage('ethereum/client-go', 'v1.12.2', 'ETH_DOCKER_IMAGE_TAG'),
   ethRelayer: new DockerImage('ghcr.io/polymerdao/eth-relayer', 'v0.0.2', 'ETH_RELAYER_DOCKER_IMAGE_TAG'),
   ibcRelayer: new DockerImage(
     'ghcr.io/polymerdao/ts-relayer',
@@ -341,7 +341,12 @@ export const images = {
     'IBC_GO_RELAYER_DOCKER_IMAGE_TAG'
   ),
   polymer: new DockerImage('ghcr.io/polymerdao/polymer', 'v0.0.1', 'POLYMER_DOCKER_IMAGE_TAG'),
-  prysmMain: new DockerImage('ghcr.io/polymerdao/prysm-beacon-chain', prysmDefaultTag, 'PRYSM_BEACON_DOCKER_IMAGE_TAG'),
+  prysm: new DockerImage(
+    'ghcr.io/polymerdao/prysm-beacon-chain',
+    prysmDefaultTag,
+    'PRYSM_BEACON_DOCKER_IMAGE_TAG',
+    'beacon'
+  ),
   prysmValidator: new DockerImage(
     'ghcr.io/polymerdao/prysm-validator',
     prysmDefaultTag,

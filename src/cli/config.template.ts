@@ -9,7 +9,7 @@ export const configTemplate = `#
 
 ChainSets:
     # Can be any unique identifier. Internally is also used as the chain id.
-  - Name: "eth-execution"
+  - Name: "eth"
 
     # These are the chain type supported by the SDK.
     # Can be one of: bsc, ethereum, ethereum2, cosmos or polymer
@@ -32,6 +32,19 @@ ChainSets:
         # Can be one of: main, genesis, validator. If not set it defaults to main.
         Label: "${images.ethereum.label}"
 
+      - Label: "${images.prysm.label}"
+        Repository: "${images.prysm.repo}"
+        Tag: "${images.prysm.tag}"
+        Bin: "beacon-chain"
+      - Label: "${images.prysmGenesis.label}"
+        Repository: "${images.prysmGenesis.repo}"
+        Tag: "${images.prysmGenesis.tag}"
+        Bin: "prysmctl"
+      - Label: "${images.prysmValidator.label}"
+        Repository: "${images.prysmValidator.repo}"
+        Tag: "${images.prysmValidator.tag}"
+        Bin: "validator"
+
     # This section is used to generate and fund accounts once the chain is started.
     Accounts:
 
@@ -43,23 +56,6 @@ ChainSets:
 
       # The accounts will be funded with these many tokens
       Balance: 1000
-
-  - Name: "eth-consensus"
-    Type: "ethereum2"
-    DependsOn: "eth-execution"
-    Images:
-      - Label: "${images.prysmMain.label}"
-        Repository: "${images.prysmMain.repo}"
-        Tag: "${images.prysmMain.tag}"
-        Bin: "beacon-chain"
-      - Label: "${images.prysmGenesis.label}"
-        Repository: "${images.prysmGenesis.repo}"
-        Tag: "${images.prysmGenesis.tag}"
-        Bin: "prysmctl"
-      - Label: "${images.prysmValidator.label}"
-        Repository: "${images.prysmValidator.repo}"
-        Tag: "${images.prysmValidator.tag}"
-        Bin: "validator"
 
   - Name: "polymer"
     Type: "polymer"

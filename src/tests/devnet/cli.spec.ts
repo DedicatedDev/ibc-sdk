@@ -74,7 +74,7 @@ test.serial('running the init command twice should fail', async (t) => {
 test.serial('the start command starts stack', async (t) => {
   t.assert((await runInit(t)).exitCode === 0)
 
-  let out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution'`
+  let out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth'`
   t.assert(out.exitCode === 0)
 
   const runtime = runningChainSetsSchema.parse(
@@ -83,7 +83,7 @@ test.serial('the start command starts stack', async (t) => {
   t.assert(runtime.Relayers.length === 2)
   t.assert(runtime.Relayers.find((r) => r.Name === 'vibc-relayer'))
   t.assert(runtime.Relayers.find((r) => r.Name === 'eth-relayer'))
-  t.assert(runtime.ChainSets.find((c) => c.Name === 'eth-execution')!.Contracts.length > 0)
+  t.assert(runtime.ChainSets.find((c) => c.Name === 'eth')!.Contracts.length > 0)
 
   await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
@@ -108,9 +108,9 @@ test.serial('the start command starts stack', async (t) => {
   t.assert(out.exitCode === 0)
   const logs = [
     '', // so we can check the parent directory exists
-    'eth-consensus.main.log',
-    'eth-consensus.validator.log',
-    'eth-execution.main.log',
+    'eth.beacon.log',
+    'eth.validator.log',
+    'eth.main.log',
     'eth-relayer.log',
     'polymer.main.log',
     'vibc-relayer.log'
@@ -212,7 +212,7 @@ test.skip('the start command starts stack with vibc and ibc chains', async (t) =
   config.close()
 
   const out =
-    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:juno' --connection 'polymer:eth-execution'`
+    await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:juno' --connection 'polymer:eth'`
   t.assert(out.exitCode === 0)
 
   const runtime = runningChainSetsSchema.parse(
@@ -223,7 +223,7 @@ test.skip('the start command starts stack with vibc and ibc chains', async (t) =
   t.assert(runtime.Relayers.find((r) => r.Name === 'vibc-relayer'))
   t.assert(runtime.Relayers.find((r) => r.Name === 'eth-relayer'))
   t.assert(runtime.Relayers.find((r) => r.Name === 'ibc-relayer-polymer-juno'))
-  t.assert(runtime.ChainSets.find((c) => c.Name === 'eth-execution')!.Contracts.length > 0)
+  t.assert(runtime.ChainSets.find((c) => c.Name === 'eth')!.Contracts.length > 0)
 
   await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
@@ -248,7 +248,7 @@ test.skip('the start command starts stack with vibc and ibc chains', async (t) =
 test.serial('the stop command resets the workspace', async (t) => {
   t.assert((await runInit(t)).exitCode === 0)
 
-  let out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution'`
+  let out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth'`
   t.assert(out.exitCode === 0)
 
   // after this, the workspace will be ready to be start again.
@@ -260,7 +260,7 @@ test.serial('the stop command resets the workspace', async (t) => {
   t.assert(fs.existsSync(path.join(t.context.workspace, 'vibc-core-smart-contracts')))
 
   // run start on the stopped workspace again
-  out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth-execution'`
+  out = await $`${t.context.cli} start --workspace ${t.context.workspace} --connection 'polymer:eth'`
   t.assert(out.exitCode === 0)
   await $`${t.context.cli} -w ${t.context.workspace} logs vibc-relayer | grep -q -i error`.then(
     () => t.fail('grep should not find errors in vibc-relayer logs'),
@@ -277,7 +277,7 @@ test.serial('the stop command always kills the containers', async (t) => {
   let out = await $`${t.context.cli} start --workspace ${t.context.workspace}`
   t.assert(out.exitCode === 0)
 
-  out = await $`${t.context.cli} --workspace ${t.context.workspace} exec eth-consensus:main killall beacon-chain`
+  out = await $`${t.context.cli} --workspace ${t.context.workspace} exec eth:beacon -- pkill -f beacon-chain`
   t.assert(out.exitCode === 0)
 
   await $`${t.context.cli} stop --workspace ${t.context.workspace}`.then(

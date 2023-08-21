@@ -8,16 +8,9 @@ ChainSets:
       - Repository: "${images.ethereum.repo}"
         Tag: "${images.ethereum.tag}"
         Bin: "geth"
-    Accounts:
-      Mnemonic: "develop test test test test only develop test test test test only"
-      Count: 10
-  - Name: "eth2"
-    Type: "ethereum2"
-    DependsOn: "eth"
-    Images:
-      - Label: "${images.prysmMain.label}"
-        Repository: "${images.prysmMain.repo}"
-        Tag: "${images.prysmMain.tag}"
+      - Label: "${images.prysm.label}"
+        Repository: "${images.prysm.repo}"
+        Tag: "${images.prysm.tag}"
         Bin: "beacon-chain"
       - Label: "${images.prysmGenesis.label}"
         Repository: "${images.prysmGenesis.repo}"
@@ -27,6 +20,9 @@ ChainSets:
         Repository: "${images.prysmValidator.repo}"
         Tag: "${images.prysmValidator.tag}"
         Bin: "validator"
+    Accounts:
+      Mnemonic: "develop test test test test only develop test test test test only"
+      Count: 10
   - Name: "bsc"
     Type: "bsc"
     Images:
