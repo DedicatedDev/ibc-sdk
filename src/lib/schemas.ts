@@ -12,7 +12,6 @@ export { RelayerConfigSchema, RelayerConfig } from './relayers/ibc_ts'
 
 const EvmChains = ['ethereum', 'bsc'] as const
 const CosmosChains = ['cosmos', 'polymer'] as const
-const NoneChains = ['ethereum2'] as const
 
 export function isCosmosChain(chainType: string): boolean {
   return Object.values(CosmosChains).some((c) => chainType === c.toString())
@@ -20,10 +19,6 @@ export function isCosmosChain(chainType: string): boolean {
 
 export function isEvmChain(chainType: string): boolean {
   return Object.values(EvmChains).some((c) => chainType === c.toString())
-}
-
-export function isNoneChain(chainType: string): boolean {
-  return Object.values(NoneChains).some((c) => chainType === c.toString())
 }
 
 const VibcChains = ['ethereum', 'bsc'] as const
@@ -77,10 +72,6 @@ export const ChainConfigSchema = (() => {
     Accounts: AccountsConfigSchema.evm
   })
 
-  const none = base.extend({
-    Type: z.enum(NoneChains)
-  })
-
   const cosmos = base.extend({
     Type: z.enum(CosmosChains),
     Moniker: z.string(),
@@ -92,8 +83,8 @@ export const ChainConfigSchema = (() => {
     })
   })
 
-  const all = z.union([evm, cosmos, none])
-  return Object.freeze({ evm, cosmos, all, none })
+  const all = z.union([evm, cosmos])
+  return Object.freeze({ evm, cosmos, all })
 })()
 
 export const chainSetsRunConfigSchema = z.object({
@@ -137,11 +128,8 @@ export const chainSetSchema = (() => {
     Prefix: z.string(),
     Accounts: AccountsSchema.cosmos
   })
-  const none = base.extend({
-    Type: z.enum(NoneChains)
-  })
-  const all = z.union([evm, cosmos, none])
-  return Object.freeze({ evm, cosmos, all, none })
+  const all = z.union([evm, cosmos])
+  return Object.freeze({ evm, cosmos, all })
 })()
 
 export const runningRelayerSchema = z.object({
@@ -169,7 +157,6 @@ export const runningChainSetsSchema = z.object({
 export type ChainConfig = z.infer<typeof ChainConfigSchema.all>
 export type EvmChainConfig = z.infer<typeof ChainConfigSchema.evm>
 export type CosmosChainConfig = z.infer<typeof ChainConfigSchema.cosmos>
-export type NoneChainConfig = z.infer<typeof ChainConfigSchema.none>
 
 export type ChainSetsRunConfig = z.infer<typeof chainSetsRunConfigSchema>
 export type ChainSetsRunObj = z.infer<typeof runningChainSetsSchema>

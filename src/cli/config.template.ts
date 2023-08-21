@@ -12,7 +12,7 @@ ChainSets:
   - Name: "eth"
 
     # These are the chain type supported by the SDK.
-    # Can be one of: bsc, ethereum, ethereum2, cosmos or polymer
+    # Can be one of: bsc, ethereum, cosmos or polymer
     Type: "ethereum"
 
     # List of docker images used when starting up a chain.

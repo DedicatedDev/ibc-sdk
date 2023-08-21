@@ -24,10 +24,6 @@ const runWithVchains = {
     {
       Name: 'eth',
       Type: 'ethereum'
-    },
-    {
-      Name: 'prysm',
-      Type: 'ethereum2'
     }
   ]
 }
@@ -62,18 +58,6 @@ test('configuring with unsupported virtual chains should fail', (t) => {
 
   err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:bsc']))
   t.assert(err?.message === 'Invalid relay path configuration: poly (type: polymer) -> bsc (type: bsc)', err?.message)
-
-  err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['prysm:poly']))
-  t.assert(
-    err?.message === 'Invalid relay path configuration: prysm (type: ethereum2) -> poly (type: polymer)',
-    err?.message
-  )
-
-  err = t.throws(() => relayers.configurePaths(runWithVchains as ChainSetsRunObj, ['poly:prysm']))
-  t.assert(
-    err?.message === 'Invalid relay path configuration: poly (type: polymer) -> prysm (type: ethereum2)',
-    err?.message
-  )
 })
 
 test('configuring paths only with virtual chains should fail', (t) => {
