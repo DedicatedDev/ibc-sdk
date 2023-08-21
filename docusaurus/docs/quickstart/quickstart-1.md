@@ -94,7 +94,7 @@ Once the workspace is initialized we can start the SDK with the `start` command:
 
 ```bash
 ibctl start \
-  --connection polymer:eth-execution \
+  --connection polymer:eth \
   --connection wasm:polymer
 ```
 
@@ -122,7 +122,7 @@ You can always check the (funded) accounts that have been created and are at you
 
 ```bash
 # (optional) check the dev accounts created
-ibctl accounts eth-execution
+ibctl accounts eth:main
 ```
 
 Copy one of the accounts from the output and use it as the address to deploy the contract, along with the path to the contract artifact JSON file:
@@ -131,10 +131,10 @@ For the tutorial, we picked the first account (it's deterministic).
 
 ```bash
 # deploy the contract with this command
-ibctl deploy eth-execution 0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934 $ROOT_DIR/race-to-send-packets-EVM/artifacts/contracts/Mars.sol/Mars.json
+ibctl deploy eth:main 0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934 $ROOT_DIR/race-to-send-packets-EVM/artifacts/contracts/Mars.sol/Mars.json
 
 # resuts in this terminal output
-[08:41:16.587 info]: Deployed contract Mars on chain eth-execution at 0xB10c73e50B9bdB51f3504F7104a411174B9C3aa3 with tx hash 0x6ad71b0617bb6c03c4404bd2fa117fb1b524b04259853362e66a459a53e9adb9 by address 0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934
+[08:41:16.587 info]: Deployed contract Mars on chain eth:main at 0xB10c73e50B9bdB51f3504F7104a411174B9C3aa3 with tx hash 0x6ad71b0617bb6c03c4404bd2fa117fb1b524b04259853362e66a459a53e9adb9 by address 0x0C46c2cAFE097b4f7e1BB868B89e5697eE65f934
 0xB10c73e50B9bdB51f3504F7104a411174B9C3aa3
 ```
 
@@ -169,7 +169,7 @@ That's it! The contracts are deployed and we're ready to move on to the next ste
 Now that both contract on either side are deployed, we need to create an IBC channel to connect them before you can send packets between the contracts.
 
 ```bash
-ibctl channel eth-execution:polyibc.Ethereum-Devnet.B10c73e50B9bdB51f3504F7104a411174B9C3aa3:1.0 wasm:wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d:1.0
+ibctl channel eth:polyibc.Ethereum-Devnet.B10c73e50B9bdB51f3504F7104a411174B9C3aa3:1.0 wasm:wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d:1.0
 ```
 
 :::tip
@@ -178,7 +178,7 @@ Note that here you'll override the channel-version with the specified version. I
 
 :::
 
-The terminal output will show you the channel hanshake steps (`ChanOpenInit`,`ChanOpenTry`,`ChanOpenAck` and `ChanOpenConfirm`). If successful, you've created the IBC channel to send packets over.
+The terminal output will show you the channel handshake steps (`ChanOpenInit`,`ChanOpenTry`,`ChanOpenAck` and `ChanOpenConfirm`). If successful, you've created the IBC channel to send packets over.
 
 The channel creation, in the context of the setup is displayed in the following diagram. Pay attention to the fact that for you as a cross-chain application developer, only the top part (the channel creation between the virtual chain and chain B) is of real concern. The IBC SDK takes care of the rest.
 
@@ -250,7 +250,7 @@ There's two types of queries that can help out:
 Let's try out the packet tracing one:
 
 ```bash
-ibctl trace-packets $'eth-execution:channel-0:polyibc.Ethereum-Devnet.B10c73e50B9bdB51f3504F7104a411174B9C3aa3' $'wasm:channel-0:wasm.wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d'
+ibctl trace-packets $'eth:channel-0:polyibc.Ethereum-Devnet.B10c73e50B9bdB51f3504F7104a411174B9C3aa3' $'wasm:channel-0:wasm.wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d'
 ```
 
 There, you should find confirmation that the packet has been received.

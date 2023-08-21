@@ -62,7 +62,7 @@ ibctl init
 Now you can get to work. Start the CLI tool:
 
 ```bash
-ibctl start -c wasm:polymer -c polymer:eth-execution
+ibctl start -c wasm:polymer -c polymer:eth
 ```
 
 :::danger Unable to reproduce the tutorial?
@@ -87,10 +87,10 @@ During development, you'll likely want to connect your development environment w
 
 :::
 
-For example, when using Hardhat you find the endpoint where 'eth-execution' is exposed and you can set it to an environment variable `ENDPOINT`:
+For example, when using Hardhat you find the endpoint where 'eth:main' is exposed and you can set it to an environment variable `ENDPOINT`:
 
 ```bash
-export ENDPOINT=$(ibctl show | grep 'eth-execution:main'| awk -F"│" '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}' | awk -F"'" '{print $2}')
+export ENDPOINT=$(ibctl show | grep 'eth:main'| awk -F"│" '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}' | awk -F"'" '{print $2}')
 ```
 
 :::caution
@@ -137,7 +137,7 @@ The accounts (unless you want to add more) can be left as is and will provide yo
 You can use the following command to get more information about the accounts the IBC SDK has created on the ETH chain:
 
 ```bash
-ibctl accounts eth-execution
+ibctl accounts eth:main
 ```
 
 You'll notice that the private keys for the last 4 accounts there are the same private keys used in the Hardhat config.
@@ -176,7 +176,7 @@ ibctl [clients/channels/connections] <chain-name>
 Create a channel between the IBC enabled contracts on the EVM and Wasm side:
 
 ```bash
-ibctl channel $'eth-execution:polyibc.Ethereum-Devnet.37FA111284FBF97318CBe05C37fEC69071Dd4965:1.0' $'wasm:wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d:1.0'
+ibctl channel $'eth:polyibc.Ethereum-Devnet.37FA111284FBF97318CBe05C37fEC69071Dd4965:1.0' $'wasm:wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d:1.0'
 ```
 
 You'll see the terminal output the different steps of the channel handshake. If successful, you now have a channel set up to send IBC packets over! 📦
@@ -274,7 +274,7 @@ To look at the events for more fine grained details, run one of:
 ```bash
 ibctl events polymer -x
 ibctl events wasm -x
-ibctl events eth-execution -x
+ibctl events eth:main -x
 ```
 
 Note that the flag `-x` shows more details and is optional.
@@ -282,7 +282,7 @@ Note that the flag `-x` shows more details and is optional.
 The `events` command focuses on all IBC events on a particular chain, alternatively you can trace the packets:
 
 ```bash
-ibctl trace-packets $'eth-execution:channel-0:polyibc.Ethereum-Devnet.37FA111284FBF97318CBe05C37fEC69071Dd4965' $'wasm:channel-0:wasm.wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d'
+ibctl trace-packets $'eth:channel-0:polyibc.Ethereum-Devnet.37FA111284FBF97318CBe05C37fEC69071Dd4965' $'wasm:channel-0:wasm.wasm.wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d'
 ```
 
 Packet tracing aggregates packet related queries between two "endpoints"; essentially a (channel, port) pair on two chains.

@@ -63,7 +63,7 @@ When using the IBC SDK, it suffices to add the IBC connections you want to have 
 Using the default configuration, the following command starts the entire setup:
 
 ```bash
-ibctl start -c wasm:polymer -c eth-execution:polymer
+ibctl start -c wasm:polymer -c eth:polymer
 ```
 
 :::caution
