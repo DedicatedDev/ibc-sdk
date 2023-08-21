@@ -7,16 +7,22 @@ import { getLogger } from '../utils'
 
 getLogger()
 
+const rpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')
+
 export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
-  static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')
   static containerGethDataDir = '/tmp/gethDataDir'
+
+  override getRpcEndpointPort(label: string): EndPoint {
+    if (label === ImageLabelTypes.Main) return rpcEndpoint
+    throw new Error(`Cannot get endpooint. Unknown label: ${label}`)
+  }
 
   static async newNode(config: ChainConfig, hostDir: string): Promise<RunningChain> {
     const image = imageByLabel(config.Images, ImageLabelTypes.Main)
     const container = await newContainer({
       label: image.Label.toString(),
       entrypoint: 'sh',
-      exposedPorts: [RunningBSCChain.rpcEndpoint.port],
+      exposedPorts: [rpcEndpoint.port],
       imageRepoTag: `${image.Repository}:${image.Tag}`,
       detach: true,
       tty: true,
@@ -31,7 +37,6 @@ export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
     return chain
   }
 
-  readonly rpcEndpoint = RunningBSCChain.rpcEndpoint
   protected override accounts?: ReturnType<typeof generateEvmAccounts>
 
   override async start() {
@@ -79,7 +84,7 @@ export class RunningBSCChain extends RunningChainBase<EvmChainConfig> {
       '--lightkdf',
       '--http',
       '--http.addr',
-      this.rpcEndpoint.host,
+      rpcEndpoint.host,
       '--datadir',
       RunningBSCChain.containerGethDataDir,
       '--password',

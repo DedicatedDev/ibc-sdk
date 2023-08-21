@@ -7,9 +7,17 @@ import { getLogger } from '../utils'
 
 const log = getLogger()
 
+const prysmRpcEndpoint = new EndPoint('http', '0.0.0.0', '4000')
+const prysmGrpcEndpoint = new EndPoint('http', '0.0.0.0', '3500')
+
 export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '4000')
   static readonly grpcEndpoint = new EndPoint('http', '0.0.0.0', '3500')
+
+  override getRpcEndpointPort(label: string): EndPoint {
+    if (label === ImageLabelTypes.Main || label === ImageLabelTypes.Validator) return prysmRpcEndpoint
+    throw new Error(`Cannot get endpooint. Unknown label: ${label}`)
+  }
 
   static async newNode(config: ChainConfig, hostDir: string): Promise<RunningChain> {
     const mainImage = config.Images.find((i) => i.Label === ImageLabelTypes.Main)
@@ -23,7 +31,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
     const mainContainer = await newContainer({
       label: mainImage.Label.toString(),
       entrypoint: 'sh',
-      exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
+      exposedPorts: [prysmRpcEndpoint.port, prysmGrpcEndpoint.port],
       imageRepoTag: `${mainImage.Repository}:${mainImage.Tag}`,
       detach: true,
       publishAllPorts: true,
@@ -37,7 +45,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
     const validatorContainer = await newContainer({
       label: validatorImage.Label.toString(),
       entrypoint: 'sh',
-      exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
+      exposedPorts: [prysmRpcEndpoint.port, prysmGrpcEndpoint.port],
       imageRepoTag: `${validatorImage.Repository}:${validatorImage.Tag}`,
       detach: true,
       tty: true,
@@ -58,7 +66,7 @@ export class RunningPrysmChain extends RunningChainBase<NoneChainConfig> {
 
   containerConfigFilePath: string = utils.path.join(RunningChainBase.getContainerDataDir(), this.configFileName)
 
-  readonly rpcEndpoint = RunningPrysmChain.rpcEndpoint
+  readonly rpcEndpoint = prysmRpcEndpoint
 
   generateAccounts(_config: any): Promise<any> {
     throw new Error('Method not implemented.')
@@ -196,7 +204,7 @@ DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
 
     await runContainer({
       entrypoint: imageByLabel(this.config.Images, ImageLabelTypes.Genesis).Bin!,
-      exposedPorts: [RunningPrysmChain.rpcEndpoint.port, RunningPrysmChain.grpcEndpoint.port],
+      exposedPorts: [prysmRpcEndpoint.port, prysmGrpcEndpoint.port],
       imageRepoTag: `${genesisImage.Repository}:${genesisImage.Tag}`,
       volumes: [[this.hostWd, '/tmp']],
       workDir: '/tmp',

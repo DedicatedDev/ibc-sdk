@@ -9,16 +9,16 @@ import { getLogger } from '../utils'
 
 const log = getLogger()
 
-export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
-  static readonly rpcEndpoint = new EndPoint('tcp', '0.0.0.0', '26657')
-  static readonly grpcEndpoint = new EndPoint('tcp', '0.0.0.0', '9090')
+const rpcEndpoint = new EndPoint('tcp', '0.0.0.0', '26657')
+const grpcEndpoint = new EndPoint('tcp', '0.0.0.0', '9090')
 
+export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
   static async newNode(config: ChainConfig, hostDir: string): Promise<RunningChain> {
     const image = imageByLabel(config.Images, ImageLabelTypes.Main)
     const container = await newContainer({
       label: image.Label.toString(),
       entrypoint: 'sh',
-      exposedPorts: [RunningCosmosChain.rpcEndpoint.port, RunningCosmosChain.grpcEndpoint.port],
+      exposedPorts: [rpcEndpoint.port, grpcEndpoint.port],
       imageRepoTag: `${image.Repository}:${image.Tag}`,
       detach: true,
       tty: true,
@@ -32,8 +32,10 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
     return chain
   }
 
-  readonly rpcEndpoint: EndPoint = RunningCosmosChain.rpcEndpoint
-
+  override getRpcEndpointPort(label: string): EndPoint {
+    if (label === ImageLabelTypes.Main) return rpcEndpoint
+    throw new Error(`Cannot get endpooint. Unknown label: ${label}`)
+  }
   async start() {
     const reusing = await super.isReusingContainer()
     await this.loadAccounts()
@@ -129,7 +131,7 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
   override async generateAccounts(accountsConfig: AccountsConfig) {
     const accounts = accountsConfig as CosmosAccountsConfig
 
-    const result : any[] = []
+    const result: any[] = []
     for (const actConfig of accounts.List) {
       const createNew = !actConfig.Address
       const account = createNew ? await this.addNewAccount(actConfig as CosmosAccount) : actConfig
@@ -179,9 +181,9 @@ export class RunningCosmosChain extends RunningChainBase<CosmosChainConfig> {
       '--home',
       this.home,
       '--rpc.laddr',
-      RunningCosmosChain.rpcEndpoint.address,
+      rpcEndpoint.address,
       '--grpc.address',
-      RunningCosmosChain.grpcEndpoint.addressNoProto
+      grpcEndpoint.addressNoProto
     ]
       .map($.quote)
       .join(' ')

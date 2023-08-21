@@ -5,6 +5,9 @@ import { EndPoint, RunningChain, RunningChainBase } from './running_chain'
 import { newContainer } from '../docker'
 import { newJsonRpcProvider } from '../ethers'
 
+const ethRpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')
+const ethAuthRpcEndpoint = new EndPoint('http', '0.0.0.0', '8551')
+
 export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
   static readonly rpcEndpoint = new EndPoint('http', '0.0.0.0', '8545')
   public static readonly authRpcEndpoint = new EndPoint('http', '0.0.0.0', '8551')
@@ -122,7 +125,7 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     const container = await newContainer({
       label: image.Label.toString(),
       entrypoint: 'sh',
-      exposedPorts: [RunningGethChain.rpcEndpoint.port, RunningGethChain.authRpcEndpoint.port],
+      exposedPorts: [ethRpcEndpoint.port, ethAuthRpcEndpoint.port],
       imageRepoTag: `${image.Repository}:${image.Tag}`,
       detach: true,
       tty: true,
@@ -138,8 +141,13 @@ export class RunningGethChain extends RunningChainBase<EvmChainConfig> {
     return chain
   }
 
-  readonly rpcEndpoint = RunningGethChain.rpcEndpoint
+  readonly rpcEndpoint = ethRpcEndpoint
   protected override accounts?: ReturnType<typeof generateEvmAccounts>
+
+  override getRpcEndpointPort(label: string): EndPoint {
+    if (label === ImageLabelTypes.Main) return ethRpcEndpoint
+    throw new Error(`Cannot get endpooint. Unknown label: ${label}`)
+  }
 
   override async generateAccounts(accounts: AccountsConfig) {
     return generateEvmAccounts(accounts)

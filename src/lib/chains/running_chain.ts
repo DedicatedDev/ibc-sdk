@@ -52,9 +52,6 @@ export class EndPoint {
 }
 
 export abstract class RunningChainBase<ConfigType extends ChainConfig> {
-  /**  should set rpcEndpoint to the default chain rpc endpoint,
-  eg. http://0.0.0.0:8545 for Geth; tcp://0.0.0.0:26657 for Cosmos chain */
-  abstract rpcEndpoint: EndPoint
   protected config: ConfigType
   private containers: Map<ImageLabelTypes, Container>
   private runObj?: NodeAccounts
@@ -73,6 +70,8 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
   }
 
   abstract start(dependencyRuntime: NodeAccounts[]): Promise<void>
+
+  abstract getRpcEndpointPort(label: string): EndPoint
 
   abstract generateAccounts(config: any): Promise<Accounts>
 
@@ -128,17 +127,19 @@ export abstract class RunningChainBase<ConfigType extends ChainConfig> {
     for (const [label, container] of this.containers) {
       const portMap = await container.getPortMap()
       // ports bind to tcp by default, the case for chain rpc endpoints
-      const conatinerPort = `${this.rpcEndpoint.port}/tcp`
-      const rpcHostPort = portMap.get(conatinerPort)
+      const endpoint = this.getRpcEndpointPort(label)
+      const containerPort = `${endpoint.port}/tcp`
+
+      const rpcHostPort = portMap.get(containerPort)
       if (!rpcHostPort) {
-        throw new Error(`Cannot find host port for port '${conatinerPort}' in container ${container.containerId}`)
+        throw new Error(`Cannot find host port for port '${containerPort}' in container ${container.containerId}`)
       }
       const containerIp = await container.getIPAddress()
       nodes.push({
         Label: label,
         ContainerId: container.containerId,
-        RpcHost: this.rpcEndpoint.withHost('127.0.0.1').withPort(rpcHostPort).address,
-        RpcContainer: this.rpcEndpoint.withHost(containerIp).address
+        RpcHost: endpoint.withHost('127.0.0.1').withPort(rpcHostPort).address,
+        RpcContainer: endpoint.withHost(containerIp).address
       })
     }
     return nodes
