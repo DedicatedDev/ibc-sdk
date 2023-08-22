@@ -11,7 +11,7 @@ const config = {
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://ibc.fyi',
+  url: 'https://developers.openibc.com',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
@@ -61,12 +61,13 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       // Replace with your project's social card
-      image: 'img/docusaurus-social-card.jpg',
+      image: 'img/IBC-SDK-OG.png',
       navbar: {
         title: ' Docs',
         logo: {
           alt: 'OpenIBC logo',
-          src: 'img/black-logo.jpg'
+          src: 'img/black-logo.jpg',
+          srcDark: 'img/dark-logo.png'
         },
         items: [
           {

@@ -27,7 +27,7 @@ function HomepageHeader() {
 export default function Home() {
   const { siteConfig } = useDocusaurusContext()
   return (
-    <Layout title={`IBC everywhere`} description="Description will go into a meta tag in <head />">
+    <Layout title={`IBC everywhere`} description="One network united under IBC">
       <HomepageHeader />
       <main>
         <HomepageFeatures />
